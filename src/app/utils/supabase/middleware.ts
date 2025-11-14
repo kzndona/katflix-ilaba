@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/in/orders' // redirect non-admin
+      console.log("PROXY: Unauthorized access to /in/accounts/staff, redirecting to /in/orders");
       return NextResponse.redirect(url)
     }
   }

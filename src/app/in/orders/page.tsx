@@ -20,5 +20,5 @@ export default function OrdersPage() {
     },
   ]);
 
-  return <div className="p-6 space-y-6">hello</div>;
+  return <div className="p-6 space-y-6">Orders</div>;
 }

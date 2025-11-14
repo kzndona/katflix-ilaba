@@ -52,28 +52,30 @@ export default function Navbar() {
           <button className="text-gray-700 font-medium hover:text-blue-600">
             Manage
           </button>
-          {manageOpen && (
-            <div className="absolute top-full left-0 mt-2 w-40 bg-white border rounded shadow-lg z-10 flex flex-col">
-              <button
-                onClick={goToInventory}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
-              >
-                Inventory
-              </button>
-              <button
-                onClick={goToMachines}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
-              >
-                Machines
-              </button>
-              <button
-                onClick={goToServices}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
-              >
-                Services
-              </button>
-            </div>
-          )}
+          <div
+            className={`absolute top-full left-0 w-40 bg-white border rounded shadow-lg z-10 flex flex-col ${
+              manageOpen ? "block" : "hidden"
+            }`}
+          >
+            <button
+              onClick={goToInventory}
+              className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+            >
+              Inventory
+            </button>
+            <button
+              onClick={goToMachines}
+              className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+            >
+              Machines
+            </button>
+            <button
+              onClick={goToServices}
+              className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+            >
+              Services
+            </button>
+          </div>
         </div>
 
         {/* Accounts Dropdown */}
@@ -85,22 +87,24 @@ export default function Navbar() {
           <button className="text-gray-700 font-medium hover:text-blue-600">
             Accounts
           </button>
-          {accountsOpen && (
-            <div className="absolute top-full left-0 mt-2 w-40 bg-white border rounded shadow-lg z-10 flex flex-col">
-              <button
-                onClick={goToStaff}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
-              >
-                Staff
-              </button>
-              <button
-                onClick={goToCustomer}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
-              >
-                Customer
-              </button>
-            </div>
-          )}
+          <div
+            className={`absolute top-full left-0 w-40 bg-white border rounded shadow-lg z-10 flex flex-col ${
+              accountsOpen ? "block" : "hidden"
+            }`}
+          >
+            <button
+              onClick={goToStaff}
+              className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+            >
+              Staff
+            </button>
+            <button
+              onClick={goToCustomer}
+              className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+            >
+              Customer
+            </button>
+          </div>
         </div>
       </div>
 
