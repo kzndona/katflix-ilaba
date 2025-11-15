@@ -1,7 +1,6 @@
 // app/in/accounts/staff/page.tsx
 "use client";
 
-import { createClient } from "@/src/app/utils/supabase/client";
 import { useEffect, useState } from "react";
 
 type Staff = {
@@ -19,7 +18,6 @@ type Staff = {
 };
 
 export default function StaffPage() {
-  const supabase = createClient();
   const [rows, setRows] = useState<Staff[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
