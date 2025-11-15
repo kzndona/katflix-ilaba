@@ -249,8 +249,8 @@ export default function InventoryPage() {
                 <td className="p-2 border truncate text-center">{r.unit}</td>
                 <td className="p-2 border text-right">₱{r.unit_cost}</td>
                 <td className="p-2 border text-right">₱{r.unit_price}</td>
-                <td className="p-2 border text-right">{r.quantity}</td>
-                <td className="p-2 border text-right">{r.reorder_level}</td>
+                <td className="p-2 border text-center">{r.quantity}</td>
+                <td className="p-2 border text-center">{r.reorder_level}</td>
                 <td className="p-2 border text-center">
                   {r.last_updated
                     ? new Date(r.last_updated).toLocaleString()
