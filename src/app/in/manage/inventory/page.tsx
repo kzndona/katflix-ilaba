@@ -243,10 +243,12 @@ export default function InventoryPage() {
                 className="cursor-pointer hover:bg-gray-50"
                 onClick={() => openEdit(r)}
               >
-                <td className="p-2 border truncate">{r.item_name}</td>
-                <td className="p-2 border truncate">{r.unit}</td>
-                <td className="p-2 border text-right">{r.unit_cost}</td>
-                <td className="p-2 border text-right">{r.unit_price}</td>
+                <td className="p-2 border truncate text-center">
+                  {r.item_name}
+                </td>
+                <td className="p-2 border truncate text-center">{r.unit}</td>
+                <td className="p-2 border text-right">₱{r.unit_cost}</td>
+                <td className="p-2 border text-right">₱{r.unit_price}</td>
                 <td className="p-2 border text-right">{r.quantity}</td>
                 <td className="p-2 border text-right">{r.reorder_level}</td>
                 <td className="p-2 border text-center">
