@@ -54,7 +54,7 @@ export async function updateSession(request: NextRequest) {
 
 
 
-  // Query staff table for actual role
+  // Query staff table for user role
   if (user) {
     const { data: staffData, error } = await supabase
       .from('staff')
@@ -64,20 +64,21 @@ export async function updateSession(request: NextRequest) {
 
     const role = staffData?.role
 
-    // Example: restrict /dashboard/staff to admin only
-    if (
-      request.nextUrl.pathname.startsWith('/in/accounts/staff') &&
-      role !== 'admin'
-    ) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/in/orders' // redirect non-admin
-      console.log("PROXY: Unauthorized access to /in/accounts/staff, redirecting to /in/orders");
-      return NextResponse.redirect(url)
-    }
-
-    // Restrict access to admin-only API
-    if (request.nextUrl.pathname.startsWith("/api/staff") && role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Admin-only routes
+    if (role !== 'admin') {
+      
+      // Restrict access to /in/accounts pages
+      if (request.nextUrl.pathname.startsWith("/in/accounts")) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/in/orders" // redirect non-admin
+        console.log("PROXY: Unauthorized access to /in/accounts/staff, redirecting to /in/orders");
+        return NextResponse.redirect(url)
+      }
+  
+      // Restrict access to admin-only API
+      if (request.nextUrl.pathname.startsWith("/api/staff")) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
     }
   }
 

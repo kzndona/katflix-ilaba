@@ -24,6 +24,7 @@ export default function StaffPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
 
+  // Get staff data on load
   useEffect(() => {
     load();
   }, []);
@@ -40,6 +41,7 @@ export default function StaffPage() {
     }
   }
 
+  // Open modal for new staff
   function openNew() {
     setEditing({
       id: "",
@@ -57,6 +59,7 @@ export default function StaffPage() {
     setModalOpen(true);
   }
 
+  // Open modal for editing existing staff
   function openEdit(row: Staff) {
     setEditing(row);
     setModalOpen(true);
@@ -65,31 +68,82 @@ export default function StaffPage() {
   async function save() {
     if (!editing) return;
 
-    const payload = { ...editing };
-    if (payload.id === "") {
-      const { error } = await supabase.from("staff").insert(payload);
-      if (!error) load();
-    } else {
-      const { error } = await supabase
-        .from("staff")
-        .update(payload)
-        .eq("id", payload.id);
-      if (!error) load();
+    const data = { ...editing };
+    // Validate required fields
+    const requiredFields: (keyof Staff)[] = [
+      "first_name",
+      "last_name",
+      "birthdate",
+      "gender",
+      "role",
+      "address",
+      "phone_number",
+      "email_address",
+    ];
+
+    for (const field of requiredFields) {
+      const value = data[field];
+      if (value === null || value === undefined || value === "") {
+        console.error(`Validation error: ${field} is required`);
+        return;
+      }
     }
-    setModalOpen(false);
+
+    // Validate phone number (PH format)
+    const phone = editing!.phone_number;
+    const phonePattern = /^09\d{9}$/;
+    if (!phonePattern.test(phone!)) {
+      console.error(
+        "Validation error: phone_number must start with 09 and have 11 digits"
+      );
+      return;
+    }
+
+    // Validate email format
+    const email = editing!.email_address;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email!)) {
+      console.error("Validation error: email_address is not valid");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/staff/saveStaff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to save staff");
+
+      load(); // reload table
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Save failed:", error);
+      // Optionally show error in UI
+    }
   }
 
   async function remove() {
-    if (!editing) return;
-    if (!editing.id) return;
-    const { error } = await supabase
-      .from("staff")
-      .delete()
-      .eq("id", editing.id);
-    if (!error) load();
-    setModalOpen(false);
+    if (!editing?.id) return;
+
+    try {
+      const res = await fetch("/api/staff/removeStaff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editing.id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to delete staff");
+
+      load(); // reload table
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Remove failed:", error);
+    }
   }
 
+  // Update a field in the editing staff
   function updateField(key: keyof Staff, value: any) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
@@ -204,7 +258,7 @@ export default function StaffPage() {
                 onChange={(v) => updateField("phone_number", v)}
               />
               <Field
-                label="Email"
+                label="Email Address"
                 value={editing.email_address ?? ""}
                 onChange={(v) => updateField("email_address", v)}
               />
