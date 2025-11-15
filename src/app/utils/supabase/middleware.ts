@@ -25,12 +25,19 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
+
+
   // IMPORTANT: Avoid writing any logic between createServerClient and
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
+
+
   // IMPORTANT: Don't remove getClaims()
   const { data } = await supabase.auth.getClaims()
+
+
+
 
   const user = data?.claims
   
@@ -44,6 +51,8 @@ export async function updateSession(request: NextRequest) {
     console.log("PROXY: No user session, redirecting to /auth/sign-in");
     return NextResponse.redirect(url)
   }
+
+
 
   // Query staff table for actual role
   if (user) {
@@ -65,7 +74,16 @@ export async function updateSession(request: NextRequest) {
       console.log("PROXY: Unauthorized access to /in/accounts/staff, redirecting to /in/orders");
       return NextResponse.redirect(url)
     }
+
+    // Restrict access to admin-only API
+    if (request.nextUrl.pathname.startsWith("/api/staff") && role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
   }
+
+
+
+
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
@@ -79,6 +97,10 @@ export async function updateSession(request: NextRequest) {
   //    return myNewResponse
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
+
+
+
+
 
   return supabaseResponse
 }
