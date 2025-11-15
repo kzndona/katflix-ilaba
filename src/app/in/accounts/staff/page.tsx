@@ -164,13 +164,13 @@ export default function StaffPage() {
       <table className="w-full border">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-2 border">First Name</th>
-            <th className="p-2 border">Last Name</th>
-            <th className="p-2 border">Birthdate</th>
-            <th className="p-2 border">Gender</th>
-            <th className="p-2 border">Role</th>
-            <th className="p-2 border">Phone Number</th>
-            <th className="p-2 border">Email Address</th>
+            <th className="p-2 border w-1/6">First Name</th>
+            <th className="p-2 border w-1/6">Last Name</th>
+            <th className="p-2 border w-1/9">Birthdate</th>
+            <th className="p-2 border w-1/9">Gender</th>
+            <th className="p-2 border w-1/9">Role</th>
+            <th className="p-2 border w-1.5/12">Phone Number</th>
+            <th className="p-2 border w-1.5/12">Email Address</th>
             <th className="p-2 border">Active</th>
           </tr>
         </thead>
@@ -181,14 +181,16 @@ export default function StaffPage() {
               className="cursor-pointer hover:bg-gray-50"
               onClick={() => openEdit(r)}
             >
-              <td className="p-2 border">{r.first_name}</td>
-              <td className="p-2 border">{r.last_name}</td>
-              <td className="p-2 border">{r.birthdate}</td>
-              <td className="p-2 border">{r.gender}</td>
-              <td className="p-2 border">{r.role}</td>
-              <td className="p-2 border">{r.phone_number}</td>
-              <td className="p-2 border">{r.email_address}</td>
-              <td className="p-2 border">{r.is_active ? "Yes" : "No"}</td>
+              <td className="p-2 border text-center">{r.first_name}</td>
+              <td className="p-2 border text-center">{r.last_name}</td>
+              <td className="p-2 border text-center">{r.birthdate}</td>
+              <td className="p-2 border text-center">{r.gender}</td>
+              <td className="p-2 border text-center">{r.role}</td>
+              <td className="p-2 border text-center">{r.phone_number}</td>
+              <td className="p-2 border text-center">{r.email_address}</td>
+              <td className="p-2 border text-center">
+                {r.is_active ? "Yes" : "No"}
+              </td>
             </tr>
           ))}
         </tbody>
