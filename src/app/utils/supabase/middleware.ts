@@ -80,6 +80,23 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
     }
+
+    // Inventory management routes (admin and attendant only)
+    if ((role !== 'admin' && role !== 'attendant')) {
+      
+      // Restrict access to /in/manage pages
+      if (request.nextUrl.pathname.startsWith("/in/manage")) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/in/orders" // redirect non-admin
+        console.log("PROXY: Unauthorized access to /in/manage, redirecting to /in/orders");
+        return NextResponse.redirect(url)
+      }
+  
+      // Restrict access to inventory API
+      if (request.nextUrl.pathname.startsWith("/api/inventory")) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+    }
   }
 
 
