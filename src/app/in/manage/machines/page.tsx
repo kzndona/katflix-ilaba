@@ -26,7 +26,7 @@ export default function MachinesPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/machines/getMachines");
+      const res = await fetch("/api/manage/machines/getMachines");
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Server responded ${res.status}`);
@@ -160,7 +160,7 @@ export default function MachinesPage() {
         <table className="w-full table-fixed border">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-2 border">Machine</th>
+              <th className="p-2 border">Name</th>
               <th className="p-2 border">Type</th>
               <th className="p-2 border">Status</th>
               <th className="p-2 border">Last Serviced</th>

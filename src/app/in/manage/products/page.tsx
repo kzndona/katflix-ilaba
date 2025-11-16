@@ -30,7 +30,7 @@ export default function ProductsPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/products/getProducts");
+      const res = await fetch("/api/manage/products/getProducts");
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Server responded ${res.status}`);
@@ -163,7 +163,7 @@ export default function ProductsPage() {
         reorder_level: Number(Math.trunc(Number(data.reorder_level))),
       };
 
-      const res = await fetch("/api/products/saveProduct", {
+      const res = await fetch("/api/manage/products/saveProduct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -188,7 +188,7 @@ export default function ProductsPage() {
     setErrorMsg(null);
     setSaving(true);
     try {
-      const res = await fetch("/api/products/removeProduct", {
+      const res = await fetch("/api/manage/products/removeProduct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editing.id }),

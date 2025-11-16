@@ -93,7 +93,7 @@ export async function updateSession(request: NextRequest) {
       }
   
       // Restrict access to inventory API
-      if (request.nextUrl.pathname.startsWith("/api/inventory")) {
+      if (request.nextUrl.pathname.startsWith("/api/manage")) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
     }
