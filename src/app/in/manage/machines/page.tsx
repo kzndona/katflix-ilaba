@@ -97,7 +97,7 @@ export default function MachinesPage() {
         last_serviced_at: editing.last_serviced_at,
       };
 
-      const res = await fetch("/api/machines/saveMachine", {
+      const res = await fetch("/api/manage/machines/saveMachines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
