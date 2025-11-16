@@ -82,7 +82,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Inventory management routes (admin and attendant only)
-    if ((role !== 'admin' && role !== 'attendant')) {
+    if ((role !== 'admin' && role !== 'attendant' && role !== 'cashier_attendant')) {
       
       // Restrict access to /in/manage pages
       if (request.nextUrl.pathname.startsWith("/in/manage")) {
