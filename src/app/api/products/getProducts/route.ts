@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     );
 
     const { data, error } = await supabase
-      .from("inventory")
+      .from("products")
       .select("*");
 
     if (error) throw error;

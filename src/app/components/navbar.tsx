@@ -14,7 +14,7 @@ export default function Navbar() {
   // Placeholder navigation functions
   const goToPOS = () => router.push("/in/pos");
   const goToOrders = () => router.push("/in/orders");
-  const goToInventory = () => router.push("/in/manage/inventory");
+  const goToProducts = () => router.push("/in/manage/products");
   const goToMachines = () => router.push("/in/manage/machines");
   const goToServices = () => router.push("/in/manage/services");
   const goToStaff = () => router.push("/in/accounts/staff");
@@ -58,10 +58,10 @@ export default function Navbar() {
             }`}
           >
             <button
-              onClick={goToInventory}
+              onClick={goToProducts}
               className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
             >
-              Inventory
+              Products
             </button>
             <button
               onClick={goToMachines}

@@ -1,9 +1,9 @@
-// app/in/manage/inventory/page.tsx
+// app/in/manage/products/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
-type Inventory = {
+type Products = {
   id: string;
   item_name: string;
   unit: string;
@@ -14,10 +14,10 @@ type Inventory = {
   last_updated: string | null;
 };
 
-export default function InventoryPage() {
-  const [rows, setRows] = useState<Inventory[]>([]);
+export default function ProductsPage() {
+  const [rows, setRows] = useState<Products[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Inventory | null>(null);
+  const [editing, setEditing] = useState<Products | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -30,14 +30,14 @@ export default function InventoryPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/inventory/getInventory");
+      const res = await fetch("/api/products/getProducts");
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Server responded ${res.status}`);
       }
       const data = await res.json();
       // Map numeric fields into strings for the form
-      const normalized: Inventory[] = (data || []).map((r: any) => ({
+      const normalized: Products[] = (data || []).map((r: any) => ({
         id: r.id,
         item_name: r.item_name ?? "",
         unit: r.unit ?? "",
@@ -61,8 +61,8 @@ export default function InventoryPage() {
       }));
       setRows(normalized);
     } catch (err) {
-      console.error("Failed to load inventory:", err);
-      setErrorMsg("Failed to load inventory");
+      console.error("Failed to load products:", err);
+      setErrorMsg("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -83,20 +83,20 @@ export default function InventoryPage() {
     setErrorMsg(null);
   }
 
-  function openEdit(row: Inventory) {
+  function openEdit(row: Products) {
     setEditing(row);
     setModalOpen(true);
     setErrorMsg(null);
   }
 
-  function updateField<K extends keyof Inventory>(key: K, value: Inventory[K]) {
+  function updateField<K extends keyof Products>(key: K, value: Products[K]) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
   }
 
-  function validateForm(data: Inventory) {
+  function validateForm(data: Products) {
     // required fields
-    const required: (keyof Inventory)[] = [
+    const required: (keyof Products)[] = [
       "item_name",
       "unit",
       "unit_cost",
@@ -163,7 +163,7 @@ export default function InventoryPage() {
         reorder_level: Number(Math.trunc(Number(data.reorder_level))),
       };
 
-      const res = await fetch("/api/inventory/saveInventory", {
+      const res = await fetch("/api/products/saveProduct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -177,7 +177,7 @@ export default function InventoryPage() {
       setModalOpen(false);
     } catch (err) {
       console.error("Save failed:", err);
-      setErrorMsg("Failed to save inventory");
+      setErrorMsg("Failed to save products");
     } finally {
       setSaving(false);
     }
@@ -188,7 +188,7 @@ export default function InventoryPage() {
     setErrorMsg(null);
     setSaving(true);
     try {
-      const res = await fetch("/api/inventory/removeInventory", {
+      const res = await fetch("/api/products/removeProduct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editing.id }),
@@ -201,7 +201,7 @@ export default function InventoryPage() {
       setModalOpen(false);
     } catch (err) {
       console.error("Remove failed:", err);
-      setErrorMsg("Failed to remove inventory");
+      setErrorMsg("Failed to remove products");
     } finally {
       setSaving(false);
     }
@@ -210,7 +210,7 @@ export default function InventoryPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div className="text-xl font-semibold">Inventory</div>
+        <div className="text-xl font-semibold">Products</div>
         <button
           onClick={openNew}
           className="px-3 py-1 bg-blue-600 text-white rounded"
@@ -266,7 +266,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 w-[560px] rounded shadow space-y-4">
             <div className="text-lg font-semibold">
-              {editing.id ? "Edit Inventory" : "Add Inventory"}
+              {editing.id ? "Edit Product" : "Add Product"}
             </div>
 
             {errorMsg && <div className="text-red-600">{errorMsg}</div>}
