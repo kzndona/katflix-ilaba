@@ -97,7 +97,7 @@ export default function MachinesPage() {
         last_serviced_at: editing.last_serviced_at,
       };
 
-      const res = await fetch("/api/manage/machines/saveMachines", {
+      const res = await fetch("/api/manage/machines/saveMachine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -121,7 +121,7 @@ export default function MachinesPage() {
     setErrorMsg(null);
     setSaving(true);
     try {
-      const res = await fetch("/api/machines/removeMachine", {
+      const res = await fetch("/api/manage/machines/removeMachine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editing.id }),
