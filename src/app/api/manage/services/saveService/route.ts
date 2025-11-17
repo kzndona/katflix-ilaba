@@ -11,17 +11,17 @@ export async function POST(req: Request) {
 
     let result;
     if (!data.id) {
-      // insert new machine
-      result = await supabase.from("machines").insert(data);
+      // insert new service
+      result = await supabase.from("services").insert(data);
     } else {
-      // update existing machine
-      result = await supabase.from("machine").update(data).eq("id", data.id);
+      // update existing service
+      result = await supabase.from("services").update(data).eq("id", data.id);
     }
 
     if (result.error) throw result.error;
     return NextResponse.json(result.data);
   } catch (error) {
-    console.error("Failed to save machine:", error);
-    return NextResponse.json({ error: "Failed to save machine" }, { status: 500 });
+    console.error("Failed to save services:", error);
+    return NextResponse.json({ error: "Failed to save services" }, { status: 500 });
   }
 }

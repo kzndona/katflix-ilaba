@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
 
-  console.log("GET products called");
+  console.log("GET services called");
 
   try {
     const supabase = createClient(
@@ -12,16 +12,16 @@ export async function GET(req: Request) {
     );
 
     const { data, error } = await supabase
-      .from("products")
+      .from("services")
       .select("*");
 
     if (error) throw error;
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching products table:", error);
+    console.error("Error fetching services table:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products table" },
+      { error: "Failed to fetch services table" },
       { status: 500 }
     );
   }

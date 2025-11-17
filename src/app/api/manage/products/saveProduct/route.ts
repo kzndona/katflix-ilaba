@@ -11,17 +11,17 @@ export async function POST(req: Request) {
 
     let result;
     if (!data.id) {
-      // insert new staff
-      result = await supabase.from("inventory").insert(data);
+      // insert new product
+      result = await supabase.from("products").insert(data);
     } else {
-      // update existing staff
-      result = await supabase.from("inventory").update(data).eq("id", data.id);
+      // update existing product
+      result = await supabase.from("products").update(data).eq("id", data.id);
     }
 
     if (result.error) throw result.error;
     return NextResponse.json(result.data);
   } catch (error) {
-    console.error("Failed to save inventory:", error);
-    return NextResponse.json({ error: "Failed to save inventory" }, { status: 500 });
+    console.error("Failed to save products:", error);
+    return NextResponse.json({ error: "Failed to save products" }, { status: 500 });
   }
 }
