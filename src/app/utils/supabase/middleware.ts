@@ -64,6 +64,14 @@ export async function updateSession(request: NextRequest) {
 
     const role = staffData?.role
 
+    // TODO:
+    // const isBack = request.headers.get('sec-fetch-user') !== '?1'
+    // if (user && !isBack && request.nextUrl.pathname.startsWith('/auth/sign-in')) {
+    //   const url = request.nextUrl.clone()
+    //   url.pathname = '/in/orders'
+    //   return NextResponse.redirect(url)
+    // }
+
     // Admin-only routes
     if (role !== 'admin') {
       

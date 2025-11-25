@@ -28,7 +28,7 @@ export default function LoginPage() {
     if (error) {
       console.log(error.message);
     } else {
-      router.push("/in/orders"); // redirect after successful login
+      router.replace("/in/orders"); // redirect after successful login
     }
   };
 
