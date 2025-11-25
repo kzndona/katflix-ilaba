@@ -203,16 +203,18 @@ export default function MachinesPage() {
                 onChange={(v) => updateField("machine_name", v)}
               />
 
-              <Field
+              <SelectField
                 label="Type"
                 value={editing.type}
                 onChange={(v) => updateField("type", v)}
+                options={["wash", "dry", "iron"]}
               />
 
-              <Field
+              <SelectField
                 label="Status"
                 value={editing.status}
                 onChange={(v) => updateField("status", v)}
+                options={["available", "running", "maintenance"]}
               />
 
               <Field
@@ -279,6 +281,35 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className="border px-2 py-1 rounded"
       />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <div className="flex flex-col">
+      <label className="text-sm">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="border px-2 py-1 rounded"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt.charAt(0) + opt.slice(1)}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -15,10 +15,36 @@ export async function POST(req: Request) {
       result = await supabase.from("machines").insert(data);
     } else {
       // update existing machine
-      result = await supabase.from("machine").update(data).eq("id", data.id);
+      result = await supabase.from("machines").update(data).eq("id", data.id);
     }
 
     if (result.error) throw result.error;
+
+  // After saving the machine, check the availability of machines of the same type
+    const machineType = data.type;
+
+    const { data: machines, error } = await supabase
+    .from("machines")
+    .select("status")
+    .eq("type", machineType);
+
+
+    const allUnavailable =
+      machines!.length > 0 &&
+      machines!.every(m => m.status !== "available");
+
+    if (allUnavailable) {
+      await supabase
+        .from("services")
+        .update({ is_active: false })
+        .eq("service_type", machineType);
+    } else {
+      await supabase
+        .from("services")
+        .update({ is_active: true })
+        .eq("service_type", machineType);
+    }
+
     return NextResponse.json(result.data);
   } catch (error) {
     console.error("Failed to save machine:", error);
