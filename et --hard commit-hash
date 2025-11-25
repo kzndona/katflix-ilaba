@@ -1,0 +1,27 @@
+[33mfe7e397[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m - bandaid fix at back navigation button
+[33m8012f9c[m - change machine type from 'washer', 'dryer', 'iron' to 'wash', 'dry', 'iron' - change machine type field to dropdown - change machine status field to dropwdown - add function that change service availability when a machine is updated
+[33m2449006[m - add /in/manage/products APIs - add /in/manage/services APIs - create /in/manage/services page
+[33mf6dc1c4[m[33m ([m[1;31morigin/main[m[33m)[m I tried deploying but Vercel is catching problems. I'm guessing its the empty pages.
+[33m405c0f4[m - add saveMachine API - add removeMachine API
+[33m1e279f4[m - fix saveMachines route - add saveMachines API
+[33m08e8fd0[m - add getMachines API - move products and machines API folder from /app/api to /app/api/in - update products API routes
+[33m27eb583[m - add /in/manage/machines page - page route already included in middleware
+[33med3bf56[m Renamed inventory table to products table
+[33ma061ef5[m There is now a cashier_attendant role.
+[33m5f85dbd[m Inventory rows can now be removed
+[33m3c19ee1[m Creating new and updating existing rows in Inventory table works now
+[33mef037c9[m - add getInventory API - align inventory body text to center - add Philippine Peso symbol in front of currency values in /in/manage/inventory
+[33m36b9485[m - add /in/manage/inventory routes in middleware
+[33m29699f6[m - add /in/manage/invetory page code - remove unused variables and imports in /in/manage/inventory and /in/accounts/staff
+[33m59791a6[m - add styling to table columns for consistent spacing
+[33m4a76ca9[m Editing staff rows now works.
+[33m862210a[m - add proper columns to staff table in /in/accounts/staff - add api route in middleware - create api endpoint for server-side authentication of user before returning the staff table rows (uses service key)
+[33m127e944[m - add console log in middleware when non-admin staff are accessing /in/accounts - add placeholder for /in/accounts/staff - temporary fix in navbar dropdown menus early dismiss
+[33mdee12ae[m - add navbar - add functionality to sign out button in navbar
+[33me40960e[m - add supabase client files (client, server, middleware) - add temporary /orders for sign-in redirect - improve /auth/sign-in UI - move /src/app/proxy.ts to /src/proxy.ts
+[33ma6906e6[m - installed supabase-js package and supabase-ssr package - add supabase to env.local
+[33mc878d50[m - changed default sans-serif font to Nunito Sans - changed default monospace font to Noto Sans Mono
+[33mc5e9ab5[m - added sign-in page - temporary disabled some global.css settings
+[33m71fc47d[m added folders in /src/app: - auth: sigin, forgot password, reset password - in (features): accounts/customers, accounts/staff, manage/inventory, manage/machines, manage/services, orders, pos - components: navbar, footer
+[33mffe319c[m - moved /app inside /src - installed tailwind postcss prefixer package - installed prettier - added "env.*" to .gitignore
+[33m0444f42[m Initial commit from Create Next App
