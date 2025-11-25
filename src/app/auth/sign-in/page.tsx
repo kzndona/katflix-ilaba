@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
@@ -37,10 +38,12 @@ export default function LoginPage() {
       <div className="flex w-full h-full gap-2">
         {/* Left Image Panel */}
         <div className="w-1/2 rounded-2xl shadow-xl overflow-hidden bg-blue-600">
-          <img
-            src="/laundry.jpg" // replace with your image path
+          <Image
+            src="/images/login_carousel_1.png" // replace with your image path
             alt="Laundry Shop"
             className="object-cover h-full w-full"
+            width={500}
+            height={500}
           />
         </div>
 
