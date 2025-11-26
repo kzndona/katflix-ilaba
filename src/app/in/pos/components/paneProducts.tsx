@@ -23,7 +23,7 @@ export default function PaneProducts({
         <div className="text-sm text-gray-500">Touch-friendly grid</div>
       </div>
 
-      <div className="grid grid-cols-8 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {products.map((p) => {
           const count = orderProductCounts[p.id] || 0;
           return (
