@@ -105,6 +105,16 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
     }
+
+    if ((role !== 'admin' && role !== 'cashier' && role !== 'cashier_attendant')) {
+
+      if (request.nextUrl.pathname.startsWith("/in/pos")) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/in/orders" // redirect non-admin
+        console.log("PROXY: Unauthorized access to /in/pos, redirecting to /in/orders");
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
 
