@@ -25,18 +25,12 @@ export default function POSPage() {
     pos.setCustomerSuggestions([]);
   };
 
-  const duplicateActiveBasket = () => {
-    pos.setBaskets((prev: any) => {
-      const copy = prev.slice();
-      const b = {
-        ...copy[pos.activeBasketIndex],
-        id: `b${Date.now()}`,
-        name: `Basket ${copy.length + 1}`,
-      };
-      copy.push(b);
-      return copy;
-    });
+  const createNewBasket = () => {
+    pos.addBasket();
+    pos.setActiveBasketIndex(pos.baskets.length);
   };
+
+  const deleteActiveBasket = pos.deleteBasket;
 
   return (
     <div className="h-screen w-full bg-white text-gray-900">
@@ -85,7 +79,8 @@ export default function POSPage() {
               baskets={pos.baskets}
               activeBasketIndex={pos.activeBasketIndex}
               updateActiveBasket={pos.updateActiveBasket}
-              duplicateActiveBasket={duplicateActiveBasket}
+              deleteActiveBasket={pos.deleteBasket}
+              createNewBasket={createNewBasket}
             />
           )}
         </main>

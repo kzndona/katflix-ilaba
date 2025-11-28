@@ -7,14 +7,16 @@ type Props = {
   baskets: Basket[];
   activeBasketIndex: number;
   updateActiveBasket: (p: Partial<Basket>) => void;
-  duplicateActiveBasket: () => void;
+  deleteActiveBasket: (index: number) => void;
+  createNewBasket: () => void;
 };
 
 export default function PaneBaskets({
   baskets,
   activeBasketIndex,
   updateActiveBasket,
-  duplicateActiveBasket,
+  deleteActiveBasket,
+  createNewBasket,
 }: Props) {
   const b = baskets[activeBasketIndex];
 
@@ -151,16 +153,13 @@ export default function PaneBaskets({
       <div className="mt-4 flex gap-3">
         <button
           className="px-4 py-3 rounded bg-indigo-600 text-white"
-          onClick={() => alert("Basket updated (mock)")}
+          onClick={() => deleteActiveBasket(activeBasketIndex)}
         >
-          Apply
+          Delete
         </button>
 
-        <button
-          className="px-4 py-3 rounded border"
-          onClick={duplicateActiveBasket}
-        >
-          Duplicate Basket
+        <button className="px-4 py-3 rounded border" onClick={createNewBasket}>
+          New Basket
         </button>
       </div>
     </div>
