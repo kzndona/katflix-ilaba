@@ -30,8 +30,6 @@ export default function POSPage() {
     pos.setActiveBasketIndex(pos.baskets.length);
   };
 
-  const deleteActiveBasket = pos.deleteBasket;
-
   return (
     <div className="h-screen w-full bg-white text-gray-900">
       <div className="h-full max-w-[1600px] mx-auto p-4 grid grid-cols-[260px_1fr_420px] gap-4">

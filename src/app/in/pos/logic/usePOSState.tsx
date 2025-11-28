@@ -6,6 +6,7 @@ import {
   ReceiptBasketLine,
   ReceiptProductLine,
 } from "./types";
+import { createClient } from "@/src/app/utils/supabase/client";
 
 /**
  * usePOSState
@@ -77,39 +78,26 @@ export function usePOSState() {
       setCustomerSuggestions([]);
       return;
     }
-    // Mock search: returns customers whose first/last contains query
-    const seed: Customer[] = [
-      {
-        id: "c1",
-        first_name: "Ana",
-        last_name: "Santos",
-        phone_number: "09171234567",
-      },
-      {
-        id: "c2",
-        first_name: "Miguel",
-        last_name: "Reyes",
-        phone_number: "09179876543",
-      },
-    ];
-    const results = seed.filter(
-      (c) =>
-        `${c.first_name} ${c.last_name}`
-          .toLowerCase()
-          .includes(customerQuery.toLowerCase()) ||
-        (c.phone_number ?? "").includes(customerQuery)
-    );
-    setCustomerSuggestions(results);
 
-    // --- Real API example (commented) ---
-    // (async () => {
-    //   const { data, error } = await supabase
-    //     .from("customers")
-    //     .select("*")
-    //     .ilike("first_name", `%${customerQuery}%`)
-    //   if (error) console.error(error)
-    //   else setCustomerSuggestions(data)
-    // })();
+    // --- Real API call ---
+    (async () => {
+      const supabase = createClient();
+
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .or(
+          `first_name.ilike.%${customerQuery}%,last_name.ilike.%${customerQuery}%,phone_number.ilike.%${customerQuery}%`
+        )
+        .limit(10);
+
+      if (error) {
+        console.error("Customer search error:", error);
+        setCustomerSuggestions([]);
+      } else {
+        setCustomerSuggestions(data || []);
+      }
+    })();
   }, [customerQuery]);
 
   // --- products add/remove ---
