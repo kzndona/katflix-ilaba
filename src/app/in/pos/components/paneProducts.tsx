@@ -35,7 +35,7 @@ export default function PaneProducts({
                     : "hover:bg-gray-50"
                 }`}
                 onClick={() => removeProduct(p.id)}
-                title={`Remove one ${p.name} (disabled at 0)`}
+                title={`Remove one ${p.item_name} (disabled at 0)`}
               >
                 <div className="w-16 h-16 bg-gray-100 rounded mb-2 flex items-center justify-center text-2xl">
                   −
@@ -47,13 +47,15 @@ export default function PaneProducts({
               <div
                 className="col-span-1 p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
                 onClick={() => addProduct(p.id)}
-                title={`Add one ${p.name}`}
+                title={`Add one ${p.item_name}`}
               >
                 <div className="w-16 h-16 bg-gray-100 rounded mb-2 flex items-center justify-center text-2xl">
                   +
                 </div>
-                <div className="text-sm text-center">{p.name}</div>
-                <div className="text-xs text-gray-500 mt-1">₱{p.price}</div>
+                <div className="text-sm text-center">{p.item_name}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  ₱{p.unit_price}
+                </div>
               </div>
             </React.Fragment>
           );
@@ -73,9 +75,9 @@ export default function PaneProducts({
             return (
               <div key={pid} className="flex justify-between text-sm">
                 <div>
-                  {p.name} × {qty}
+                  {p.item_name} × {qty}
                 </div>
-                <div>₱{p.price * qty}</div>
+                <div>₱{p.unit_price * qty}</div>
               </div>
             );
           })}

@@ -36,12 +36,8 @@ const newBasket = (index: number): Basket => ({
 
 export function usePOSState() {
   // --- Mock Data ---
-  const [products] = React.useState<Product[]>([
-    { id: "p1", name: "HMA Detergent", price: 35 },
-    { id: "p2", name: "Downy Blue", price: 7 },
-    { id: "p3", name: "Stain Remover", price: 55 },
-    { id: "p4", name: "Fabric Softener", price: 10 },
-  ]);
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = React.useState(true);
 
   const [customer, setCustomer] = React.useState<Customer | null>(null);
   const [customerQuery, setCustomerQuery] = React.useState("");
@@ -101,6 +97,29 @@ export function usePOSState() {
   }, [customerQuery]);
 
   // --- products add/remove ---
+  // --- load products from DB ---
+  React.useEffect(() => {
+    const loadProducts = async () => {
+      const supabase = createClient();
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, item_name, unit_price")
+        .order("item_name", { ascending: true });
+
+      if (error) {
+        console.error("Failed to load products:", error);
+        setProducts([]);
+      } else {
+        setProducts(data || []);
+      }
+
+      setLoadingProducts(false);
+    };
+
+    loadProducts();
+  }, []);
+
   const addProduct = (productId: string) => {
     setOrderProductCounts((prev) => ({
       ...prev,
@@ -152,8 +171,14 @@ export function usePOSState() {
       orderProductCounts
     ).map(([pid, qty]) => {
       const p = products.find((x) => x.id === pid)!;
-      const lineTotal = p.price * qty;
-      return { id: pid, name: p.name, qty, price: p.price, lineTotal };
+      const lineTotal = p.unit_price * qty;
+      return {
+        id: pid,
+        name: p.item_name,
+        qty,
+        price: p.unit_price,
+        lineTotal,
+      };
     });
 
     const productSubtotal = productLines.reduce((s, l) => s + l.lineTotal, 0);
