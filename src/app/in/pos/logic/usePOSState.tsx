@@ -5,6 +5,7 @@ import {
   Basket,
   ReceiptBasketLine,
   ReceiptProductLine,
+  LaundryService,
 } from "./types";
 import { createClient } from "@/src/app/utils/supabase/client";
 
@@ -45,6 +46,10 @@ export function usePOSState() {
     Customer[]
   >([]);
 
+  // --- Services ---
+  const [services, setServices] = React.useState<LaundryService[]>([]);
+
+  // --- Baskets ---
   const [baskets, setBaskets] = React.useState<Basket[]>([newBasket(0)]);
   const [activeBasketIndex, setActiveBasketIndex] = React.useState(0);
 
@@ -68,7 +73,26 @@ export function usePOSState() {
 
   const [showConfirm, setShowConfirm] = React.useState(false);
 
-  // --- Customer search (mock) ---
+  React.useEffect(() => {
+    const loadServices = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("is_active", true);
+
+      if (error) {
+        console.error("Service load error:", error);
+        setServices([]);
+      } else {
+        setServices(data || []);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  // --- Customer search ---
   React.useEffect(() => {
     if (!customerQuery) {
       setCustomerSuggestions([]);
@@ -165,6 +189,26 @@ export function usePOSState() {
     });
   };
 
+  const getServiceByType = (type: string, premium: boolean) => {
+    // premium toggle means: fetch service where name contains "Premium"
+    const matches = services.filter((s) => s.service_type === type);
+
+    if (matches.length === 0) return null;
+
+    if (premium) {
+      return (
+        matches.find((s) => s.name.toLowerCase().includes("premium")) ||
+        matches[0]
+      );
+    }
+
+    // basic = first non-premium service
+    return (
+      matches.find((s) => !s.name.toLowerCase().includes("premium")) ||
+      matches[0]
+    );
+  };
+
   // --- receipt/calculation ---
   const computeReceipt = React.useMemo(() => {
     const productLines: ReceiptProductLine[] = Object.entries(
@@ -185,17 +229,57 @@ export function usePOSState() {
 
     // Baskets cost mock calculation: base rates depend on weight & services
     const basketLines: ReceiptBasketLine[] = baskets.map((b) => {
-      const wash = b.washCount * 50 + (b.washPremium ? 25 : 0); // mock
-      const dry = b.dryCount * 30 + (b.dryPremium ? 10 : 0);
-      const spin = b.spinCount * 10;
-      const subtotal =
-        wash + dry + spin + (b.iron ? 20 : 0) + (b.fold ? 10 : 0);
+      const weight = b.weightKg;
+
+      // 1. wash (basic or premium)
+      let washPrice = 0;
+      if (b.washCount > 0) {
+        const s = getServiceByType("wash", b.washPremium);
+        if (s) washPrice = s.rate_per_kg * weight * b.washCount;
+      }
+
+      // 2. dry (basic or premium)
+      let dryPrice = 0;
+      if (b.dryCount > 0) {
+        const s = getServiceByType("dry", b.dryPremium);
+        if (s) dryPrice = s.rate_per_kg * weight * b.dryCount;
+      }
+
+      // 3. spin (count-based)
+      let spinPrice = 0;
+      if (b.spinCount > 0) {
+        const s = getServiceByType("spin", false);
+        if (s) spinPrice = s.rate_per_kg * weight * b.spinCount;
+      }
+
+      // 4. iron (toggle)
+      let ironPrice = 0;
+      if (b.iron) {
+        const s = getServiceByType("iron", false);
+        if (s) ironPrice = s.rate_per_kg * weight;
+      }
+
+      // 5. fold (toggle)
+      let foldPrice = 0;
+      if (b.fold) {
+        const s = getServiceByType("fold", false);
+        if (s) foldPrice = s.rate_per_kg * weight;
+      }
+
+      const subtotal = washPrice + dryPrice + spinPrice + ironPrice + foldPrice;
       const total = subtotal + PRICING.serviceFeePerBasket;
+
       return {
         id: b.id,
         name: b.name,
         weightKg: b.weightKg,
-        breakdown: { wash, dry, spin },
+        breakdown: {
+          wash: washPrice,
+          dry: dryPrice,
+          spin: spinPrice,
+          iron: ironPrice,
+          fold: foldPrice,
+        },
         total,
       };
     });

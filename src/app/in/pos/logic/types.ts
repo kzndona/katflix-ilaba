@@ -45,3 +45,13 @@ export type ReceiptProductLine = {
   price: number;
   lineTotal: number;
 };
+
+export type LaundryService = {
+  id: string;
+  service_type: string;
+  name: string;
+  description: string | null;
+  base_duration_minutes: number;
+  rate_per_kg: number;
+  is_active: boolean;
+};
