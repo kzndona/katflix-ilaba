@@ -297,34 +297,121 @@ export function usePOSState() {
     };
   }, [orderProductCounts, baskets, products, handling]);
 
-  // --- mock submit order ---
   const saveOrder = async () => {
+    // 1️⃣ Prepare products array
+    const productsPayload = Object.entries(orderProductCounts).map(
+      ([productId, qty]) => {
+        const product = products.find((p) => p.id === productId)!;
+        return {
+          product_id: productId,
+          quantity: qty,
+          unit_price: product.unit_price,
+          subtotal: qty * product.unit_price,
+        };
+      }
+    );
+
+    // 2️⃣ Prepare baskets array with services
+    const serviceTypes: Array<"wash" | "dry" | "spin" | "iron" | "fold"> = [
+      "wash",
+      "dry",
+      "spin",
+      "iron",
+      "fold",
+    ];
+
+    const basketsPayload = baskets.map((b) => {
+      const premiumMap: Record<string, boolean> = {
+        wash: b.washPremium,
+        dry: b.dryPremium,
+        spin: false,
+        iron: false,
+        fold: false,
+      };
+
+      const services = serviceTypes
+        .map((type) => {
+          const countKey =
+            type === "wash"
+              ? "washCount"
+              : type === "dry"
+                ? "dryCount"
+                : type === "spin"
+                  ? "spinCount"
+                  : type;
+
+          const active =
+            type === "iron" || type === "fold"
+              ? Boolean(b[countKey])
+              : (b[countKey] as number) > 0;
+
+          if (!active) return null;
+
+          const service = getServiceByType(type, premiumMap[type]);
+          if (!service) return null;
+
+          const qty =
+            type === "iron" || type === "fold" ? 1 : (b[countKey] as number);
+
+          const subtotal = (service.rate_per_kg ?? 0) * (b.weightKg ?? 0) * qty;
+
+          return {
+            service_id: service.id,
+            rate: service.rate_per_kg,
+            subtotal,
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        machine_id: b.machine_id || null,
+        weight: b.weightKg,
+        notes: b.notes || null,
+        subtotal:
+          computeReceipt.basketLines.find((bl) => bl.id === b.id)?.total ?? 0,
+        services,
+      };
+    });
+
+    // 3️⃣ Prepare customerId and total
     const payload = {
-      customer,
-      products: orderProductCounts,
-      baskets,
-      handling,
-      totals: computeReceipt,
+      customerId: customer?.id || null,
+      total: computeReceipt.total,
+      products: productsPayload,
+      baskets: basketsPayload,
+      payments: [], // you can fill this if you want
     };
 
-    // Mock action:
-    console.log("Saving order (mock)", payload);
-    alert(`Order saved (mock). Total: ₱${computeReceipt.total.toFixed(2)}`);
+    // 4️⃣ Send to API
+    try {
+      const res = await fetch("/api/pos/newOrder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    // --- Real API example (commented) ---
-    // try {
-    //   const { data, error } = await supabase.from("orders").insert([payload])
-    //   if (error) throw error
-    //   console.log("saved", data)
-    // } catch (err) {
-    //   console.error(err)
-    // }
+      if (!res.ok) {
+        console.error("Save order failed:", await res.text());
+        alert("Failed to save order. Check console.");
+        return null;
+      }
 
-    // reset
-    setOrderProductCounts({});
-    setBaskets([newBasket(0)]);
-    setActiveBasketIndex(0);
-    setActivePane("customer");
+      const data = await res.json();
+      console.log("Order saved:", data);
+      alert(`Order saved. Total: ₱${computeReceipt.total.toFixed(2)}`);
+
+      // RESET POS
+      setOrderProductCounts({});
+      setBaskets([newBasket(0)]);
+      setActiveBasketIndex(0);
+      setActivePane("customer");
+
+      return data.orderId;
+    } catch (err) {
+      console.error("saveOrder():", err);
+      alert("Something went wrong while saving the order.");
+      return null;
+    }
   };
 
   const resetPOS = () => {
