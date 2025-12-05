@@ -52,6 +52,25 @@ export default function PaneBaskets({
           <div className="text-sm mt-2">Weight</div>
         </div>
 
+        {/* Spin */}
+        <div
+          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+          onClick={() =>
+            updateActiveBasket({ spinCount: Math.max(0, b.spinCount - 1) })
+          }
+        >
+          <div className="text-2xl">−</div>
+          <div className="text-sm mt-2">Spin</div>
+          <div className="text-xs text-gray-500">{b.spinCount}</div>
+        </div>
+        <div
+          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+          onClick={() => updateActiveBasket({ spinCount: b.spinCount + 1 })}
+        >
+          <div className="text-2xl">+</div>
+          <div className="text-sm mt-2">Spin</div>
+        </div>
+
         {/* Wash controls */}
         <div
           className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
@@ -76,6 +95,14 @@ export default function PaneBaskets({
         >
           <div className="text-sm">Premium</div>
           <div className="text-xs text-gray-500">Wash</div>
+        </div>
+
+        {/* Fold */}
+        <div
+          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.fold ? "bg-blue-50" : "hover:bg-gray-50"}`}
+          onClick={() => updateActiveBasket({ fold: !b.fold })}
+        >
+          <div className="text-sm">Fold</div>
         </div>
 
         {/* Dry */}
@@ -104,39 +131,12 @@ export default function PaneBaskets({
           <div className="text-xs text-gray-500">Dry</div>
         </div>
 
-        {/* Spin */}
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() =>
-            updateActiveBasket({ spinCount: Math.max(0, b.spinCount - 1) })
-          }
-        >
-          <div className="text-2xl">−</div>
-          <div className="text-sm mt-2">Spin</div>
-          <div className="text-xs text-gray-500">{b.spinCount}</div>
-        </div>
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() => updateActiveBasket({ spinCount: b.spinCount + 1 })}
-        >
-          <div className="text-2xl">+</div>
-          <div className="text-sm mt-2">Spin</div>
-        </div>
-
         {/* Iron */}
         <div
           className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.iron ? "bg-blue-50" : "hover:bg-gray-50"}`}
           onClick={() => updateActiveBasket({ iron: !b.iron })}
         >
           <div className="text-sm">Iron</div>
-        </div>
-
-        {/* Fold */}
-        <div
-          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.fold ? "bg-blue-50" : "hover:bg-gray-50"}`}
-          onClick={() => updateActiveBasket({ fold: !b.fold })}
-        >
-          <div className="text-sm">Fold</div>
         </div>
       </div>
 
