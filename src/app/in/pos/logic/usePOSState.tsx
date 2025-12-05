@@ -227,47 +227,36 @@ export function usePOSState() {
 
     const productSubtotal = productLines.reduce((s, l) => s + l.lineTotal, 0);
 
-    // Baskets cost mock calculation: base rates depend on weight & services
     const basketLines: ReceiptBasketLine[] = baskets.map((b) => {
       const weight = b.weightKg;
 
-      // 1. wash (basic or premium)
-      let washPrice = 0;
-      if (b.washCount > 0) {
-        const s = getServiceByType("wash", b.washPremium);
-        if (s) washPrice = s.rate_per_kg * weight * b.washCount;
-      }
+      const washService = getServiceByType("wash", b.washPremium);
+      const washPrice =
+        b.washCount > 0 && washService
+          ? washService.rate_per_kg * weight * b.washCount
+          : 0;
 
-      // 2. dry (basic or premium)
-      let dryPrice = 0;
-      if (b.dryCount > 0) {
-        const s = getServiceByType("dry", b.dryPremium);
-        if (s) dryPrice = s.rate_per_kg * weight * b.dryCount;
-      }
+      const dryService = getServiceByType("dry", b.dryPremium);
+      const dryPrice =
+        b.dryCount > 0 && dryService
+          ? dryService.rate_per_kg * weight * b.dryCount
+          : 0;
 
-      // 3. spin (count-based)
-      let spinPrice = 0;
-      if (b.spinCount > 0) {
-        const s = getServiceByType("spin", false);
-        if (s) spinPrice = s.rate_per_kg * weight * b.spinCount;
-      }
+      const spinService = getServiceByType("spin", false);
+      const spinPrice =
+        b.spinCount > 0 && spinService
+          ? spinService.rate_per_kg * weight * b.spinCount
+          : 0;
 
-      // 4. iron (toggle)
-      let ironPrice = 0;
-      if (b.iron) {
-        const s = getServiceByType("iron", false);
-        if (s) ironPrice = s.rate_per_kg * weight;
-      }
+      const ironService = getServiceByType("iron", false);
+      const ironPrice =
+        b.iron && ironService ? ironService.rate_per_kg * weight : 0;
 
-      // 5. fold (toggle)
-      let foldPrice = 0;
-      if (b.fold) {
-        const s = getServiceByType("fold", false);
-        if (s) foldPrice = s.rate_per_kg * weight;
-      }
+      const foldService = getServiceByType("fold", false);
+      const foldPrice =
+        b.fold && foldService ? foldService.rate_per_kg * weight : 0;
 
       const subtotal = washPrice + dryPrice + spinPrice + ironPrice + foldPrice;
-      const total = subtotal + PRICING.serviceFeePerBasket;
 
       return {
         id: b.id,
@@ -280,26 +269,30 @@ export function usePOSState() {
           iron: ironPrice,
           fold: foldPrice,
         },
-        total,
+        total: subtotal, // NO service fee added
       };
     });
 
     const basketSubtotal = basketLines.reduce((s, l) => s + l.total, 0);
 
+    // Handling fee (only if delivery)
     const handlingFee = handling.deliver ? handling.deliveryFee : 0;
-    const fee = PRICING.serviceFeePerBasket * baskets.length + handlingFee;
-    const taxBase = productSubtotal + basketSubtotal + fee;
-    const tax = taxBase * PRICING.taxRate;
-    const total = taxBase + tax;
+
+    const subtotalBeforeTax = productSubtotal + basketSubtotal + handlingFee;
+
+    // VAT included in subtotal
+    const vatIncluded =
+      subtotalBeforeTax * (PRICING.taxRate / (1 + PRICING.taxRate));
+
+    const total = subtotalBeforeTax; // final total includes VAT already
 
     return {
       productLines,
       basketLines,
       productSubtotal,
       basketSubtotal,
-      fee,
       handlingFee,
-      tax,
+      taxIncluded: vatIncluded,
       total,
     };
   }, [orderProductCounts, baskets, products, handling]);
@@ -334,6 +327,25 @@ export function usePOSState() {
     setActivePane("customer");
   };
 
+  const resetPOS = () => {
+    setOrderProductCounts({});
+    setBaskets([newBasket(0)]);
+    setActiveBasketIndex(0);
+    setCustomer(null);
+    setCustomerQuery("");
+    setCustomerSuggestions([]);
+    setHandling({
+      pickup: true,
+      deliver: false,
+      pickupAddress: "",
+      deliveryAddress: "",
+      deliveryFee: 0,
+      courierRef: "",
+      instructions: "",
+    });
+    setActivePane("customer");
+  };
+
   return {
     products,
     customer,
@@ -361,5 +373,6 @@ export function usePOSState() {
     setShowConfirm,
     computeReceipt,
     saveOrder,
+    resetPOS,
   };
 }

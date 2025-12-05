@@ -92,6 +92,7 @@ export default function POSPage() {
           setBaskets={pos.baskets as any}
           setActiveBasketIndex={pos.setActiveBasketIndex}
           saveOrder={pos.saveOrder}
+          resetPOS={pos.resetPOS}
         />
       </div>
 
