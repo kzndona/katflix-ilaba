@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Basket } from "../logic/types";
+import { Basket, LaundryService } from "../logic/types";
 
 type Props = {
   baskets: Basket[];
@@ -9,6 +9,7 @@ type Props = {
   updateActiveBasket: (p: Partial<Basket>) => void;
   deleteActiveBasket: (index: number) => void;
   createNewBasket: () => void;
+  services: LaundryService[];
 };
 
 export default function PaneBaskets({
@@ -17,150 +18,228 @@ export default function PaneBaskets({
   updateActiveBasket,
   deleteActiveBasket,
   createNewBasket,
+  services,
 }: Props) {
   const b = baskets[activeBasketIndex];
 
+  // Get service duration from DB by service_type
+  const getServiceDuration = (serviceType: string): number => {
+    const service = services.find((s) => s.service_type === serviceType);
+    return service?.base_duration_minutes || 0;
+  };
+
+  // Simple duration estimation (in minutes, for display purposes)
+  const estimateDuration = (serviceType: string, count: number): number => {
+    if (count === 0) return 0;
+    return getServiceDuration(serviceType) * count;
+  };
+
+  const TileButton = ({ label, subLabel, onClick, active, color }: any) => (
+    <div
+      className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+        active
+          ? `border-${color}-500 bg-${color}-50`
+          : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
+      }`}
+      onClick={onClick}
+    >
+      <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
+      <div className="text-xs font-semibold text-gray-600 mt-2">{subLabel}</div>
+    </div>
+  );
+
+  const TileWithDuration = ({
+    label,
+    count,
+    serviceType,
+    onClick,
+    active,
+    color,
+    title,
+  }: any) => (
+    <div
+      className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+        active
+          ? `border-${color}-500 bg-${color}-50`
+          : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
+      }`}
+      onClick={onClick}
+    >
+      <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
+      <div className="text-xs font-semibold text-gray-600 mt-1">{title}</div>
+      <div className="text-xs text-gray-700 font-semibold mt-1">
+        {count}x ({estimateDuration(serviceType, count)}m)
+      </div>
+    </div>
+  );
+
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold mb-4">{b?.name ?? "Basket"}</h2>
-        <div className="text-sm text-gray-500">
-          Adjust services for this basket
-        </div>
-      </div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">
+        {b?.name ?? "Basket"}
+      </h2>
 
-      <div className="grid grid-cols-4 gap-4">
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+      {/* Row 1: Weight, Spin */}
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <TileButton
+          label="−"
+          subLabel="Decrease Weight"
           onClick={() =>
             updateActiveBasket({ weightKg: Math.max(0.1, b.weightKg - 0.5) })
           }
-        >
-          <div className="text-2xl">−</div>
-          <div className="text-sm mt-2">Weight</div>
-          <div className="text-xs text-gray-500">
-            {b.weightKg.toFixed(1)} kg
-          </div>
-        </div>
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+          color="blue"
+          active={true}
+        />
+        <TileButton
+          label="+"
+          subLabel="Increase Weight"
           onClick={() =>
             updateActiveBasket({ weightKg: +(b.weightKg + 0.5).toFixed(1) })
           }
-        >
-          <div className="text-2xl">+</div>
-          <div className="text-sm mt-2">Weight</div>
-        </div>
-
-        {/* Spin */}
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+          color="green"
+          active={true}
+        />
+        <TileWithDuration
+          label="−"
+          title="Spin"
+          count={b.spinCount}
+          serviceType="spin"
           onClick={() =>
             updateActiveBasket({ spinCount: Math.max(0, b.spinCount - 1) })
           }
-        >
-          <div className="text-2xl">−</div>
-          <div className="text-sm mt-2">Spin</div>
-          <div className="text-xs text-gray-500">{b.spinCount}</div>
-        </div>
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
+          active={b.spinCount > 0}
+          color="blue"
+        />
+        <TileWithDuration
+          label="+"
+          title="Spin"
+          count={b.spinCount}
+          serviceType="spin"
           onClick={() => updateActiveBasket({ spinCount: b.spinCount + 1 })}
-        >
-          <div className="text-2xl">+</div>
-          <div className="text-sm mt-2">Spin</div>
-        </div>
-
-        {/* Wash controls */}
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() =>
-            updateActiveBasket({ washCount: Math.max(0, b.washCount - 1) })
-          }
-        >
-          <div className="text-2xl">−</div>
-          <div className="text-sm mt-2">Wash</div>
-          <div className="text-xs text-gray-500">{b.washCount}</div>
-        </div>
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() => updateActiveBasket({ washCount: b.washCount + 1 })}
-        >
-          <div className="text-2xl">+</div>
-          <div className="text-sm mt-2">Wash</div>
-        </div>
-        <div
-          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.washPremium ? "bg-yellow-100" : "hover:bg-gray-50"}`}
-          onClick={() => updateActiveBasket({ washPremium: !b.washPremium })}
-        >
-          <div className="text-sm">Premium</div>
-          <div className="text-xs text-gray-500">Wash</div>
-        </div>
-
-        {/* Fold */}
-        <div
-          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.fold ? "bg-blue-50" : "hover:bg-gray-50"}`}
-          onClick={() => updateActiveBasket({ fold: !b.fold })}
-        >
-          <div className="text-sm">Fold</div>
-        </div>
-
-        {/* Dry */}
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() =>
-            updateActiveBasket({ dryCount: Math.max(0, b.dryCount - 1) })
-          }
-        >
-          <div className="text-2xl">−</div>
-          <div className="text-sm mt-2">Dry</div>
-          <div className="text-xs text-gray-500">{b.dryCount}</div>
-        </div>
-        <div
-          className="p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none hover:bg-gray-50"
-          onClick={() => updateActiveBasket({ dryCount: b.dryCount + 1 })}
-        >
-          <div className="text-2xl">+</div>
-          <div className="text-sm mt-2">Dry</div>
-        </div>
-        <div
-          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.dryPremium ? "bg-yellow-100" : "hover:bg-gray-50"}`}
-          onClick={() => updateActiveBasket({ dryPremium: !b.dryPremium })}
-        >
-          <div className="text-sm">Premium</div>
-          <div className="text-xs text-gray-500">Dry</div>
-        </div>
-
-        {/* Iron */}
-        <div
-          className={`p-3 border rounded flex flex-col items-center justify-center cursor-pointer select-none ${b.iron ? "bg-blue-50" : "hover:bg-gray-50"}`}
-          onClick={() => updateActiveBasket({ iron: !b.iron })}
-        >
-          <div className="text-sm">Iron</div>
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <label className="block text-sm font-medium mb-1">Notes</label>
-        <textarea
-          value={b.notes}
-          onChange={(e) => updateActiveBasket({ notes: e.target.value })}
-          className="w-full border rounded px-3 py-3"
-          rows={3}
+          active={b.spinCount > 0}
+          color="green"
         />
       </div>
 
-      <div className="mt-4 flex gap-3">
-        <button
-          className="px-4 py-3 rounded bg-indigo-600 text-white"
-          onClick={() => deleteActiveBasket(activeBasketIndex)}
-        >
-          Delete
-        </button>
+      {/* Row 2: Wash, Dry */}
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <TileWithDuration
+          label="−"
+          title="Wash"
+          count={b.washCount}
+          serviceType="wash"
+          onClick={() =>
+            updateActiveBasket({ washCount: Math.max(0, b.washCount - 1) })
+          }
+          active={b.washCount > 0}
+          color="blue"
+        />
+        <TileWithDuration
+          label="+"
+          title="Wash"
+          count={b.washCount}
+          serviceType="wash"
+          onClick={() => updateActiveBasket({ washCount: b.washCount + 1 })}
+          active={b.washCount > 0}
+          color="green"
+        />
+        <TileWithDuration
+          label="−"
+          title="Dry"
+          count={b.dryCount}
+          serviceType="dry"
+          onClick={() =>
+            updateActiveBasket({ dryCount: Math.max(0, b.dryCount - 1) })
+          }
+          active={b.dryCount > 0}
+          color="blue"
+        />
+        <TileWithDuration
+          label="+"
+          title="Dry"
+          count={b.dryCount}
+          serviceType="dry"
+          onClick={() => updateActiveBasket({ dryCount: b.dryCount + 1 })}
+          active={b.dryCount > 0}
+          color="green"
+        />
+      </div>
 
-        <button className="px-4 py-3 rounded border" onClick={createNewBasket}>
-          New Basket
-        </button>
+      {/* Row 3: Premium options */}
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <div
+          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+            b.washPremium
+              ? "border-purple-500 bg-purple-50"
+              : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
+          }`}
+          onClick={() => updateActiveBasket({ washPremium: !b.washPremium })}
+        >
+          <div className="text-sm font-semibold text-gray-900">
+            Premium Wash
+          </div>
+          <div className="text-xs text-gray-600 font-semibold mt-1">
+            {b.washPremium ? "✓ Selected" : "Add Premium"}
+          </div>
+        </div>
+
+        <div
+          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+            b.dryPremium
+              ? "border-purple-500 bg-purple-50"
+              : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
+          }`}
+          onClick={() => updateActiveBasket({ dryPremium: !b.dryPremium })}
+        >
+          <div className="text-sm font-semibold text-gray-900">Premium Dry</div>
+          <div className="text-xs text-gray-600 font-semibold mt-1">
+            {b.dryPremium ? "✓ Selected" : "Add Premium"}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Iron, Fold */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <div
+          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+            b.iron
+              ? "border-orange-500 bg-orange-50"
+              : "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          }`}
+          onClick={() => updateActiveBasket({ iron: !b.iron })}
+        >
+          <div className="text-sm font-semibold text-gray-900">Iron</div>
+          <div className="text-xs text-gray-600 font-semibold mt-1">
+            {b.iron ? `${estimateDuration("iron", 1)}m` : "Click to add"}
+          </div>
+        </div>
+
+        <div
+          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
+            b.fold
+              ? "border-teal-500 bg-teal-50"
+              : "border-gray-300 hover:border-teal-500 hover:bg-teal-50"
+          }`}
+          onClick={() => updateActiveBasket({ fold: !b.fold })}
+        >
+          <div className="text-sm font-semibold text-gray-900">Fold</div>
+          <div className="text-xs text-gray-600 font-semibold mt-1">
+            {b.fold ? `${estimateDuration("fold", 1)}m` : "Click to add"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          Notes
+        </label>
+        <textarea
+          value={b.notes}
+          onChange={(e) => updateActiveBasket({ notes: e.target.value })}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={3}
+          placeholder="Add any special instructions for this basket..."
+        />
       </div>
     </div>
   );

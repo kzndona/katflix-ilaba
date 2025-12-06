@@ -22,112 +22,116 @@ export default function PaneCustomer({
   pickCustomer,
   clearCustomer,
 }: Props) {
+  const isLoadedFromDB = customer?.id ? true : false;
+
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">Customer</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Customer Details</h2>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">
-            Search or type name
-          </label>
-          <input
-            type="text"
-            value={customerQuery}
-            onChange={(e) => setCustomerQuery(e.target.value)}
-            placeholder="Live search — matches will appear as you type"
-            className="w-full border rounded px-3 py-3"
-          />
-          {customerSuggestions.length > 0 && (
-            <div className="mt-2 border rounded shadow-sm bg-white max-h-44 overflow-auto">
-              {customerSuggestions.map((s: any, idx: number) => (
-                <div
-                  key={idx}
-                  onClick={() => pickCustomer(s)}
-                  className="px-3 py-3 hover:bg-gray-50 cursor-pointer"
-                >
-                  <div className="font-medium">
-                    {s.first_name} {s.last_name}
+        {!isLoadedFromDB && (
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">
+              Search or Add Customer
+            </label>
+            <input
+              type="text"
+              value={customerQuery}
+              onChange={(e) => setCustomerQuery(e.target.value)}
+              placeholder="Type name to search existing customers..."
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {customerSuggestions.length > 0 && (
+              <div className="mt-2 border border-gray-300 rounded-lg shadow-lg bg-white max-h-48 overflow-auto">
+                {customerSuggestions.map((s: any, idx: number) => (
+                  <div
+                    key={idx}
+                    onClick={() => pickCustomer(s)}
+                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-sm"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {s.first_name} {s.last_name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {s.phone_number}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">{s.phone_number}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
-          <label className="block text-sm font-medium mb-1">First name</label>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            First Name *
+          </label>
           <input
             value={customer?.first_name ?? ""}
             onChange={(e) =>
               setCustomer({ ...(customer ?? {}), first_name: e.target.value })
             }
-            className="w-full border rounded px-3 py-3"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Middle name</label>
-          <input
-            value={customer?.middle_name ?? ""}
-            onChange={(e) =>
-              setCustomer({ ...(customer ?? {}), middle_name: e.target.value })
-            }
-            className="w-full border rounded px-3 py-3"
+            disabled={isLoadedFromDB}
+            placeholder="Required"
+            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
+            }`}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Last name</label>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Last Name *
+          </label>
           <input
             value={customer?.last_name ?? ""}
             onChange={(e) =>
               setCustomer({ ...(customer ?? {}), last_name: e.target.value })
             }
-            className="w-full border rounded px-3 py-3"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Birthdate</label>
-          <input
-            type="date"
-            value={customer?.birthdate ?? ""}
-            onChange={(e) =>
-              setCustomer({ ...(customer ?? {}), birthdate: e.target.value })
-            }
-            className="w-full border rounded px-3 py-3"
+            disabled={isLoadedFromDB}
+            placeholder="Required"
+            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
+            }`}
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Gender</label>
-          <select
-            value={customer?.gender ?? ""}
-            onChange={(e) =>
-              setCustomer({ ...(customer ?? {}), gender: e.target.value })
-            }
-            className="w-full border rounded px-3 py-3"
-          >
-            <option value="">--</option>
-            <option value="male">male</option>
-            <option value="female">female</option>
-          </select>
-        </div>
+        {isLoadedFromDB && (
+          <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-900">
+              Customer loaded from database. Fields are read-only.
+            </p>
+          </div>
+        )}
 
         <div>
-          <label className="block text-sm font-medium mb-1">Phone</label>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Phone Number
+          </label>
           <input
             value={customer?.phone_number ?? ""}
             onChange={(e) =>
               setCustomer({ ...(customer ?? {}), phone_number: e.target.value })
             }
-            className="w-full border rounded px-3 py-3"
+            disabled={isLoadedFromDB}
+            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
+            }`}
           />
         </div>
 
-        <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Email</label>
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Email Address
+          </label>
           <input
+            type="email"
             value={customer?.email_address ?? ""}
             onChange={(e) =>
               setCustomer({
@@ -135,40 +139,32 @@ export default function PaneCustomer({
                 email_address: e.target.value,
               })
             }
-            className="w-full border rounded px-3 py-3"
+            disabled={isLoadedFromDB}
+            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
+            }`}
           />
         </div>
 
-        <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Address</label>
-          <textarea
-            value={customer?.address ?? ""}
-            onChange={(e) =>
-              setCustomer({ ...(customer ?? {}), address: e.target.value })
-            }
-            className="w-full border rounded px-3 py-3"
-            rows={3}
-          />
-        </div>
-
-        <div className="col-span-2 mt-4 flex gap-3">
-          <button
-            className="px-4 py-3 rounded bg-indigo-600 text-white"
-            onClick={() => {
-              alert("Customer saved (mock)");
-            }}
-          >
-            Save Customer
-          </button>
-
-          <button
-            className="px-4 py-3 rounded border"
-            onClick={() => {
-              clearCustomer();
-            }}
-          >
-            Clear
-          </button>
+        <div className="col-span-2 mt-2 flex gap-2">
+          {!isLoadedFromDB && (
+            <button
+              className="flex-1 px-4 py-4 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition text-base"
+              onClick={() => clearCustomer()}
+            >
+              Clear
+            </button>
+          )}
+          {isLoadedFromDB && (
+            <button
+              className="flex-1 px-4 py-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-base"
+              onClick={() => clearCustomer()}
+            >
+              Change Customer
+            </button>
+          )}
         </div>
       </div>
     </div>

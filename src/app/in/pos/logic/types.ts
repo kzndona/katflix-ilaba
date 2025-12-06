@@ -37,6 +37,7 @@ export type ReceiptBasketLine = {
   weightKg: number;
   breakdown: { wash: number; dry: number; spin: number };
   total: number;
+  estimatedDurationMinutes: number;
 };
 
 export type ReceiptProductLine = {

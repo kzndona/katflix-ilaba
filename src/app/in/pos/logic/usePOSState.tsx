@@ -213,6 +213,53 @@ export function usePOSState() {
     );
   };
 
+  // --- Calculate total estimated duration for a basket ---
+  const calculateBasketDuration = (basket: Basket): number => {
+    let totalMinutes = 0;
+
+    // Wash duration
+    if (basket.washCount > 0) {
+      const washService = getServiceByType("wash", basket.washPremium);
+      if (washService) {
+        totalMinutes += washService.base_duration_minutes * basket.washCount;
+      }
+    }
+
+    // Dry duration
+    if (basket.dryCount > 0) {
+      const dryService = getServiceByType("dry", basket.dryPremium);
+      if (dryService) {
+        totalMinutes += dryService.base_duration_minutes * basket.dryCount;
+      }
+    }
+
+    // Spin duration
+    if (basket.spinCount > 0) {
+      const spinService = getServiceByType("spin", false);
+      if (spinService) {
+        totalMinutes += spinService.base_duration_minutes * basket.spinCount;
+      }
+    }
+
+    // Iron duration
+    if (basket.iron) {
+      const ironService = getServiceByType("iron", false);
+      if (ironService) {
+        totalMinutes += ironService.base_duration_minutes;
+      }
+    }
+
+    // Fold duration
+    if (basket.fold) {
+      const foldService = getServiceByType("fold", false);
+      if (foldService) {
+        totalMinutes += foldService.base_duration_minutes;
+      }
+    }
+
+    return totalMinutes;
+  };
+
   // --- receipt/calculation ---
   const computeReceipt = React.useMemo(() => {
     const productLines: ReceiptProductLine[] = Object.entries(
@@ -274,6 +321,7 @@ export function usePOSState() {
           fold: foldPrice,
         },
         total: subtotal, // NO service fee added
+        estimatedDurationMinutes: calculateBasketDuration(b),
       };
     });
 
@@ -479,5 +527,7 @@ export function usePOSState() {
     computeReceipt,
     saveOrder,
     resetPOS,
+    services,
+    calculateBasketDuration,
   };
 }

@@ -31,8 +31,8 @@ export default function POSPage() {
   };
 
   return (
-    <div className="h-screen w-full bg-white text-gray-900">
-      <div className="h-full max-w-[1600px] mx-auto p-4 grid grid-cols-[260px_1fr_420px] gap-4">
+    <div className="h-screen w-screen bg-gray-50 text-gray-900 overflow-hidden">
+      <div className="h-full w-full p-4 grid grid-cols-[260px_1fr_420px] gap-4">
         <SidebarTabs
           activePane={pos.activePane}
           setActivePane={pos.setActivePane}
@@ -43,7 +43,7 @@ export default function POSPage() {
           deleteBasket={pos.deleteBasket}
         />
 
-        <main className="bg-white border rounded-xl p-5 overflow-auto">
+        <main className="bg-white border border-gray-100 rounded-lg p-6 overflow-auto h-full">
           {pos.activePane === "customer" && (
             <PaneCustomer
               customer={pos.customer}
@@ -79,6 +79,7 @@ export default function POSPage() {
               updateActiveBasket={pos.updateActiveBasket}
               deleteActiveBasket={pos.deleteBasket}
               createNewBasket={createNewBasket}
+              services={pos.services}
             />
           )}
         </main>
@@ -124,46 +125,48 @@ export default function POSPage() {
                   />
                   <div className="flex-1">
                     <div className="font-medium">Cash</div>
-                    <div className="mt-3 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Total Amount:</span>
-                        <span className="font-medium">
-                          ₱{pos.computeReceipt.total.toFixed(2)}
-                        </span>
+                    {pos.payment.method === "cash" && (
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Total Amount:</span>
+                          <span className="font-medium">
+                            ₱{pos.computeReceipt.total.toFixed(2)}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-gray-600 mb-1">
+                            Amount Paid
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={pos.payment.amountPaid || ""}
+                            onChange={(e) =>
+                              pos.setPayment({
+                                ...pos.payment,
+                                amountPaid: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full border rounded px-2 py-1 text-sm"
+                          />
+                        </div>
+                        {pos.payment.amountPaid !== undefined &&
+                          pos.payment.amountPaid >= 0 && (
+                            <div className="flex justify-between text-gray-700">
+                              <span>Change:</span>
+                              <span className="font-medium">
+                                ₱
+                                {(
+                                  pos.payment.amountPaid -
+                                  pos.computeReceipt.total
+                                ).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
                       </div>
-                      <div>
-                        <label className="block text-gray-600 mb-1">
-                          Amount Paid
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={pos.payment.amountPaid || ""}
-                          onChange={(e) =>
-                            pos.setPayment({
-                              ...pos.payment,
-                              amountPaid: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          className="w-full border rounded px-2 py-1 text-sm"
-                        />
-                      </div>
-                      {pos.payment.amountPaid !== undefined &&
-                        pos.payment.amountPaid >= 0 && (
-                          <div className="flex justify-between text-gray-700">
-                            <span>Change:</span>
-                            <span className="font-medium">
-                              ₱
-                              {(
-                                pos.payment.amountPaid -
-                                pos.computeReceipt.total
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                    </div>
+                    )}
                   </div>
                 </label>
 
@@ -185,23 +188,25 @@ export default function POSPage() {
                   />
                   <div className="flex-1">
                     <div className="font-medium">GCash</div>
-                    <div className="mt-3">
-                      <label className="block text-sm text-gray-600 mb-1">
-                        Reference Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g., GC123456789"
-                        value={pos.payment.referenceNumber || ""}
-                        onChange={(e) =>
-                          pos.setPayment({
-                            ...pos.payment,
-                            referenceNumber: e.target.value,
-                          })
-                        }
-                        className="w-full border rounded px-2 py-1 text-sm"
-                      />
-                    </div>
+                    {pos.payment.method === "gcash" && (
+                      <div className="mt-3">
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Reference Number
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., GC123456789"
+                          value={pos.payment.referenceNumber || ""}
+                          onChange={(e) =>
+                            pos.setPayment({
+                              ...pos.payment,
+                              referenceNumber: e.target.value,
+                            })
+                          }
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 </label>
               </div>
@@ -217,9 +222,11 @@ export default function POSPage() {
               <button
                 className="px-4 py-2 rounded bg-green-600 text-white disabled:bg-gray-400"
                 disabled={
-                  pos.payment.method === "cash" &&
-                  (!pos.payment.amountPaid ||
-                    pos.payment.amountPaid < pos.computeReceipt.total)
+                  (pos.payment.method === "cash" &&
+                    (!pos.payment.amountPaid ||
+                      pos.payment.amountPaid < pos.computeReceipt.total)) ||
+                  (pos.payment.method === "gcash" &&
+                    !pos.payment.referenceNumber)
                 }
                 onClick={async () => {
                   await pos.saveOrder();
