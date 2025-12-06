@@ -10,18 +10,74 @@ export async function POST(req: Request) {
     );
 
     let result;
+    
     if (!data.id) {
-      // insert new staff
-      result = await supabase.from("staff").insert(data);
+      // New staff: Create auth user first if email provided
+      let authUserId: string | null = null;
+      
+      if (data.email_address) {
+        try {
+          // Invite user via email - Supabase will send invitation link
+          const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(
+            data.email_address,
+            {
+              data: {
+                first_name: data.first_name,
+                last_name: data.last_name,
+                role: data.role,
+              },
+            }
+          );
+
+          if (authError) {
+            console.error("Auth invite error:", authError);
+            throw new Error(`Failed to invite user: ${authError.message}`);
+          }
+
+          if (authData?.user?.id) {
+            authUserId = authData.user.id;
+          }
+        } catch (authErr) {
+          console.error("Error inviting user:", authErr);
+          throw authErr;
+        }
+      }
+
+      // Now insert staff profile with auth_id
+      const { id, ...dataWithoutId } = data; // Remove id from payload for insert
+      const staffPayload = {
+        ...dataWithoutId,
+        auth_id: authUserId || null, // Use null instead of empty string
+      };
+
+      result = await supabase.from("staff").insert(staffPayload).select();
     } else {
-      // update existing staff
-      result = await supabase.from("staff").update(data).eq("id", data.id);
+      // Update existing staff
+      // Don't allow changing email (would need re-invitation)
+      const { email_address, ...dataWithoutEmail } = data;
+      
+      result = await supabase
+        .from("staff")
+        .update(dataWithoutEmail)
+        .eq("id", data.id)
+        .select();
     }
 
     if (result.error) throw result.error;
-    return NextResponse.json(result.data);
+    
+    return NextResponse.json({
+      success: true,
+      data: result.data,
+      message: data.id 
+        ? "Staff updated successfully" 
+        : "Staff created and invitation email sent",
+    });
   } catch (error) {
     console.error("Failed to save staff:", error);
-    return NextResponse.json({ error: "Failed to save staff" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { error: `Failed to save staff: ${errorMessage}` },
+      { status: 500 }
+    );
   }
 }

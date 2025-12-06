@@ -21,6 +21,9 @@ export default function StaffPage() {
   const [rows, setRows] = useState<Staff[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Get staff data on load
   useEffect(() => {
@@ -66,6 +69,9 @@ export default function StaffPage() {
   async function save() {
     if (!editing) return;
 
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
     const data = { ...editing };
     // Validate required fields
     const requiredFields: (keyof Staff)[] = [
@@ -82,7 +88,7 @@ export default function StaffPage() {
     for (const field of requiredFields) {
       const value = data[field];
       if (value === null || value === undefined || value === "") {
-        console.error(`Validation error: ${field} is required`);
+        setErrorMsg(`${field.replace(/_/g, " ")} is required`);
         return;
       }
     }
@@ -91,9 +97,7 @@ export default function StaffPage() {
     const phone = editing!.phone_number;
     const phonePattern = /^09\d{9}$/;
     if (!phonePattern.test(phone!)) {
-      console.error(
-        "Validation error: phone_number must start with 09 and have 11 digits"
-      );
+      setErrorMsg("Phone number must start with 09 and have 11 digits");
       return;
     }
 
@@ -101,10 +105,11 @@ export default function StaffPage() {
     const email = editing!.email_address;
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email!)) {
-      console.error("Validation error: email_address is not valid");
+      setErrorMsg("Email address is not valid");
       return;
     }
 
+    setSaving(true);
     try {
       const res = await fetch("/api/staff/saveStaff", {
         method: "POST",
@@ -114,17 +119,26 @@ export default function StaffPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to save staff");
 
+      setSuccessMsg(result.message || "Staff saved successfully");
       load(); // reload table
-      setModalOpen(false);
+      setTimeout(() => {
+        setModalOpen(false);
+        setSuccessMsg(null);
+      }, 2000);
     } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setErrorMsg(msg);
       console.error("Save failed:", error);
-      // Optionally show error in UI
+    } finally {
+      setSaving(false);
     }
   }
 
   async function remove() {
     if (!editing?.id) return;
 
+    setSaving(true);
     try {
       const res = await fetch("/api/staff/removeStaff", {
         method: "POST",
@@ -134,10 +148,19 @@ export default function StaffPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to delete staff");
 
+      setSuccessMsg("Staff deleted successfully");
       load(); // reload table
-      setModalOpen(false);
+      setTimeout(() => {
+        setModalOpen(false);
+        setSuccessMsg(null);
+      }, 1500);
     } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setErrorMsg(msg);
       console.error("Remove failed:", error);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -195,11 +218,23 @@ export default function StaffPage() {
       </table>
 
       {modalOpen && editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 w-[450px] rounded shadow space-y-4">
             <div className="text-lg font-semibold">
               {editing.id ? "Edit Staff" : "Add Staff"}
             </div>
+
+            {errorMsg && (
+              <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                {errorMsg}
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="bg-green-50 border border-green-300 rounded p-3 text-sm text-green-700">
+                {successMsg}
+              </div>
+            )}
 
             <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
               <Field
@@ -263,6 +298,14 @@ export default function StaffPage() {
                 onChange={(v) => updateField("email_address", v)}
               />
 
+              {!editing.id && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
+                  <strong>📧 Account Creation:</strong> An invitation link will
+                  be sent to the email address. Staff can set their password and
+                  activate their account through the link.
+                </div>
+              )}
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -276,7 +319,8 @@ export default function StaffPage() {
             <div className="flex justify-end space-x-3 pt-3">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-3 py-1 border rounded"
+                className="px-3 py-1 border rounded disabled:opacity-50"
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -284,7 +328,8 @@ export default function StaffPage() {
               {editing.id && (
                 <button
                   onClick={remove}
-                  className="px-3 py-1 bg-red-600 text-white rounded"
+                  className="px-3 py-1 bg-red-600 text-white rounded disabled:opacity-50"
+                  disabled={saving}
                 >
                   Delete
                 </button>
@@ -292,9 +337,10 @@ export default function StaffPage() {
 
               <button
                 onClick={save}
-                className="px-3 py-1 bg-green-600 text-white rounded"
+                className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
+                disabled={saving}
               >
-                {editing.id ? "Save" : "Add"}
+                {saving ? "Saving..." : editing.id ? "Save" : "Add"}
               </button>
             </div>
           </div>
