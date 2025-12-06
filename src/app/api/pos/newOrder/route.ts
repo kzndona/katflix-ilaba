@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       .insert({
         customer_id: customerId,
         total_amount: total,
-        status: "completed",
+        status: "processing",
         source: "pos",
       })
       .select()
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
         amount: pay.amount,
         method: pay.method,
         reference_number: pay.reference || null,
-        status: "completed",
+        status: "successful",
       }));
 
       const { error: payErr } = await supabase.from("payments").insert(paymentInserts);

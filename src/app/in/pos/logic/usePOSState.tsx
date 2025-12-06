@@ -6,6 +6,7 @@ import {
   ReceiptBasketLine,
   ReceiptProductLine,
   LaundryService,
+  Payment,
 } from "./types";
 import { createClient } from "@/src/app/utils/supabase/client";
 
@@ -72,6 +73,9 @@ export function usePOSState() {
   });
 
   const [showConfirm, setShowConfirm] = React.useState(false);
+  const [payment, setPayment] = React.useState<Payment>({
+    method: "cash",
+  });
 
   React.useEffect(() => {
     const loadServices = async () => {
@@ -382,12 +386,22 @@ export function usePOSState() {
       payments: [], // you can fill this if you want
     };
 
-    // 4️⃣ Send to API
+    // 4️⃣ Prepare payment
+    const paymentPayload = {
+      amount: computeReceipt.total,
+      method: payment.method,
+      reference: payment.referenceNumber || null,
+    };
+
+    // 5️⃣ Send to API
     try {
       const res = await fetch("/api/pos/newOrder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          payments: [paymentPayload],
+        }),
       });
 
       if (!res.ok) {
@@ -405,6 +419,8 @@ export function usePOSState() {
       setBaskets([newBasket(0)]);
       setActiveBasketIndex(0);
       setActivePane("customer");
+      setPayment({ method: "cash" });
+      setShowConfirm(false);
 
       return data.orderId;
     } catch (err) {
@@ -458,6 +474,8 @@ export function usePOSState() {
     setHandling,
     showConfirm,
     setShowConfirm,
+    payment,
+    setPayment,
     computeReceipt,
     saveOrder,
     resetPOS,

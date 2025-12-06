@@ -56,3 +56,10 @@ export type LaundryService = {
   rate_per_kg: number;
   is_active: boolean;
 };
+
+export type Payment = {
+  method: 'cash' | 'gcash';
+  amount?: number;
+  amountPaid?: number;
+  referenceNumber?: string;
+};

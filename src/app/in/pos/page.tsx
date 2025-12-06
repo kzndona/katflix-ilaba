@@ -98,14 +98,116 @@ export default function POSPage() {
 
       {pos.showConfirm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
-          <div className="bg-white rounded-xl p-6 w-[480px]">
-            <h3 className="text-lg font-semibold">Confirm checkout (mock)</h3>
+          <div className="bg-white rounded-xl p-6 w-[520px]">
+            <h3 className="text-lg font-semibold">
+              Confirm Checkout & Process Payment
+            </h3>
             <p className="text-sm text-gray-600 mt-2">
-              This will simulate saving the order (mock). Price shown:{" "}
-              <strong>₱{pos.computeReceipt.total.toFixed(2)}</strong>
+              Total: <strong>₱{pos.computeReceipt.total.toFixed(2)}</strong>
             </p>
 
-            <div className="mt-4 flex gap-3 justify-end">
+            {/* Payment Method */}
+            <div className="mt-5 border-t pt-4">
+              <div className="font-medium text-sm mb-3">Payment Method</div>
+              <div className="space-y-3">
+                {/* Cash Option */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cash"
+                    checked={pos.payment.method === "cash"}
+                    onChange={(e) =>
+                      pos.setPayment({ ...pos.payment, method: "cash" })
+                    }
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">Cash</div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Total Amount:</span>
+                        <span className="font-medium">
+                          ₱{pos.computeReceipt.total.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-gray-600 mb-1">
+                          Amount Paid
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={pos.payment.amountPaid || ""}
+                          onChange={(e) =>
+                            pos.setPayment({
+                              ...pos.payment,
+                              amountPaid: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                      {pos.payment.amountPaid !== undefined &&
+                        pos.payment.amountPaid >= 0 && (
+                          <div className="flex justify-between text-gray-700">
+                            <span>Change:</span>
+                            <span className="font-medium">
+                              ₱
+                              {(
+                                pos.payment.amountPaid -
+                                pos.computeReceipt.total
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                </label>
+
+                {/* GCash Option */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="gcash"
+                    checked={pos.payment.method === "gcash"}
+                    onChange={(e) =>
+                      pos.setPayment({
+                        ...pos.payment,
+                        method: "gcash",
+                        amountPaid: undefined,
+                      })
+                    }
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">GCash</div>
+                    <div className="mt-3">
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Reference Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., GC123456789"
+                        value={pos.payment.referenceNumber || ""}
+                        onChange={(e) =>
+                          pos.setPayment({
+                            ...pos.payment,
+                            referenceNumber: e.target.value,
+                          })
+                        }
+                        className="w-full border rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3 justify-end">
               <button
                 className="px-4 py-2 rounded border"
                 onClick={() => pos.setShowConfirm(false)}
@@ -113,13 +215,17 @@ export default function POSPage() {
                 Back
               </button>
               <button
-                className="px-4 py-2 rounded bg-green-600 text-white"
+                className="px-4 py-2 rounded bg-green-600 text-white disabled:bg-gray-400"
+                disabled={
+                  pos.payment.method === "cash" &&
+                  (!pos.payment.amountPaid ||
+                    pos.payment.amountPaid < pos.computeReceipt.total)
+                }
                 onClick={async () => {
-                  pos.setShowConfirm(false);
                   await pos.saveOrder();
                 }}
               >
-                Confirm & Save (mock)
+                Process Payment & Save
               </button>
             </div>
           </div>
