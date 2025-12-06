@@ -16,31 +16,28 @@ export default function SetPasswordForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Check if user has a valid session with recovery token
-    const checkSession = async () => {
+    // Verify the recovery session from the invite link
+    const verifySession = async () => {
       try {
+        // First, try to get the current user to verify the recovery session
         const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-        if (sessionError) {
+        if (userError || !user) {
           setError("Invalid or expired link. Please request a new invitation.");
           return;
         }
 
-        if (!session?.user) {
-          setError(
-            "No active session found. Please check your invitation link."
-          );
-        }
+        // Session is valid, user can now set their password
       } catch (err) {
-        console.error("Session check error:", err);
-        setError("Failed to verify session");
+        console.error("Session verification error:", err);
+        setError("Failed to verify your invitation link.");
       }
     };
 
-    checkSession();
+    verifySession();
   }, [supabase.auth]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
@@ -113,8 +110,12 @@ export default function SetPasswordForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow p-8 space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Set Your Password</h1>
-          <p className="text-gray-600 mt-2">Create a password for your account</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Set Your Password
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Create a password for your account
+          </p>
         </div>
 
         {error && (
