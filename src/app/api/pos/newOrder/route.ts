@@ -65,11 +65,10 @@ export async function POST(req: Request) {
         .from("baskets")
         .insert({
           order_id: orderId,
-          machine_id: b.machine_id || null,
           weight: b.weight || null,
           price: b.subtotal,
           notes: b.notes || null,
-          status: "completed",
+          status: "processing",
         })
         .select()
         .single();
@@ -79,11 +78,12 @@ export async function POST(req: Request) {
 
       // Only insert services if present
       if (b.services?.length) {
-        const serviceInserts = b.services.map((s) => ({
+        const serviceInserts = b.services.map((s, index) => ({
           basket_id: basketId,
           service_id: s.service_id,
           rate: s.rate,
           subtotal: s.subtotal,
+          status: index === 0 ? "in_progress" : "pending",
         }));
 
         const { error: svcErr } = await supabase.from("basket_services").insert(serviceInserts);
@@ -105,14 +105,14 @@ export async function POST(req: Request) {
       if (prodErr) throw prodErr;
     }
 
-    // 4️⃣ Insert payments (optional)
+    // 4️⃣ Insert payments
     if (payments?.length) {
       const paymentInserts = payments.map((pay) => ({
         order_id: orderId,
         amount: pay.amount,
         method: pay.method,
         reference_number: pay.reference || null,
-        status: "successful",
+        status: "completed",
       }));
 
       const { error: payErr } = await supabase.from("payments").insert(paymentInserts);

@@ -14,6 +14,7 @@ export default function Navbar() {
   // Placeholder navigation functions
   const goToPOS = () => router.push("/in/pos");
   const goToOrders = () => router.push("/in/orders");
+  const goToBaskets = () => router.push("/in/baskets");
   const goToProducts = () => router.push("/in/manage/products");
   const goToMachines = () => router.push("/in/manage/machines");
   const goToServices = () => router.push("/in/manage/services");
@@ -41,6 +42,13 @@ export default function Navbar() {
           className="text-gray-700 font-medium hover:text-blue-600"
         >
           Orders
+        </button>
+
+        <button
+          onClick={goToBaskets}
+          className="text-gray-700 font-medium hover:text-blue-600"
+        >
+          Baskets
         </button>
 
         {/* Manage Dropdown */}
