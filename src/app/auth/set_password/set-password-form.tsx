@@ -16,28 +16,25 @@ export default function SetPasswordForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Verify the recovery session from the invite link
-    const verifySession = async () => {
-      try {
-        // First, try to get the current user to verify the recovery session
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !user) {
+    // Listen for auth state changes - when the recovery token is processed
+    // by Supabase, the session will be established
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "INITIAL_SESSION") {
+        // Check initial session when component loads
+        if (!session) {
           setError("Invalid or expired link. Please request a new invitation.");
-          return;
         }
-
-        // Session is valid, user can now set their password
-      } catch (err) {
-        console.error("Session verification error:", err);
-        setError("Failed to verify your invitation link.");
+      } else if (event === "SIGNED_IN") {
+        // Recovery session was established successfully
+        console.log("Recovery session established for:", session?.user?.email);
       }
-    };
+    });
 
-    verifySession();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, [supabase.auth]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
