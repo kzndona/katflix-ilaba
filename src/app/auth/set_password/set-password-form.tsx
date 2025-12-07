@@ -16,48 +16,58 @@ export default function SetPasswordForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Wait for the Supabase client to process the recovery token from the URL hash
-    // This is async and may take a moment, especially on first load
+    // Process the recovery token from the invite link URL
     let isMounted = true;
 
-    const verifyRecoverySession = async () => {
-      // Add a small delay to allow Supabase to process the URL hash
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      if (!isMounted) return;
-
+    const handleRecoveryToken = async () => {
       try {
-        // Try to get the current user - this will only succeed if there's
-        // a valid recovery session from the invite link
+        // Get the hash from the URL (contains #access_token=...)
+        const hash = window.location.hash;
+        console.log("URL hash present:", !!hash);
+
+        if (!hash) {
+          setError("Invalid or expired link. Please request a new invitation.");
+          return;
+        }
+
+        // Parse the hash to get the access_token
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const tokenType = params.get("type"); // Should be 'recovery'
+
+        console.log("Token type:", tokenType);
+
+        if (!accessToken) {
+          setError("Invalid or expired link. Please request a new invitation.");
+          return;
+        }
+
+        // Create a new session with the recovery token
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: params.get("refresh_token") || "",
+        });
 
         if (!isMounted) return;
 
-        if (userError) {
-          console.error("Auth error:", userError);
+        if (sessionError || !session) {
+          console.error("Session creation error:", sessionError);
           setError("Invalid or expired link. Please request a new invitation.");
           return;
         }
 
-        if (!user) {
-          console.error("No user found in recovery session");
-          setError("Invalid or expired link. Please request a new invitation.");
-          return;
-        }
-
-        console.log("Recovery session verified for:", user.email);
-        // Session is valid - form will be displayed
+        console.log("Recovery session established for:", session.user?.email);
       } catch (err) {
         if (!isMounted) return;
-        console.error("Session verification error:", err);
-        setError("Failed to verify your invitation link.");
+        console.error("Recovery token handling error:", err);
+        setError("Failed to process your invitation link.");
       }
     };
 
-    verifyRecoverySession();
+    handleRecoveryToken();
 
     return () => {
       isMounted = false;
