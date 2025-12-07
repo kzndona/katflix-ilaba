@@ -19,7 +19,7 @@ export default function Navbar() {
   const goToMachines = () => router.push("/in/manage/machines");
   const goToServices = () => router.push("/in/manage/services");
   const goToStaff = () => router.push("/in/accounts/staff");
-  const goToCustomer = () => router.push("/in/accounts/customer");
+  const goToCustomer = () => router.push("/in/accounts/customers");
   const signOut = () =>
     supabase.auth
       .signOut()
@@ -110,7 +110,7 @@ export default function Navbar() {
               onClick={goToCustomer}
               className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
             >
-              Customer
+              Customers
             </button>
           </div>
         </div>

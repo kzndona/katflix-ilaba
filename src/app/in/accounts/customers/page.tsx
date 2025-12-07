@@ -1,35 +1,37 @@
-// app/in/accounts/staff/page.tsx
+// app/in/accounts/customers/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
-type Staff = {
+type Customer = {
   id: string;
   first_name: string;
   middle_name: string | null;
   last_name: string;
   birthdate: string | null;
   gender: "male" | "female" | null;
-  role: "admin" | "cashier" | "attendant" | "rider" | "cashier_attendant";
   address: string | null;
   phone_number: string | null;
   email_address: string | null;
-  is_active: boolean;
+  loyalty_points: number | null;
+  is_active?: boolean;
 };
 
-export default function StaffPage() {
-  const [rows, setRows] = useState<Staff[]>([]);
-  const [filteredRows, setFilteredRows] = useState<Staff[]>([]);
+export default function CustomersPage() {
+  const [rows, setRows] = useState<Customer[]>([]);
+  const [filteredRows, setFilteredRows] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selected, setSelected] = useState<Staff | null>(null);
+  const [selected, setSelected] = useState<Customer | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editing, setEditing] = useState<Staff | null>(null);
+  const [editing, setEditing] = useState<Customer | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [originalStaff, setOriginalStaff] = useState<Staff | null>(null);
+  const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(
+    null
+  );
 
-  // Get staff data on load
+  // Get customers data on load
   useEffect(() => {
     load();
   }, []);
@@ -41,9 +43,9 @@ export default function StaffPage() {
         setFilteredRows(rows);
       } else {
         const query = searchQuery.toLowerCase();
-        const filtered = rows.filter((staff) => {
+        const filtered = rows.filter((customer) => {
           const fullName =
-            `${staff.first_name} ${staff.last_name}`.toLowerCase();
+            `${customer.first_name} ${customer.last_name}`.toLowerCase();
           return fullName.includes(query);
         });
         setFilteredRows(filtered);
@@ -55,48 +57,47 @@ export default function StaffPage() {
 
   async function load() {
     try {
-      const res = await fetch("/api/staff/getStaffTable");
+      const res = await fetch("/api/customer/getCustomersTable");
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data = await res.json();
       setRows(data);
       setFilteredRows(data);
     } catch (error) {
-      console.error("Failed to load staff:", error);
+      console.error("Failed to load customers:", error);
     }
   }
 
-  // Create new staff
+  // Create new customer
   function openNew() {
-    const newStaff: Staff = {
+    const newCustomer: Customer = {
       id: "",
       first_name: "",
       middle_name: "",
       last_name: "",
       birthdate: "",
       gender: null,
-      role: "cashier",
       address: "",
       phone_number: "",
       email_address: "",
-      is_active: true,
+      loyalty_points: 0,
     };
-    setEditing(newStaff);
-    setOriginalStaff(null);
+    setEditing(newCustomer);
+    setOriginalCustomer(null);
     setSelected(null);
     setIsEditingDetails(true);
   }
 
-  // Select staff to view details
-  function selectStaff(staff: Staff) {
-    setSelected(staff);
+  // Select customer to view details
+  function selectCustomer(customer: Customer) {
+    setSelected(customer);
     setIsEditingDetails(false);
   }
 
-  // Start editing the selected staff
+  // Start editing the selected customer
   function startEdit() {
     if (!selected) return;
     setEditing({ ...selected });
-    setOriginalStaff({ ...selected });
+    setOriginalCustomer({ ...selected });
     setIsEditingDetails(true);
   }
 
@@ -108,13 +109,9 @@ export default function StaffPage() {
 
     const data = { ...editing };
     // Validate required fields
-    const requiredFields: (keyof Staff)[] = [
+    const requiredFields: (keyof Customer)[] = [
       "first_name",
       "last_name",
-      "birthdate",
-      "gender",
-      "role",
-      "address",
       "phone_number",
       "email_address",
     ];
@@ -145,15 +142,15 @@ export default function StaffPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/staff/saveStaff", {
+      const res = await fetch("/api/customer/saveCustomer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editing),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to save staff");
+      if (!res.ok) throw new Error(result.error || "Failed to save customer");
 
-      setSuccessMsg(result.message || "Staff saved successfully");
+      setSuccessMsg(result.message || "Customer saved successfully");
       load(); // reload table
       setTimeout(() => {
         setIsEditingDetails(false);
@@ -175,15 +172,15 @@ export default function StaffPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/staff/removeStaff", {
+      const res = await fetch("/api/customer/removeCustomer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editing.id }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to delete staff");
+      if (!res.ok) throw new Error(result.error || "Failed to delete customer");
 
-      setSuccessMsg("Staff deleted successfully");
+      setSuccessMsg("Customer deleted successfully");
       load(); // reload table
       setTimeout(() => {
         setIsEditingDetails(false);
@@ -201,8 +198,8 @@ export default function StaffPage() {
     }
   }
 
-  // Update a field in the editing staff
-  function updateField(key: keyof Staff, value: any) {
+  // Update a field in the editing customer
+  function updateField(key: keyof Customer, value: any) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
   }
@@ -210,10 +207,10 @@ export default function StaffPage() {
   return (
     <div className="p-6 h-screen bg-gray-50 flex flex-col">
       <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
-        {/* LEFT PANE - Staff List */}
+        {/* LEFT PANE - Customers List */}
         <div className="col-span-1 bg-white rounded-lg shadow flex flex-col">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-3xl font-bold mb-4">Staff</h2>
+            <h2 className="text-3xl font-bold mb-4">Customers</h2>
             <input
               type="text"
               placeholder="Search by name..."
@@ -226,29 +223,32 @@ export default function StaffPage() {
           <div className="flex-1 overflow-y-auto">
             {filteredRows.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
-                {rows.length === 0 ? "No staff yet" : "No results"}
+                {rows.length === 0 ? "No customers yet" : "No results"}
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {filteredRows.map((staff) => (
+                {filteredRows.map((customer) => (
                   <div
-                    key={staff.id}
-                    onClick={() => selectStaff(staff)}
+                    key={customer.id}
+                    onClick={() => selectCustomer(customer)}
                     className={`p-4 cursor-pointer transition ${
-                      selected?.id === staff.id
+                      selected?.id === customer.id
                         ? "bg-blue-50 border-l-4 border-blue-600"
                         : "hover:bg-gray-50"
                     }`}
                   >
                     <div className="font-medium text-sm">
-                      {staff.first_name} {staff.last_name}
+                      {customer.first_name} {customer.last_name}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1 capitalize">
-                      {staff.role}
+                    <div className="text-xs text-gray-500 mt-1">
+                      {customer.email_address}
                     </div>
-                    {!staff.is_active && (
-                      <div className="text-xs text-red-600 mt-1">Inactive</div>
-                    )}
+                    {customer.loyalty_points !== null &&
+                      customer.loyalty_points > 0 && (
+                        <div className="text-xs text-amber-600 mt-1 font-medium">
+                          ★ {customer.loyalty_points} points
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>
@@ -260,7 +260,7 @@ export default function StaffPage() {
               onClick={openNew}
               className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
             >
-              + Add New Staff
+              + Add New Customer
             </button>
           </div>
         </div>
@@ -269,8 +269,8 @@ export default function StaffPage() {
         <div className="col-span-2 bg-white rounded-lg shadow flex flex-col">
           {isEditingDetails && editing ? (
             <EditPane
-              staff={editing}
-              originalStaff={originalStaff}
+              customer={editing}
+              originalCustomer={originalCustomer}
               updateField={updateField}
               save={save}
               remove={remove}
@@ -282,15 +282,15 @@ export default function StaffPage() {
                 setEditing(null);
                 setErrorMsg(null);
               }}
-              isNewStaff={!editing.id}
+              isNewCustomer={!editing.id}
             />
           ) : selected ? (
-            <DetailsPane staff={selected} onEdit={startEdit} />
+            <DetailsPane customer={selected} onEdit={startEdit} />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <div className="text-center">
-                <div className="text-5xl mb-3">👤</div>
-                <p>Select a staff member to view details</p>
+                <div className="text-5xl mb-3">👥</div>
+                <p>Select a customer to view details</p>
               </div>
             </div>
           )}
@@ -301,15 +301,21 @@ export default function StaffPage() {
 }
 
 // Details View Pane
-function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
+function DetailsPane({
+  customer,
+  onEdit,
+}: {
+  customer: Customer;
+  onEdit: () => void;
+}) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-8 border-b border-gray-200 flex justify-between items-start">
         <div>
           <h3 className="text-4xl font-bold">
-            {staff.first_name} {staff.last_name}
+            {customer.first_name} {customer.last_name}
           </h3>
-          <p className="text-gray-500 mt-2 capitalize text-lg">{staff.role}</p>
+          <p className="text-gray-500 mt-2 text-lg">{customer.email_address}</p>
         </div>
         <button
           onClick={onEdit}
@@ -332,43 +338,37 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-8">
         <div className="grid grid-cols-2 gap-8">
           <div>
-            <DetailField label="First Name" value={staff.first_name} />
-            <DetailField label="Middle Name" value={staff.middle_name || "—"} />
-            <DetailField label="Last Name" value={staff.last_name} />
-            <DetailField label="Birthdate" value={staff.birthdate || "—"} />
+            <DetailField label="First Name" value={customer.first_name} />
+            <DetailField
+              label="Middle Name"
+              value={customer.middle_name || "—"}
+            />
+            <DetailField label="Last Name" value={customer.last_name} />
+            <DetailField label="Birthdate" value={customer.birthdate || "—"} />
           </div>
           <div>
             <DetailField
               label="Gender"
               value={
-                staff.gender
-                  ? staff.gender.charAt(0).toUpperCase() + staff.gender.slice(1)
+                customer.gender
+                  ? customer.gender.charAt(0).toUpperCase() +
+                    customer.gender.slice(1)
                   : "—"
               }
             />
+            <DetailField label="Email" value={customer.email_address || "—"} />
+            <DetailField label="Phone" value={customer.phone_number || "—"} />
             <DetailField
-              label="Role"
-              value={staff.role.charAt(0).toUpperCase() + staff.role.slice(1)}
+              label="Loyalty Points"
+              value={`⭐ ${customer.loyalty_points || 0} points`}
             />
-            <DetailField label="Email" value={staff.email_address || "—"} />
-            <DetailField label="Phone" value={staff.phone_number || "—"} />
           </div>
         </div>
         <div className="mt-6">
-          <DetailField label="Address" value={staff.address || "—"} />
-        </div>
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-          <div className="text-sm">
-            <span className="font-medium">Status: </span>
-            <span
-              className={staff.is_active ? "text-green-600" : "text-red-600"}
-            >
-              {staff.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
+          <DetailField label="Address" value={customer.address || "—"} />
         </div>
       </div>
     </div>
@@ -387,8 +387,8 @@ function DetailField({ label, value }: { label: string; value: string }) {
 
 // Edit Pane
 function EditPane({
-  staff,
-  originalStaff,
+  customer,
+  originalCustomer,
   updateField,
   save,
   remove,
@@ -396,29 +396,30 @@ function EditPane({
   errorMsg,
   successMsg,
   onCancel,
-  isNewStaff,
+  isNewCustomer,
 }: {
-  staff: Staff;
-  originalStaff: Staff | null;
-  updateField: (key: keyof Staff, value: any) => void;
+  customer: Customer;
+  originalCustomer: Customer | null;
+  updateField: (key: keyof Customer, value: any) => void;
   save: () => void;
   remove: () => void;
   saving: boolean;
   errorMsg: string | null;
   successMsg: string | null;
   onCancel: () => void;
-  isNewStaff: boolean;
+  isNewCustomer: boolean;
 }) {
   // Check if there are any changes
   const hasChanges =
-    isNewStaff ||
-    !originalStaff ||
-    JSON.stringify(staff) !== JSON.stringify(originalStaff);
+    isNewCustomer ||
+    !originalCustomer ||
+    JSON.stringify(customer) !== JSON.stringify(originalCustomer);
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-8 border-b border-gray-200">
         <h3 className="text-4xl font-bold">
-          {isNewStaff ? "Add New Staff" : "Edit Staff"}
+          {isNewCustomer ? "Add New Customer" : "Edit Customer"}
         </h3>
       </div>
 
@@ -438,29 +439,29 @@ function EditPane({
         <div className="grid grid-cols-2 gap-6">
           <Field
             label="First Name"
-            value={staff.first_name}
+            value={customer.first_name}
             onChange={(v) => updateField("first_name", v)}
           />
           <Field
             label="Middle Name"
-            value={staff.middle_name ?? ""}
+            value={customer.middle_name ?? ""}
             onChange={(v) => updateField("middle_name", v)}
           />
           <Field
             label="Last Name"
-            value={staff.last_name}
+            value={customer.last_name}
             onChange={(v) => updateField("last_name", v)}
           />
           <Field
             label="Birthdate"
             type="date"
-            value={staff.birthdate ?? ""}
+            value={customer.birthdate ?? ""}
             onChange={(v) => updateField("birthdate", v)}
           />
 
           <Select
             label="Gender"
-            value={staff.gender ?? ""}
+            value={customer.gender ?? ""}
             onChange={(v) => updateField("gender", v || null)}
             options={[
               { value: "", label: "Select…" },
@@ -469,56 +470,33 @@ function EditPane({
             ]}
           />
 
-          <Select
-            label="Role"
-            value={staff.role}
-            onChange={(v) => updateField("role", v)}
-            options={[
-              { value: "admin", label: "Admin" },
-              { value: "cashier", label: "Cashier" },
-              { value: "attendant", label: "Attendant" },
-              { value: "rider", label: "Rider" },
-              { value: "cashier_attendant", label: "Cashier & Attendant" },
-            ]}
-          />
-
           <Field
             label="Email Address"
-            value={staff.email_address ?? ""}
+            value={customer.email_address ?? ""}
             onChange={(v) => updateField("email_address", v)}
-            disabled={!isNewStaff}
+            disabled={!isNewCustomer}
           />
           <Field
             label="Phone"
-            value={staff.phone_number ?? ""}
+            value={customer.phone_number ?? ""}
             onChange={(v) => updateField("phone_number", v)}
           />
 
           <div className="col-span-2">
             <Field
               label="Address"
-              value={staff.address ?? ""}
+              value={customer.address ?? ""}
               onChange={(v) => updateField("address", v)}
             />
           </div>
 
-          {isNewStaff && (
+          {isNewCustomer && (
             <div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
               <strong>📧 Account Creation:</strong> An invitation link will be
-              sent to the email address. Staff can set their password and
+              sent to the email address. The customer can set their password and
               activate their account through the link.
             </div>
           )}
-
-          <div className="col-span-2 flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={staff.is_active}
-              onChange={(e) => updateField("is_active", e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300"
-            />
-            <label className="text-sm">Active</label>
-          </div>
         </div>
       </div>
 
@@ -531,7 +509,7 @@ function EditPane({
           Cancel
         </button>
 
-        {!isNewStaff && (
+        {!isNewCustomer && (
           <button
             onClick={remove}
             className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 text-base font-medium w-24"
@@ -547,7 +525,7 @@ function EditPane({
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-base font-medium w-24"
             disabled={saving}
           >
-            {saving ? "Saving..." : isNewStaff ? "Add" : "Save"}
+            {saving ? "Saving..." : isNewCustomer ? "Add" : "Save"}
           </button>
         )}
       </div>
