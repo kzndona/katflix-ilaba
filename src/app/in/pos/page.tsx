@@ -25,6 +25,28 @@ export default function POSPage() {
     pos.setCustomerSuggestions([]);
   };
 
+  // Auto-clear customer if search results exist but no selection after delay
+  React.useEffect(() => {
+    if (
+      pos.customerQuery &&
+      pos.customerSuggestions.length > 0 &&
+      !pos.customer
+    ) {
+      const timer = setTimeout(() => {
+        if (
+          pos.customerQuery &&
+          !pos.customer &&
+          pos.customerSuggestions.length > 0
+        ) {
+          // User typed but didn't select from suggestions, so clear it
+          clearCustomer();
+        }
+      }, 3000); // 3 seconds delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [pos.customerQuery, pos.customerSuggestions, pos.customer]);
+
   const createNewBasket = () => {
     pos.addBasket();
     pos.setActiveBasketIndex(pos.baskets.length);
@@ -222,6 +244,7 @@ export default function POSPage() {
               <button
                 className="px-4 py-2 rounded bg-green-600 text-white disabled:bg-gray-400"
                 disabled={
+                  pos.isProcessing ||
                   (pos.payment.method === "cash" &&
                     (!pos.payment.amountPaid ||
                       pos.payment.amountPaid < pos.computeReceipt.total)) ||
@@ -232,7 +255,7 @@ export default function POSPage() {
                   await pos.saveOrder();
                 }}
               >
-                Process Payment & Save
+                {pos.isProcessing ? "Processing..." : "Process Payment & Save"}
               </button>
             </div>
           </div>

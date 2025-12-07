@@ -117,9 +117,9 @@ export default function PaneCustomer({
             onChange={(e) =>
               setCustomer({ ...(customer ?? {}), phone_number: e.target.value })
             }
-            disabled={isLoadedFromDB}
+            disabled={!!(isLoadedFromDB && customer?.phone_number)}
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB
+              isLoadedFromDB && customer?.phone_number
                 ? "bg-gray-100 cursor-not-allowed text-gray-500"
                 : ""
             }`}
@@ -139,9 +139,10 @@ export default function PaneCustomer({
                 email_address: e.target.value,
               })
             }
-            disabled={isLoadedFromDB}
+            disabled={!!(isLoadedFromDB && customer?.email_address)}
+            placeholder="Optional"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB
+              isLoadedFromDB && customer?.email_address
                 ? "bg-gray-100 cursor-not-allowed text-gray-500"
                 : ""
             }`}

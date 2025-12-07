@@ -178,7 +178,18 @@ export default function CustomersPage() {
         body: JSON.stringify({ id: editing.id }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to delete customer");
+      if (!res.ok) {
+        // Check if error is due to foreign key constraint (customer has orders)
+        if (
+          result.error?.includes("foreign key") ||
+          result.error?.includes("violates")
+        ) {
+          throw new Error(
+            "Cannot delete this customer because they have existing orders. Please contact support if you need to remove this customer."
+          );
+        }
+        throw new Error(result.error || "Failed to delete customer");
+      }
 
       setSuccessMsg("Customer deleted successfully");
       load(); // reload table
