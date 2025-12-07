@@ -23,8 +23,12 @@ export default function PaneCustomer({
   clearCustomer,
 }: Props) {
   const isLoadedFromDB = customer?.id ? true : false;
-  const [originalEmail, setOriginalEmail] = React.useState<string | undefined>(undefined);
-  const [originalPhone, setOriginalPhone] = React.useState<string | undefined>(undefined);
+  const [originalEmail, setOriginalEmail] = React.useState<string | undefined>(
+    undefined
+  );
+  const [originalPhone, setOriginalPhone] = React.useState<string | undefined>(
+    undefined
+  );
 
   // Track original email/phone when customer is picked from DB
   React.useEffect(() => {
