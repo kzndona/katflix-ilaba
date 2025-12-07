@@ -357,7 +357,7 @@ export function usePOSState() {
     setIsProcessing(true);
 
     try {
-      // 0️⃣ Create customer if they're new (not from DB)
+      // 0️⃣ Handle customer - create if new, or update if email was added
       let customerId = customer?.id || null;
 
       if (customer && !customer.id) {
@@ -396,6 +396,32 @@ export function usePOSState() {
 
         // Update local customer state with the new ID
         setCustomer({ ...customer, id: customerId });
+      } else if (customer && customer.id && customer.email_address) {
+        // Existing customer - check if email was just added (and send invitation)
+        try {
+          const res = await fetch("/api/customer/saveCustomer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: customer.id,
+              first_name: customer.first_name,
+              last_name: customer.last_name,
+              phone_number: customer.phone_number,
+              email_address: customer.email_address,
+              birthdate: customer.birthdate,
+              gender: customer.gender,
+              address: customer.address,
+            }),
+          });
+
+          if (!res.ok) {
+            console.warn("Failed to update customer email:", await res.text());
+            // Don't block order creation, just warn
+          }
+        } catch (err) {
+          console.warn("Error updating customer email:", err);
+          // Don't block order creation
+        }
       }
 
       // 1️⃣ Prepare products array

@@ -23,6 +23,19 @@ export default function PaneCustomer({
   clearCustomer,
 }: Props) {
   const isLoadedFromDB = customer?.id ? true : false;
+  const [originalEmail, setOriginalEmail] = React.useState<string | undefined>(undefined);
+  const [originalPhone, setOriginalPhone] = React.useState<string | undefined>(undefined);
+
+  // Track original email/phone when customer is picked from DB
+  React.useEffect(() => {
+    if (isLoadedFromDB) {
+      setOriginalEmail(customer?.email_address);
+      setOriginalPhone(customer?.phone_number);
+    } else {
+      setOriginalEmail(undefined);
+      setOriginalPhone(undefined);
+    }
+  }, [isLoadedFromDB, customer?.id]);
 
   return (
     <div>
@@ -117,9 +130,9 @@ export default function PaneCustomer({
             onChange={(e) =>
               setCustomer({ ...(customer ?? {}), phone_number: e.target.value })
             }
-            disabled={!!(isLoadedFromDB && customer?.phone_number)}
+            disabled={!!(isLoadedFromDB && originalPhone)}
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB && customer?.phone_number
+              isLoadedFromDB && originalPhone
                 ? "bg-gray-100 cursor-not-allowed text-gray-500"
                 : ""
             }`}
@@ -139,10 +152,10 @@ export default function PaneCustomer({
                 email_address: e.target.value,
               })
             }
-            disabled={!!(isLoadedFromDB && customer?.email_address)}
+            disabled={!!(isLoadedFromDB && originalEmail)}
             placeholder="Optional"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB && customer?.email_address
+              isLoadedFromDB && originalEmail
                 ? "bg-gray-100 cursor-not-allowed text-gray-500"
                 : ""
             }`}

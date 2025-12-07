@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    let result;
+    let result: any = null;
 
     if (!data.id) {
       // New customer: Create auth user first if email provided
@@ -52,14 +52,85 @@ export async function POST(req: Request) {
       result = await supabase.from("customers").insert(customerPayload).select();
     } else {
       // Update existing customer
-      // Don't allow changing email (would need re-invitation)
       const { email_address, loyalty_points, ...dataWithoutEmailAndPoints } = data;
 
-      result = await supabase
-        .from("customers")
-        .update(dataWithoutEmailAndPoints)
-        .eq("id", data.id)
-        .select();
+      // If email is being set and customer doesn't have auth_id, send invitation
+      if (email_address) {
+        try {
+          // First check if this customer already has an auth user
+          const { data: customerData } = await supabase
+            .from("customers")
+            .select("auth_id")
+            .eq("id", data.id)
+            .single();
+
+          if (!customerData?.auth_id) {
+            // No auth user yet - create one and send invitation
+            const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(
+              email_address,
+              {
+                data: {
+                  first_name: data.first_name,
+                  last_name: data.last_name,
+                },
+              }
+            );
+
+            if (authError) {
+              console.error("Auth invite error:", authError);
+              // Don't throw - continue with profile update
+            }
+
+            if (authData?.user?.id) {
+              // Update customer with new auth_id and email
+              result = await supabase
+                .from("customers")
+                .update({
+                  ...dataWithoutEmailAndPoints,
+                  email_address,
+                  auth_id: authData.user.id,
+                })
+                .eq("id", data.id)
+                .select();
+            } else {
+              // Invitation failed, update without auth_id
+              result = await supabase
+                .from("customers")
+                .update({
+                  ...dataWithoutEmailAndPoints,
+                  email_address,
+                })
+                .eq("id", data.id)
+                .select();
+            }
+          } else {
+            // Auth user already exists - just update profile
+            result = await supabase
+              .from("customers")
+              .update({
+                ...dataWithoutEmailAndPoints,
+                email_address,
+              })
+              .eq("id", data.id)
+              .select();
+          }
+        } catch (emailErr) {
+          console.warn("Error handling email update:", emailErr);
+          // Continue with regular update
+          result = await supabase
+            .from("customers")
+            .update(dataWithoutEmailAndPoints)
+            .eq("id", data.id)
+            .select();
+        }
+      } else {
+        // No email - just update other fields
+        result = await supabase
+          .from("customers")
+          .update(dataWithoutEmailAndPoints)
+          .eq("id", data.id)
+          .select();
+      }
     }
 
     if (result.error) throw result.error;
