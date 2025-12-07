@@ -16,24 +16,51 @@ export default function SetPasswordForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Listen for auth state changes - when the recovery token is processed
-    // by Supabase, the session will be established
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "INITIAL_SESSION") {
-        // Check initial session when component loads
-        if (!session) {
+    // Wait for the Supabase client to process the recovery token from the URL hash
+    // This is async and may take a moment, especially on first load
+    let isMounted = true;
+
+    const verifyRecoverySession = async () => {
+      // Add a small delay to allow Supabase to process the URL hash
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      if (!isMounted) return;
+
+      try {
+        // Try to get the current user - this will only succeed if there's
+        // a valid recovery session from the invite link
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (!isMounted) return;
+
+        if (userError) {
+          console.error("Auth error:", userError);
           setError("Invalid or expired link. Please request a new invitation.");
+          return;
         }
-      } else if (event === "SIGNED_IN") {
-        // Recovery session was established successfully
-        console.log("Recovery session established for:", session?.user?.email);
+
+        if (!user) {
+          console.error("No user found in recovery session");
+          setError("Invalid or expired link. Please request a new invitation.");
+          return;
+        }
+
+        console.log("Recovery session verified for:", user.email);
+        // Session is valid - form will be displayed
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Session verification error:", err);
+        setError("Failed to verify your invitation link.");
       }
-    });
+    };
+
+    verifyRecoverySession();
 
     return () => {
-      subscription?.unsubscribe();
+      isMounted = false;
     };
   }, [supabase.auth]);
 
