@@ -71,8 +71,8 @@ export default function PaneBaskets({
         disabled
           ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
           : active
-          ? `border-${color}-500 bg-${color}-50`
-          : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
+            ? `border-${color}-500 bg-${color}-50`
+            : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
       }`}
       onClick={disabled ? undefined : onClick}
     >
@@ -241,8 +241,8 @@ export default function PaneBaskets({
             b.weightKg === 0
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.iron
-              ? "border-orange-500 bg-orange-50"
-              : "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                ? "border-orange-500 bg-orange-50"
+                : "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
           }`}
           onClick={() => {
             if (b.weightKg !== 0) {
@@ -255,8 +255,8 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : b.iron
-              ? `${estimateDuration("iron", 1)}m`
-              : "Click to add"}
+                ? `${estimateDuration("iron", 1)}m`
+                : "Click to add"}
           </div>
         </div>
 
@@ -265,8 +265,8 @@ export default function PaneBaskets({
             b.weightKg === 0
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.fold
-              ? "border-teal-500 bg-teal-50"
-              : "border-gray-300 hover:border-teal-500 hover:bg-teal-50"
+                ? "border-teal-500 bg-teal-50"
+                : "border-gray-300 hover:border-teal-500 hover:bg-teal-50"
           }`}
           onClick={() => {
             if (b.weightKg !== 0) {
@@ -279,8 +279,8 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : b.fold
-              ? `${estimateDuration("fold", 1)}m`
-              : "Click to add"}
+                ? `${estimateDuration("fold", 1)}m`
+                : "Click to add"}
           </div>
         </div>
       </div>
