@@ -114,7 +114,7 @@ export default function CustomersPage() {
       "last_name",
       "phone_number",
     ];
-    
+
     // Email is required only for new customers
     if (!editing.id) {
       requiredFields.push("email_address");

@@ -117,7 +117,7 @@ export default function StaffPage() {
       "address",
       "phone_number",
     ];
-    
+
     // Email is required only for new staff
     if (!editing.id) {
       requiredFields.push("email_address");
