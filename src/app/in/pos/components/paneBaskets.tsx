@@ -29,20 +29,27 @@ export default function PaneBaskets({
   };
 
   // Get service price from DB by service_type
-  const getServicePrice = (serviceType: string, premium: boolean = false): number => {
+  const getServicePrice = (
+    serviceType: string,
+    premium: boolean = false
+  ): number => {
     const matches = services.filter((s) => s.service_type === serviceType);
     if (matches.length === 0) return 0;
-    
+
     if (premium) {
       return (
-        matches.find((s) => s.name.toLowerCase().includes("premium"))?.rate_per_kg ||
-        matches[0]?.rate_per_kg || 0
+        matches.find((s) => s.name.toLowerCase().includes("premium"))
+          ?.rate_per_kg ||
+        matches[0]?.rate_per_kg ||
+        0
       );
     }
-    
+
     return (
-      matches.find((s) => !s.name.toLowerCase().includes("premium"))?.rate_per_kg ||
-      matches[0]?.rate_per_kg || 0
+      matches.find((s) => !s.name.toLowerCase().includes("premium"))
+        ?.rate_per_kg ||
+      matches[0]?.rate_per_kg ||
+      0
     );
   };
 

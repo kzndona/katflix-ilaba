@@ -1,6 +1,6 @@
 // app/api/pos/newOrder/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/src/app/utils/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 interface ServicePayload {
   service_id: string;
@@ -42,17 +42,11 @@ interface OrderPayload {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   
-  // Verify user is authenticated via Bearer token
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { error: 'Unauthorized - Missing or invalid authentication token' },
-      { status: 401 }
-    );
-  }
-
   const body: OrderPayload = await req.json();
 
   const { customerId, total, baskets, products, payments, pickupAddress, deliveryAddress, shippingFee, source } = body;
