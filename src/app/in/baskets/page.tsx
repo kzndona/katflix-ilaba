@@ -16,6 +16,7 @@ type ServiceDetail = {
 type BasketDetail = {
   id: string;
   order_id: string;
+  basket_number: number;
   weight: number | null;
   notes: string | null;
   price: number | null;
@@ -23,15 +24,44 @@ type BasketDetail = {
   created_at: string | null;
   services: ServiceDetail[];
   customer_name?: string | null;
+  phone_number?: string | null;
+  email_address?: string | null;
+  handling?: {
+    id: string;
+    type: string;
+    address: string;
+  } | null;
+  washPremium?: boolean;
+  dryPremium?: boolean;
 };
 
 const serviceTypeOrder = ["wash", "dry", "spin", "iron", "fold"];
+
+// Color palette for different orders
+const colorPalette = [
+  { border: "border-blue-500", bg: "bg-blue-50" },
+  { border: "border-purple-500", bg: "bg-purple-50" },
+  { border: "border-pink-500", bg: "bg-pink-50" },
+  { border: "border-green-500", bg: "bg-green-50" },
+  { border: "border-yellow-500", bg: "bg-yellow-50" },
+  { border: "border-indigo-500", bg: "bg-indigo-50" },
+  { border: "border-teal-500", bg: "bg-teal-50" },
+  { border: "border-orange-500", bg: "bg-orange-50" },
+];
 
 export default function BasketsPage() {
   const [baskets, setBaskets] = useState<BasketDetail[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // Map order IDs to colors for grouping
+  const getOrderColor = (orderId: string) => {
+    const orderIndex = baskets.findIndex((b) => b.order_id === orderId);
+    const uniqueOrderIds = Array.from(new Set(baskets.map((b) => b.order_id)));
+    const uniqueIndex = uniqueOrderIds.indexOf(orderId);
+    return colorPalette[uniqueIndex % colorPalette.length];
+  };
 
   useEffect(() => {
     load();
@@ -146,43 +176,68 @@ export default function BasketsPage() {
           No baskets to process
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {baskets.map((basket) => {
             const nextServiceType = getNextServiceType(basket);
             const grouped = groupServicesByType(basket);
+            const orderColor = getOrderColor(basket.order_id);
 
             return (
               <div
                 key={basket.id}
-                className="bg-white rounded-lg shadow p-5 border-l-4 border-blue-500"
+                className={`bg-white rounded-lg shadow-md p-5 border-l-4 ${orderColor.border} border-opacity-70 ${orderColor.bg} border-opacity-20 flex flex-col h-full`}
               >
-                {/* Header */}
-                <div className="mb-4 pb-3 border-b">
-                  <p className="text-xs text-gray-500">Order ID</p>
-                  <p className="text-lg font-bold text-blue-600">
-                    {basket.order_id.slice(0, 8).toUpperCase()}
+                {/* Header - Name + Basket Number */}
+                <div className="mb-4 pb-3 border-b border-gray-200">
+                  <p className="text-base font-bold text-gray-900 line-clamp-2">
+                    {basket.customer_name} • Basket {basket.basket_number}
                   </p>
-                  {basket.customer_name && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      {basket.customer_name}
+                </div>
+
+                {/* Contact Info */}
+                <div className="text-sm text-gray-600 space-y-2 mb-4">
+                  {basket.phone_number && (
+                    <p className="truncate">
+                      <span className="font-semibold">📞</span>{" "}
+                      {basket.phone_number}
+                    </p>
+                  )}
+                  {basket.email_address && (
+                    <p className="truncate">
+                      <span className="font-semibold">✉️</span>{" "}
+                      {basket.email_address}
                     </p>
                   )}
                 </div>
 
+                {/* Handling Info - Only show if handling exists */}
+                {basket.handling && (
+                  <div className="text-sm text-gray-600 mb-4 pb-3 border-b border-gray-200">
+                    <p className="font-semibold capitalize">
+                      {basket.handling.type}
+                    </p>
+                    {basket.handling.address && (
+                      <p className="text-gray-500 truncate text-sm">
+                        {basket.handling.address}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Basket Info */}
-                <div className="text-sm space-y-1 mb-4">
+                <div className="text-sm space-y-2 mb-4 pb-3 border-b border-gray-200">
                   <p>
                     <strong>Weight:</strong> {basket.weight} kg
                   </p>
                   {basket.notes && (
-                    <p>
+                    <p className="text-gray-600 line-clamp-2">
                       <strong>Notes:</strong> {basket.notes}
                     </p>
                   )}
                 </div>
 
                 {/* Services by Type */}
-                <div className="mb-4 space-y-2">
+                <div className="mb-4 space-y-2 grow">
                   {serviceTypeOrder.map((type) => {
                     const typeServices = grouped[type];
                     if (!typeServices || typeServices.length === 0) return null;
@@ -198,37 +253,36 @@ export default function BasketsPage() {
                       0
                     );
 
-                    let bgClass = "bg-gray-100 border-gray-300 text-gray-600";
+                    // Check if wash or dry is premium
+                    const isPremium =
+                      (type === "wash" && basket.washPremium) ||
+                      (type === "dry" && basket.dryPremium);
+
+                    let bgClass = "bg-gray-50 border-gray-200 text-gray-600";
                     if (isCompleted) {
-                      bgClass = "bg-green-100 border-green-300 text-green-800";
+                      bgClass = "bg-green-50 border-green-200 text-green-700";
                     } else if (isInProgress) {
-                      bgClass = "bg-blue-100 border-blue-300 text-blue-800";
+                      bgClass = "bg-blue-50 border-blue-200 text-blue-700";
                     }
 
                     return (
                       <div
                         key={type}
-                        className={`p-2 rounded text-sm border-2 ${bgClass}`}
+                        className={`p-2 rounded text-sm border ${bgClass}`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium capitalize flex items-center gap-2">
+                        <div className="flex justify-between items-center gap-1">
+                          <span className="font-semibold capitalize">
                             {type}
-
-                            {isCompleted && (
-                              <span className="ml-2 text-xs bg-green-600 text-white px-2 py-1 rounded">
-                                ✓
+                            {isPremium && (
+                              <span className="ml-1 text-xs bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded">
+                                Premium
                               </span>
                             )}
-
-                            {isInProgress && (
-                              <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                                In Progress
-                              </span>
-                            )}
+                            {isCompleted && <span className="ml-1">✓</span>}
+                            {isInProgress && <span className="ml-1">●</span>}
                           </span>
-
-                          <span className="text-xs">
-                            ₱{totalPrice.toFixed(2)}
+                          <span className="font-bold">
+                            ₱{totalPrice.toFixed(0)}
                           </span>
                         </div>
                       </div>
@@ -243,15 +297,23 @@ export default function BasketsPage() {
                     (!nextServiceType && !canCompleteBasket(basket)) ||
                     processingId === basket.id
                   }
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-300 font-medium hover:bg-green-700 disabled:cursor-not-allowed hover:cursor-pointer disabled:hover:cursor-not-allowed"
+                  className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
+                    processingId === basket.id
+                      ? "bg-gray-400 text-white cursor-wait"
+                      : !nextServiceType && !canCompleteBasket(basket)
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : canCompleteBasket(basket)
+                          ? "bg-linear-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg"
+                          : "bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg"
+                  }`}
                 >
                   {processingId === basket.id
                     ? "Processing..."
                     : canCompleteBasket(basket)
-                      ? "Complete"
+                      ? "Complete ✓"
                       : nextServiceType
-                        ? "Next Service"
-                        : "Completed"}
+                        ? "Next Service →"
+                        : "All Done"}
                 </button>
               </div>
             );

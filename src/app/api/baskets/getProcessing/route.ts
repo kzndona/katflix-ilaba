@@ -11,6 +11,7 @@ export async function GET(req: Request) {
       .select(`
         id,
         order_id,
+        basket_number,
         weight,
         notes,
         price,
@@ -34,7 +35,9 @@ export async function GET(req: Request) {
           customers (
             id,
             first_name,
-            last_name
+            last_name,
+            phone_number,
+            email_address
           )
         )
       `)
@@ -44,28 +47,36 @@ export async function GET(req: Request) {
     if (basketError) throw basketError;
 
     // Transform data to match frontend expectations
-    const formattedBaskets = baskets?.map((basket: any) => ({
-      id: basket.id,
-      order_id: basket.order_id,
-      weight: basket.weight,
-      notes: basket.notes,
-      price: basket.price,
-      status: basket.status,
-      created_at: basket.created_at,
-      customer_name: basket.orders?.customers
-        ? `${basket.orders.customers.first_name} ${basket.orders.customers.last_name}`
-        : null,
-      services: basket.basket_services?.map((bs: any) => ({
-        id: bs.id,
-        service_id: bs.service_id,
-        basket_id: basket.id,
-        rate: bs.rate,
-        subtotal: bs.subtotal,
-        status: bs.status,
-        service_type: bs.services?.service_type,
-        service_name: bs.services?.name,
-      })) || [],
-    })) || [];
+    const formattedBaskets = baskets?.map((basket: any) => {
+      return {
+        id: basket.id,
+        order_id: basket.order_id,
+        basket_number: basket.basket_number,
+        weight: basket.weight,
+        notes: basket.notes,
+        price: basket.price,
+        status: basket.status,
+        created_at: basket.created_at,
+        customer_name: basket.orders?.customers
+          ? `${basket.orders.customers.first_name} ${basket.orders.customers.last_name}`
+          : null,
+        phone_number: basket.orders?.customers?.phone_number || null,
+        email_address: basket.orders?.customers?.email_address || null,
+        handling: null,
+        washPremium: false,
+        dryPremium: false,
+        services: basket.basket_services?.map((bs: any) => ({
+          id: bs.id,
+          service_id: bs.service_id,
+          basket_id: basket.id,
+          rate: bs.rate,
+          subtotal: bs.subtotal,
+          status: bs.status,
+          service_type: bs.services?.service_type,
+          service_name: bs.services?.name,
+        })) || [],
+      };
+    }) || [];
 
     return NextResponse.json(formattedBaskets);
   } catch (error: any) {

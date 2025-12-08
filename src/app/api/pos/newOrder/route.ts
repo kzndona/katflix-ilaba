@@ -60,11 +60,13 @@ export async function POST(req: Request) {
     const orderId = order.id;
 
     // 2️⃣ Insert baskets and basket services
-    for (const b of baskets) {
+    for (let i = 0; i < baskets.length; i++) {
+      const b = baskets[i];
       const { data: basket, error: basketErr } = await supabase
         .from("baskets")
         .insert({
           order_id: orderId,
+          basket_number: i + 1,
           weight: b.weight || null,
           price: b.subtotal,
           notes: b.notes || null,
