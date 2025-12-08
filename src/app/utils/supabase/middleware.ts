@@ -64,56 +64,99 @@ export async function updateSession(request: NextRequest) {
 
     const role = staffData?.role
 
-    // TODO:
-    // const isBack = request.headers.get('sec-fetch-user') !== '?1'
-    // if (user && !isBack && request.nextUrl.pathname.startsWith('/auth/sign-in')) {
-    //   const url = request.nextUrl.clone()
-    //   url.pathname = '/in/orders'
-    //   return NextResponse.redirect(url)
-    // }
-
-    // Admin-only routes
-    if (role !== 'admin') {
-      
-      // Restrict access to /in/accounts pages
-      if (request.nextUrl.pathname.startsWith("/in/accounts")) {
-        const url = request.nextUrl.clone()
-        url.pathname = "/in/orders" // redirect non-admin
-        console.log("PROXY: Unauthorized access to /in/accounts/staff, redirecting to /in/orders");
-        return NextResponse.redirect(url)
-      }
-  
-      // Restrict access to admin-only API
-      if (request.nextUrl.pathname.startsWith("/api/staff")) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Helper function to get appropriate home page for role
+    const getHomePageForRole = (userRole: string): string => {
+      switch (userRole) {
+        case 'cashier':
+          return '/in/pos'
+        case 'rider':
+          return '/in/orders'
+        case 'attendant':
+          return '/in/baskets'
+        case 'cashier_attendant':
+          return '/in/baskets'
+        case 'admin':
+          return '/in/orders'
+        default:
+          return '/in/orders'
       }
     }
 
-    // Inventory management routes (admin and attendant only)
-    if ((role !== 'admin' && role !== 'attendant' && role !== 'cashier_attendant')) {
-      
-      // Restrict access to /in/manage pages
-      if (request.nextUrl.pathname.startsWith("/in/manage")) {
+    // Redirect to login if no role found
+    if (!role) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/sign-in'
+      return NextResponse.redirect(url)
+    }
+
+    // Redirect logged-in users from auth pages to their appropriate home page
+    const isBackNavigation = request.headers.get('sec-fetch-user') !== '?1'
+    if (!isBackNavigation && request.nextUrl.pathname.startsWith('/auth/sign-in')) {
+      const url = request.nextUrl.clone()
+      url.pathname = getHomePageForRole(role)
+      return NextResponse.redirect(url)
+    }
+
+    // CASHIER - Can only access POS
+    if (role === 'cashier') {
+      if (request.nextUrl.pathname.startsWith('/in/') && !request.nextUrl.pathname.startsWith('/in/pos')) {
         const url = request.nextUrl.clone()
-        url.pathname = "/in/orders" // redirect non-admin
-        console.log("PROXY: Unauthorized access to /in/manage, redirecting to /in/orders");
+        url.pathname = '/in/pos'
+        console.log(`PROXY: Cashier unauthorized access, redirecting to /in/pos`)
         return NextResponse.redirect(url)
-      }
-  
-      // Restrict access to inventory API
-      if (request.nextUrl.pathname.startsWith("/api/manage")) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
     }
 
-    if ((role !== 'admin' && role !== 'cashier' && role !== 'cashier_attendant')) {
-
-      if (request.nextUrl.pathname.startsWith("/in/pos")) {
+    // RIDER - Can access Orders only
+    if (role === 'rider') {
+      if (request.nextUrl.pathname.startsWith('/in/') && !request.nextUrl.pathname.startsWith('/in/orders')) {
         const url = request.nextUrl.clone()
-        url.pathname = "/in/orders" // redirect non-admin
-        console.log("PROXY: Unauthorized access to /in/pos, redirecting to /in/orders");
+        url.pathname = '/in/orders'
+        console.log(`PROXY: Rider unauthorized access, redirecting to /in/orders`)
         return NextResponse.redirect(url)
       }
+    }
+
+    // ATTENDANT - Can access Orders, Baskets, Manage
+    if (role === 'attendant') {
+      const allowedPaths = ['/in/orders', '/in/baskets', '/in/manage']
+      const isAllowed = allowedPaths.some(path => request.nextUrl.pathname.startsWith(path))
+      
+      if (request.nextUrl.pathname.startsWith('/in/') && !isAllowed) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/in/baskets'
+        console.log(`PROXY: Attendant unauthorized access, redirecting to /in/baskets`)
+        return NextResponse.redirect(url)
+      }
+    }
+
+    // CASHIER_ATTENDANT - Can access POS, Orders, Baskets, Manage
+    if (role === 'cashier_attendant') {
+      const allowedPaths = ['/in/pos', '/in/orders', '/in/baskets', '/in/manage']
+      const isAllowed = allowedPaths.some(path => request.nextUrl.pathname.startsWith(path))
+      
+      if (request.nextUrl.pathname.startsWith('/in/') && !isAllowed) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/in/baskets'
+        console.log(`PROXY: Cashier Attendant unauthorized access, redirecting to /in/baskets`)
+        return NextResponse.redirect(url)
+      }
+    }
+
+    // ADMIN - Can access everything, so no restrictions
+
+    // API-level access control
+    // Only admin can access /api/staff
+    if (role !== 'admin' && request.nextUrl.pathname.startsWith('/api/staff')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Only admin, attendant, and cashier_attendant can access /api/manage
+    if (
+      (role !== 'admin' && role !== 'attendant' && role !== 'cashier_attendant') &&
+      request.nextUrl.pathname.startsWith('/api/manage')
+    ) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
   }
 
