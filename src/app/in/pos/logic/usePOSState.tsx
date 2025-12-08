@@ -320,6 +320,10 @@ export function usePOSState() {
           iron: ironPrice,
           fold: foldPrice,
         },
+        premiumFlags: {
+          wash: b.washPremium,
+          dry: b.dryPremium,
+        },
         total: subtotal, // NO service fee added
         estimatedDurationMinutes: calculateBasketDuration(b),
       };

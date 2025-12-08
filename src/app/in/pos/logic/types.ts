@@ -35,7 +35,8 @@ export type ReceiptBasketLine = {
   id: string;
   name: string;
   weightKg: number;
-  breakdown: { wash: number; dry: number; spin: number };
+  breakdown: { wash: number; dry: number; spin: number; iron: number; fold: number };
+  premiumFlags: { wash: boolean; dry: boolean };
   total: number;
   estimatedDurationMinutes: number;
 };

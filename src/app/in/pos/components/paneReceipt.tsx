@@ -45,94 +45,103 @@ export default function PaneReceipt({
   };
 
   return (
-    <aside className="bg-white border-l border-gray-200 p-4 flex flex-col h-full overflow-hidden rounded-lg">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Receipt</h3>
+    <aside className="bg-white border-l border-gray-200 p-6 flex flex-col h-full overflow-hidden rounded-lg">
+      <h3 className="text-xl font-bold text-gray-900 mb-6">Receipt</h3>
 
-      <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+      <div className="flex-1 overflow-y-auto pr-3 space-y-5">
         {/* Customer Info */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-sm text-gray-600">Customer</div>
-          <div className="text-base font-semibold text-gray-900">
+        <div className="bg-linear-to-br from-gray-50 to-gray-100 rounded-lg p-5 border border-gray-200">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Customer</div>
+          <div className="text-lg font-bold text-gray-900 mb-4">
             {customer && (customer.first_name || customer.last_name)
               ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
               : "—"}
+          </div>
+          <div className="space-y-2">
+            {customer?.phone_number && (
+              <div className="flex items-start gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase mt-0.5">Mobile:</span>
+                <span className="text-sm text-gray-700">{customer.phone_number}</span>
+              </div>
+            )}
+            {customer?.email_address && (
+              <div className="flex items-start gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase mt-0.5">Email:</span>
+                <span className="text-sm text-gray-700 break-all">{customer.email_address}</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Products Section */}
         {computeReceipt.productLines.length > 0 && (
-          <div>
-            <div className="font-semibold text-gray-900 text-sm mb-2">
+          <div className="pt-3">
+            <div className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-4">
               Products
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {computeReceipt.productLines.map((pl: any) => (
-                <div key={pl.id} className="flex justify-between text-sm">
+                <div key={pl.id} className="flex justify-between">
                   <div>
-                    <div className="text-gray-900">{pl.name}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-sm font-semibold text-gray-900">{pl.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
                       {pl.qty} × ₱{pl.price}
                     </div>
                   </div>
-                  <div className="font-medium">₱{pl.lineTotal.toFixed(2)}</div>
+                  <div className="font-semibold text-gray-900">₱{pl.lineTotal.toFixed(2)}</div>
                 </div>
               ))}
             </div>
             {computeReceipt.basketLines.length > 0 && (
-              <div className="flex justify-between text-gray-700 font-semibold mt-2 pt-1 border-t border-gray-300" />
+              <div className="border-t-2 border-gray-200 mt-5 pt-5" />
             )}
           </div>
         )}
 
         {/* Baskets Section */}
         {computeReceipt.basketLines.length > 0 && (
-          <div>
-            <div className="font-semibold text-gray-900 text-base mb-2">
+          <div className="pt-3">
+            <div className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-4">
               Services
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {computeReceipt.basketLines.map((b: any, idx: number) => (
-                <div key={b.id}>
-                  <div className="text-sm">
-                    <div className="flex justify-between">
-                      <div className="text-gray-900 font-medium">
-                        {b.name} • {b.weightKg}kg
-                      </div>
-                      <div className="font-medium">₱{b.total.toFixed(2)}</div>
+                <div key={b.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition">
+                  <div className="flex justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="text-gray-900 font-semibold text-base">
+                      {b.name} • {b.weightKg}kg
                     </div>
-                    <div className="text-xs text-gray-600 space-y-1 mt-1">
-                      {Object.entries(b.breakdown)
-                        .filter(([_, val]) => (val as number) > 0)
-                        .map(([service, val]) => (
-                          <div key={service} className="flex justify-between">
-                            <span>
-                              {service.charAt(0).toUpperCase() +
-                                service.slice(1)}{" "}
-                              {b[`${service}Premium`] && "(Premium)"}
-                            </span>
-                            <span>₱{(val as number).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      <div className="border-t border-gray-100 mt-2">
-                        <span>Estimated Duration:</span>
-                        <span>{b.estimatedDurationMinutes} min</span>
-                      </div>
+                    <div className="font-bold text-gray-900 text-base">₱{b.total.toFixed(2)}</div>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1.5 ml-1">
+                    {Object.entries(b.breakdown)
+                      .filter(([_, val]) => (val as number) > 0)
+                      .map(([service, val]) => (
+                        <div key={service} className="flex justify-between">
+                          <span className="text-gray-700 font-medium">
+                            {service.charAt(0).toUpperCase() +
+                              service.slice(1)}{" "}
+                            {(b.premiumFlags as any)[service] && "(Premium)"}
+                          </span>
+                          <span className="font-semibold text-gray-700">₱{(val as number).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    <div className="flex justify-between text-xs pt-2 mt-2 border-t border-gray-300">
+                      <span className="text-gray-600 font-medium">Duration:</span>
+                      <span className="font-bold text-gray-700">{b.estimatedDurationMinutes} min</span>
                     </div>
                   </div>
-                  {idx < computeReceipt.basketLines.length - 1 && (
-                    <div className="border-t border-gray-200 mt-4" />
-                  )}
                 </div>
               ))}
 
               {/* Total Estimated Duration across all baskets */}
               {computeReceipt.basketLines.length > 0 && (
-                <div className="bg-blue-50 rounded-lg p-3 mt-3 border border-blue-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-semibold text-gray-900">
+                <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-4 mt-2 border border-blue-200">
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-gray-900 text-sm">
                       Total Estimated Duration
                     </span>
-                    <span className="font-bold text-blue-600">
+                    <span className="font-bold text-blue-700 text-base">
                       {computeReceipt.basketLines.reduce(
                         (sum: number, b: any) =>
                           sum + b.estimatedDurationMinutes,
@@ -149,10 +158,10 @@ export default function PaneReceipt({
       </div>
 
       {/* Totals Section */}
-      <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
+      <div className="border-t-2 border-gray-300 pt-5 space-y-4 text-sm mt-5">
         <div className="flex justify-between">
           <span className="text-gray-600">Subtotal</span>
-          <span className="font-medium">
+          <span className="font-semibold text-gray-900">
             ₱
             {(
               computeReceipt.productSubtotal + computeReceipt.basketSubtotal
@@ -163,36 +172,37 @@ export default function PaneReceipt({
           <span className="text-gray-600">
             VAT ({(PRICING.taxRate * 100).toFixed(0)}%)
           </span>
-          <span className="font-medium">
+          <span className="font-semibold text-gray-900">
             ₱{computeReceipt.taxIncluded.toFixed(2)}
           </span>
         </div>
         {handling.deliver && (
           <div className="flex justify-between">
             <span className="text-gray-600">Delivery Fee</span>
-            <span className="font-medium">
+            <span className="font-semibold text-gray-900">
               ₱{handling.deliveryFee.toFixed(2)}
             </span>
           </div>
         )}
-        <div className="flex justify-between text-base font-bold bg-blue-50 p-3 rounded-lg">
+        <div className="border-t-2 border-gray-300 pt-4 mt-4" />
+        <div className="flex justify-between text-base font-bold bg-linear-to-r from-blue-600 to-blue-700 text-white p-5 rounded-lg">
           <span>Total</span>
           <span>₱{computeReceipt.total.toFixed(2)}</span>
         </div>
       </div>
 
       {/* Buttons */}
-      <div className="mt-4 flex gap-2">
+      <div className="mt-6 flex gap-3">
         <button
           onClick={() => setShowConfirm(true)}
           disabled={!isOrderValid()}
-          className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          className="flex-1 py-4 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition shadow-md hover:shadow-lg"
         >
           Checkout
         </button>
         <button
           onClick={() => resetPOS()}
-          className="flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition"
+          className="flex-1 py-4 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold text-base hover:bg-gray-100 transition"
         >
           Clear
         </button>
