@@ -34,6 +34,18 @@ type Customer = {
   phone_number: string | null;
 };
 
+type OrderProduct = {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  products: {
+    id: string;
+    item_name: string;
+  };
+};
+
 type Order = {
   id: string;
   source: string;
@@ -48,6 +60,7 @@ type Order = {
   created_at: string | null;
   completed_at: string | null;
   baskets: Basket[];
+  order_products: OrderProduct[];
   customers: Customer | null;
 };
 
@@ -421,19 +434,21 @@ function OrderListItem({
 
 function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-gray-200 flex justify-between items-start">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
         <div>
-          <h3 className="text-4xl font-bold">Order #{order.id.slice(0, 8)}</h3>
-          <p className="text-gray-500 mt-2 text-lg">
+          <h3 className="text-3xl font-bold">
             {order.customers
               ? `${order.customers.first_name} ${order.customers.last_name}`
               : "No customer"}
+          </h3>
+          <p className="text-gray-500 mt-1 text-sm">
+            Order #{order.id.slice(0, 8)}
           </p>
         </div>
         <button
           onClick={onEdit}
-          className="p-3 hover:bg-gray-100 rounded-lg transition"
+          className="p-3 hover:bg-gray-100 rounded-lg transition shrink-0"
           title="Edit"
         >
           <svg
@@ -452,84 +467,124 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8">
-        {/* Order Details */}
-        <div className="space-y-8">
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Order Information</h4>
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField label="Status" value={order.status} />
-              <DetailField label="Source" value={order.source} />
-              <DetailField
-                label="Payment Status"
-                value={order.payment_status}
-              />
-              <DetailField
-                label="Created"
-                value={
-                  order.created_at
-                    ? new Date(order.created_at).toLocaleString()
-                    : "—"
-                }
-              />
-            </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-4">
+          {/* Order Status & Dates */}
+          <div className="grid grid-cols-3 gap-4">
+            <DetailField label="📊 Status" value={order.status} />
+            <DetailField label="💳 Payment" value={order.payment_status} />
+            <DetailField label="🔧 Source" value={order.source} />
+            <DetailField
+              label="📅 Created"
+              value={
+                order.created_at
+                  ? new Date(order.created_at).toLocaleString()
+                  : "—"
+              }
+            />
+            <DetailField
+              label="✅ Completed"
+              value={
+                order.completed_at
+                  ? new Date(order.completed_at).toLocaleString()
+                  : "—"
+              }
+            />
           </div>
 
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Pricing</h4>
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField
-                label="Total Amount"
-                value={`₱${order.total_amount.toFixed(2)}`}
-              />
-              <DetailField
-                label="Discount"
-                value={`₱${order.discount.toFixed(2)}`}
-              />
-              <DetailField
-                label="Shipping Fee"
-                value={`₱${order.shipping_fee.toFixed(2)}`}
-              />
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Addresses</h4>
-            <div className="space-y-4">
-              <DetailField
-                label="Pickup Address"
-                value={order.pickup_address || "—"}
-              />
-              <DetailField
-                label="Delivery Address"
-                value={order.delivery_address || "—"}
-              />
-            </div>
-          </div>
-
+          {/* Customer Contact */}
           {order.customers && (
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Customer</h4>
-              <div className="grid grid-cols-2 gap-6">
-                <DetailField
-                  label="Email"
-                  value={order.customers.email_address || "—"}
-                />
-                <DetailField
-                  label="Phone"
-                  value={order.customers.phone_number || "—"}
-                />
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+              <DetailField
+                label="☎️ Phone"
+                value={order.customers.phone_number || "—"}
+              />
+              <DetailField
+                label="📧 Email"
+                value={order.customers.email_address || "—"}
+              />
+            </div>
+          )}
+
+          {/* Addresses */}
+          <div className="pt-2 border-t border-gray-100">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              🚚 Delivery Info
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500">Pickup Address</p>
+                <p className="text-sm text-gray-900">
+                  {order.pickup_address || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Delivery Address</p>
+                <p className="text-sm text-gray-900">
+                  {order.delivery_address || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="pt-2 border-t border-gray-100">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              💰 Charges
+            </h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Amount:</span>
+                <span className="font-medium">
+                  ₱{order.total_amount.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Discount:</span>
+                <span className="font-medium">
+                  ₱{order.discount.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Shipping Fee:</span>
+                <span className="font-medium">
+                  ₱{order.shipping_fee.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Products */}
+          {order.order_products && order.order_products.length > 0 && (
+            <div className="pt-2 border-t border-gray-100">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                🛍️ Products ({order.order_products.length})
+              </h4>
+              <div className="space-y-2">
+                {order.order_products.map((product) => (
+                  <div key={product.id} className="flex justify-between text-sm p-2 rounded bg-gray-50">
+                    <div>
+                      <p className="font-medium text-gray-900">{product.products.item_name}</p>
+                      <p className="text-xs text-gray-500">
+                        {product.quantity} × ₱{product.unit_price.toFixed(2)}
+                      </p>
+                    </div>
+                    <p className="font-medium text-gray-900">
+                      ₱{product.subtotal.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* Baskets Section */}
           {order.baskets && order.baskets.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold mb-4">
-                Baskets ({order.baskets.length})
+            <div className="pt-2 border-t border-gray-100">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                🧺 Baskets ({order.baskets.length})
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {order.baskets.map((basket) => (
                   <BasketCard key={basket.id} basket={basket} />
                 ))}
@@ -553,22 +608,22 @@ function BasketCard({ basket }: { basket: Basket }) {
     }[basket.status] || "bg-gray-50 border-gray-200";
 
   return (
-    <div className={`border rounded-lg p-4 ${statusColor}`}>
-      <div className="flex justify-between items-start mb-3">
+    <div className={`border rounded-lg p-3 ${statusColor}`}>
+      <div className="flex justify-between items-start mb-2">
         <div>
-          <h5 className="font-semibold">Basket #{basket.basket_number}</h5>
-          <p className="text-xs text-gray-600 mt-1">
-            {basket.created_at
-              ? new Date(basket.created_at).toLocaleString()
-              : "—"}
-          </p>
+          <h5 className="font-semibold text-sm">
+            Basket #{basket.basket_number}
+          </h5>
+          {basket.weight !== null && (
+            <p className="text-xs text-gray-600">Weight: {basket.weight} kg</p>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs font-semibold text-gray-700">
             {basket.status}
           </div>
           {basket.price !== null && (
-            <div className="text-sm font-semibold mt-1">
+            <div className="text-sm font-semibold">
               ₱{basket.price.toFixed(2)}
             </div>
           )}
@@ -576,28 +631,24 @@ function BasketCard({ basket }: { basket: Basket }) {
       </div>
 
       {basket.notes && (
-        <p className="text-xs text-gray-700 mb-3">{basket.notes}</p>
-      )}
-
-      {basket.weight !== null && (
-        <p className="text-xs text-gray-600 mb-3">Weight: {basket.weight} kg</p>
+        <p className="text-xs text-gray-700 mb-2 italic">"{basket.notes}"</p>
       )}
 
       {basket.basket_services && basket.basket_services.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-50">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Services:</p>
-          <div className="space-y-2">
+        <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
+          <div className="space-y-1">
             {basket.basket_services.map((service) => (
-              <div key={service.id} className="text-xs text-gray-700">
-                <span className="font-medium">{service.services.name}</span>
+              <div
+                key={service.id}
+                className="text-xs text-gray-700 grid grid-cols-[1fr_80px_70px] gap-2"
+              >
+                <span className="font-medium truncate">{service.services.name}</span>
+                <span className="text-gray-600 text-right">{service.status}</span>
                 {service.subtotal !== null && (
-                  <span className="float-right">
+                  <span className="font-medium text-right">
                     ₱{service.subtotal.toFixed(2)}
                   </span>
                 )}
-                <div className="text-gray-500 text-xs">
-                  Status: {service.status}
-                </div>
               </div>
             ))}
           </div>
@@ -609,9 +660,9 @@ function BasketCard({ basket }: { basket: Basket }) {
 
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-5">
-      <label className="text-sm text-gray-500 font-medium">{label}</label>
-      <p className="text-base text-gray-900 mt-1">{value}</p>
+    <div className="mb-0">
+      <label className="text-xs text-gray-500 font-medium">{label}</label>
+      <p className="text-sm text-gray-900">{value}</p>
     </div>
   );
 }

@@ -44,6 +44,17 @@ export async function GET(req: Request) {
             )
           )
         ),
+        order_products (
+          id,
+          product_id,
+          quantity,
+          unit_price,
+          subtotal,
+          products (
+            id,
+            item_name
+          )
+        ),
         customers (
           id,
           first_name,
