@@ -101,12 +101,20 @@ export async function POST(req: Request) {
 
       // If all baskets are completed, update order status to completed
       if (allCompleted) {
-        const { error: orderUpdateError } = await supabase
+        const completedAt = new Date().toISOString();
+        
+        const { data: updateResult, error: orderUpdateError } = await supabase
           .from("orders")
-          .update({ status: "completed" })
-          .eq("id", order_id);
+          .update({ status: "completed", completed_at: completedAt })
+          .eq("id", order_id)
+          .select();
 
-        if (orderUpdateError) throw orderUpdateError;
+        if (orderUpdateError) {
+          console.error("Order update error:", orderUpdateError);
+          throw orderUpdateError;
+        }
+      } else {
+        console.log(`Order ${order_id} still has incomplete baskets. Baskets:`, allBaskets);
       }
     }
 

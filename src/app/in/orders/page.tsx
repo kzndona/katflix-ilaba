@@ -79,7 +79,7 @@ export default function OrdersPage() {
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     setDateFrom(today);
     setDateTo(today);
     load();
@@ -166,7 +166,7 @@ export default function OrdersPage() {
     if (!editing) return;
     const updated = { ...editing, [key]: value };
     // Auto-set completed_at when status changes to completed
-    if (key === 'status' && value === 'completed' && !editing.completed_at) {
+    if (key === "status" && value === "completed" && !editing.completed_at) {
       updated.completed_at = new Date().toISOString();
     }
     setEditing(updated);
@@ -523,13 +523,13 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
               <div>
                 <p className="text-xs text-gray-500">Pickup Address</p>
                 <p className="text-sm text-gray-900">
-                  {order.pickup_address || "—"}
+                  {order.pickup_address || "In-store"}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Delivery Address</p>
                 <p className="text-sm text-gray-900">
-                  {order.delivery_address || "—"}
+                  {order.delivery_address || "In-store"}
                 </p>
               </div>
             </div>
