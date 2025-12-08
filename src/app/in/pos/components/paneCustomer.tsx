@@ -127,14 +127,16 @@ export default function PaneCustomer({
 
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Phone Number
+            Phone Number *
           </label>
           <input
             value={customer?.phone_number ?? ""}
-            onChange={(e) =>
-              setCustomer({ ...(customer ?? {}), phone_number: e.target.value })
-            }
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^\d\s\-\+\(\)]/g, "");
+              setCustomer({ ...(customer ?? {}), phone_number: value });
+            }}
             disabled={!!(isLoadedFromDB && originalPhone)}
+            placeholder="Required"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               isLoadedFromDB && originalPhone
                 ? "bg-gray-100 cursor-not-allowed text-gray-500"

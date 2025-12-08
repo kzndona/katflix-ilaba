@@ -19,7 +19,8 @@ export type Customer = {
 export type Basket = {
   id: string;
   name: string;
-    machine_id?: string | null;
+  originalIndex: number;
+  machine_id?: string | null;
   weightKg: number;
   washCount: number;
   dryCount: number;
@@ -37,6 +38,7 @@ export type ReceiptBasketLine = {
   weightKg: number;
   breakdown: { wash: number; dry: number; spin: number; iron: number; fold: number };
   premiumFlags: { wash: boolean; dry: boolean };
+  notes: string;
   total: number;
   estimatedDurationMinutes: number;
 };

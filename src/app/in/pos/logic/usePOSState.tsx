@@ -25,6 +25,7 @@ export const PRICING = {
 const newBasket = (index: number): Basket => ({
   id: `b${Date.now()}${index}`,
   name: `Basket ${index + 1}`,
+  originalIndex: index + 1,
   weightKg: 0,
   washCount: 0,
   dryCount: 0,
@@ -324,6 +325,7 @@ export function usePOSState() {
           wash: b.washPremium,
           dry: b.dryPremium,
         },
+        notes: b.notes,
         total: subtotal, // NO service fee added
         estimatedDurationMinutes: calculateBasketDuration(b),
       };
