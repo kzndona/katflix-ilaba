@@ -79,6 +79,9 @@ export default function OrdersPage() {
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setDateFrom(today);
+    setDateTo(today);
     load();
   }, []);
 
@@ -161,7 +164,12 @@ export default function OrdersPage() {
 
   function updateField<K extends keyof Order>(key: K, value: Order[K]) {
     if (!editing) return;
-    setEditing({ ...editing, [key]: value });
+    const updated = { ...editing, [key]: value };
+    // Auto-set completed_at when status changes to completed
+    if (key === 'status' && value === 'completed' && !editing.completed_at) {
+      updated.completed_at = new Date().toISOString();
+    }
+    setEditing(updated);
   }
 
   function validateForm(data: Order) {
@@ -256,10 +264,10 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="p-6 h-screen bg-gray-50 flex flex-col">
+    <div className="p-6 bg-gray-50 flex flex-col h-screen">
       <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
         {/* LEFT PANE - Orders List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col">
+        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-3xl font-bold mb-4">Orders</h2>
 
@@ -344,7 +352,7 @@ export default function OrdersPage() {
         </div>
 
         {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col">
+        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col overflow-hidden">
           {isEditingDetails && editing ? (
             <EditPane
               order={editing}
