@@ -517,6 +517,9 @@ export function usePOSState() {
         products: productsPayload,
         baskets: basketsPayload,
         payments: [],
+        pickupAddress: handling.pickupAddress || null,
+        deliveryAddress: handling.deliveryAddress || null,
+        shippingFee: handling.deliver ? handling.deliveryFee : 0,
       };
 
       // 4️⃣ Prepare payment

@@ -112,7 +112,9 @@ export default function OrdersPage() {
     }
 
     // Separate processing and non-processing orders
-    const processing = filtered.filter((order) => order.status === "processing");
+    const processing = filtered.filter(
+      (order) => order.status === "processing"
+    );
     const nonProcessing = filtered.filter(
       (order) => order.status !== "processing"
     );
@@ -172,15 +174,16 @@ export default function OrdersPage() {
     try {
       const payload = {
         ...(editing.id ? { id: editing.id } : {}),
+        ...(editing.customer_id ? { customer_id: editing.customer_id } : {}),
         source: editing.source,
         status: editing.status,
         payment_status: editing.payment_status,
         total_amount: editing.total_amount,
         discount: editing.discount,
-        pickup_address: editing.pickup_address,
-        delivery_address: editing.delivery_address,
+        pickup_address: editing.pickup_address || null,
+        delivery_address: editing.delivery_address || null,
         shipping_fee: editing.shipping_fee,
-        completed_at: editing.completed_at,
+        completed_at: editing.completed_at || null,
       };
 
       const res = await fetch("/api/orders/saveOrder", {
@@ -201,8 +204,7 @@ export default function OrdersPage() {
         setSuccessMsg(null);
       }, 1500);
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to save order";
+      const msg = err instanceof Error ? err.message : "Failed to save order";
       setErrorMsg(msg);
     } finally {
       setSaving(false);
@@ -233,8 +235,7 @@ export default function OrdersPage() {
         setSuccessMsg(null);
       }, 1500);
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to delete order";
+      const msg = err instanceof Error ? err.message : "Failed to delete order";
       setErrorMsg(msg);
     } finally {
       setSaving(false);
@@ -375,13 +376,14 @@ function OrderListItem({
     ? `${order.customers.first_name} ${order.customers.last_name}`
     : "Unknown";
 
-  const statusColor = {
-    processing: "text-orange-600",
-    "pick-up": "text-blue-600",
-    delivering: "text-purple-600",
-    completed: "text-green-600",
-    cancelled: "text-red-600",
-  }[order.status] || "text-gray-600";
+  const statusColor =
+    {
+      processing: "text-orange-600",
+      "pick-up": "text-blue-600",
+      delivering: "text-purple-600",
+      completed: "text-green-600",
+      cancelled: "text-red-600",
+    }[order.status] || "text-gray-600";
 
   return (
     <div
@@ -417,13 +419,7 @@ function OrderListItem({
   );
 }
 
-function DetailsPane({
-  order,
-  onEdit,
-}: {
-  order: Order;
-  onEdit: () => void;
-}) {
+function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-8 border-b border-gray-200 flex justify-between items-start">
@@ -464,7 +460,10 @@ function DetailsPane({
             <div className="grid grid-cols-2 gap-6">
               <DetailField label="Status" value={order.status} />
               <DetailField label="Source" value={order.source} />
-              <DetailField label="Payment Status" value={order.payment_status} />
+              <DetailField
+                label="Payment Status"
+                value={order.payment_status}
+              />
               <DetailField
                 label="Created"
                 value={
@@ -544,13 +543,14 @@ function DetailsPane({
 }
 
 function BasketCard({ basket }: { basket: Basket }) {
-  const statusColor = {
-    processing: "bg-orange-50 border-orange-200",
-    "pick-up": "bg-blue-50 border-blue-200",
-    delivering: "bg-purple-50 border-purple-200",
-    completed: "bg-green-50 border-green-200",
-    cancelled: "bg-red-50 border-red-200",
-  }[basket.status] || "bg-gray-50 border-gray-200";
+  const statusColor =
+    {
+      processing: "bg-orange-50 border-orange-200",
+      "pick-up": "bg-blue-50 border-blue-200",
+      delivering: "bg-purple-50 border-purple-200",
+      completed: "bg-green-50 border-green-200",
+      cancelled: "bg-red-50 border-red-200",
+    }[basket.status] || "bg-gray-50 border-gray-200";
 
   return (
     <div className={`border rounded-lg p-4 ${statusColor}`}>
@@ -575,7 +575,9 @@ function BasketCard({ basket }: { basket: Basket }) {
         </div>
       </div>
 
-      {basket.notes && <p className="text-xs text-gray-700 mb-3">{basket.notes}</p>}
+      {basket.notes && (
+        <p className="text-xs text-gray-700 mb-3">{basket.notes}</p>
+      )}
 
       {basket.weight !== null && (
         <p className="text-xs text-gray-600 mb-3">Weight: {basket.weight} kg</p>

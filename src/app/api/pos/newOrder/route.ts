@@ -35,13 +35,16 @@ interface OrderPayload {
   baskets: BasketPayload[];
   products: ProductPayload[];
   payments?: PaymentPayload[];
+  pickupAddress?: string | null;
+  deliveryAddress?: string | null;
+  shippingFee?: number;
 }
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const body: OrderPayload = await req.json();
 
-  const { customerId, total, baskets, products, payments } = body;
+  const { customerId, total, baskets, products, payments, pickupAddress, deliveryAddress, shippingFee } = body;
 
   try {
     // 1️⃣ Insert order
@@ -52,6 +55,9 @@ export async function POST(req: Request) {
         total_amount: total,
         status: "processing",
         source: "pos",
+        pickup_address: pickupAddress || null,
+        delivery_address: deliveryAddress || null,
+        shipping_fee: shippingFee || 0,
       })
       .select()
       .single();
