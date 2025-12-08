@@ -64,14 +64,17 @@ export default function PaneBaskets({
     title,
     getServicePrice,
     isPremium,
+    disabled,
   }: any) => (
     <div
       className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
-        active
+        disabled
+          ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+          : active
           ? `border-${color}-500 bg-${color}-50`
           : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
       }`}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
       <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
       <div className="text-xs font-semibold text-gray-600 mt-1">
@@ -126,6 +129,7 @@ export default function PaneBaskets({
           color="blue"
           getServicePrice={getServicePrice}
           isPremium={false}
+          disabled={b.weightKg === 0}
         />
         <TileWithDuration
           label="+"
@@ -137,6 +141,7 @@ export default function PaneBaskets({
           color="green"
           getServicePrice={getServicePrice}
           isPremium={false}
+          disabled={b.weightKg === 0}
         />
       </div>
 
@@ -154,6 +159,7 @@ export default function PaneBaskets({
           color="blue"
           getServicePrice={getServicePrice}
           isPremium={b.washPremium}
+          disabled={b.weightKg === 0}
         />
         <TileWithDuration
           label="+"
@@ -165,6 +171,7 @@ export default function PaneBaskets({
           color="green"
           getServicePrice={getServicePrice}
           isPremium={b.washPremium}
+          disabled={b.weightKg === 0}
         />
         <TileWithDuration
           label="−"
@@ -178,6 +185,7 @@ export default function PaneBaskets({
           color="blue"
           getServicePrice={getServicePrice}
           isPremium={b.dryPremium}
+          disabled={b.weightKg === 0}
         />
         <TileWithDuration
           label="+"
@@ -189,6 +197,7 @@ export default function PaneBaskets({
           color="green"
           getServicePrice={getServicePrice}
           isPremium={b.dryPremium}
+          disabled={b.weightKg === 0}
         />
       </div>
 
@@ -229,29 +238,49 @@ export default function PaneBaskets({
       <div className="grid grid-cols-4 gap-3 mb-6">
         <div
           className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
-            b.iron
+            b.weightKg === 0
+              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              : b.iron
               ? "border-orange-500 bg-orange-50"
               : "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
           }`}
-          onClick={() => updateActiveBasket({ iron: !b.iron })}
+          onClick={() => {
+            if (b.weightKg !== 0) {
+              updateActiveBasket({ iron: !b.iron });
+            }
+          }}
         >
           <div className="text-sm font-semibold text-gray-900">Iron</div>
           <div className="text-xs text-gray-600 font-semibold mt-1">
-            {b.iron ? `${estimateDuration("iron", 1)}m` : "Click to add"}
+            {b.weightKg === 0
+              ? "Add weight first"
+              : b.iron
+              ? `${estimateDuration("iron", 1)}m`
+              : "Click to add"}
           </div>
         </div>
 
         <div
           className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
-            b.fold
+            b.weightKg === 0
+              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              : b.fold
               ? "border-teal-500 bg-teal-50"
               : "border-gray-300 hover:border-teal-500 hover:bg-teal-50"
           }`}
-          onClick={() => updateActiveBasket({ fold: !b.fold })}
+          onClick={() => {
+            if (b.weightKg !== 0) {
+              updateActiveBasket({ fold: !b.fold });
+            }
+          }}
         >
           <div className="text-sm font-semibold text-gray-900">Fold</div>
           <div className="text-xs text-gray-600 font-semibold mt-1">
-            {b.fold ? `${estimateDuration("fold", 1)}m` : "Click to add"}
+            {b.weightKg === 0
+              ? "Add weight first"
+              : b.fold
+              ? `${estimateDuration("fold", 1)}m`
+              : "Click to add"}
           </div>
         </div>
       </div>
