@@ -96,28 +96,14 @@ export default function PaneHandling({ handling, setHandling }: Props) {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={handling.deliveryFee}
-                  onChange={(e) =>
+                  value={handling.deliveryFee || 50}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setHandling({
                       ...handling,
-                      deliveryFee: Number(e.target.value || 0),
-                    })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Courier / Reference
-                </label>
-                <input
-                  type="text"
-                  placeholder="Courier name or tracking reference"
-                  value={handling.courierRef}
-                  onChange={(e) =>
-                    setHandling({ ...handling, courierRef: e.target.value })
-                  }
+                      deliveryFee: val === "" ? 0 : Number(val),
+                    });
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

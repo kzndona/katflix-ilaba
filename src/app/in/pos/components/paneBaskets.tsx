@@ -28,6 +28,12 @@ export default function PaneBaskets({
     return service?.base_duration_minutes || 0;
   };
 
+  // Get service price from DB by service_type
+  const getServicePrice = (serviceType: string): number => {
+    const service = services.find((s) => s.service_type === serviceType);
+    return service?.rate_per_kg || 0;
+  };
+
   // Simple duration estimation (in minutes, for display purposes)
   const estimateDuration = (serviceType: string, count: number): number => {
     if (count === 0) return 0;
@@ -56,6 +62,8 @@ export default function PaneBaskets({
     active,
     color,
     title,
+    getServicePrice,
+    isPremium,
   }: any) => (
     <div
       className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
@@ -66,9 +74,14 @@ export default function PaneBaskets({
       onClick={onClick}
     >
       <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
-      <div className="text-xs font-semibold text-gray-600 mt-1">{title}</div>
+      <div className="text-xs font-semibold text-gray-600 mt-1">
+        {title} {isPremium && "(Premium)"}
+      </div>
       <div className="text-xs text-gray-700 font-semibold mt-1">
         {count}x ({estimateDuration(serviceType, count)}m)
+      </div>
+      <div className="text-xs text-gray-600 mt-1">
+        ₱{getServicePrice(serviceType)}/kg
       </div>
     </div>
   );
@@ -85,7 +98,7 @@ export default function PaneBaskets({
           label="−"
           subLabel="Decrease Weight"
           onClick={() =>
-            updateActiveBasket({ weightKg: Math.max(0.1, b.weightKg - 0.5) })
+            updateActiveBasket({ weightKg: Math.max(0, b.weightKg - 0.5) })
           }
           color="blue"
           active={true}
@@ -94,7 +107,9 @@ export default function PaneBaskets({
           label="+"
           subLabel="Increase Weight"
           onClick={() =>
-            updateActiveBasket({ weightKg: +(b.weightKg + 0.5).toFixed(1) })
+            updateActiveBasket({
+              weightKg: parseFloat((b.weightKg + 0.5).toFixed(1)),
+            })
           }
           color="green"
           active={true}
@@ -109,6 +124,8 @@ export default function PaneBaskets({
           }
           active={b.spinCount > 0}
           color="blue"
+          getServicePrice={getServicePrice}
+          isPremium={false}
         />
         <TileWithDuration
           label="+"
@@ -118,6 +135,8 @@ export default function PaneBaskets({
           onClick={() => updateActiveBasket({ spinCount: b.spinCount + 1 })}
           active={b.spinCount > 0}
           color="green"
+          getServicePrice={getServicePrice}
+          isPremium={false}
         />
       </div>
 
@@ -133,6 +152,8 @@ export default function PaneBaskets({
           }
           active={b.washCount > 0}
           color="blue"
+          getServicePrice={getServicePrice}
+          isPremium={b.washPremium}
         />
         <TileWithDuration
           label="+"
@@ -142,6 +163,8 @@ export default function PaneBaskets({
           onClick={() => updateActiveBasket({ washCount: b.washCount + 1 })}
           active={b.washCount > 0}
           color="green"
+          getServicePrice={getServicePrice}
+          isPremium={b.washPremium}
         />
         <TileWithDuration
           label="−"
@@ -153,6 +176,8 @@ export default function PaneBaskets({
           }
           active={b.dryCount > 0}
           color="blue"
+          getServicePrice={getServicePrice}
+          isPremium={b.dryPremium}
         />
         <TileWithDuration
           label="+"
@@ -162,6 +187,8 @@ export default function PaneBaskets({
           onClick={() => updateActiveBasket({ dryCount: b.dryCount + 1 })}
           active={b.dryCount > 0}
           color="green"
+          getServicePrice={getServicePrice}
+          isPremium={b.dryPremium}
         />
       </div>
 

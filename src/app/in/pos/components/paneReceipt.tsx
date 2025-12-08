@@ -28,6 +28,7 @@ type Props = {
 export default function PaneReceipt({
   customer,
   computeReceipt,
+  handling,
   setShowConfirm,
   setOrderProductCounts,
   setBaskets,
@@ -77,38 +78,50 @@ export default function PaneReceipt({
                 </div>
               ))}
             </div>
+            {computeReceipt.basketLines.length > 0 && (
+              <div className="flex justify-between text-gray-700 font-semibold mt-2 pt-1 border-t border-gray-300" />
+            )}
           </div>
         )}
 
         {/* Baskets Section */}
         {computeReceipt.basketLines.length > 0 && (
           <div>
-            <div className="font-semibold text-gray-900 text-sm mb-2">
+            <div className="font-semibold text-gray-900 text-base mb-2">
               Services
             </div>
             <div className="space-y-2">
-              {computeReceipt.basketLines.map((b: any) => (
-                <div key={b.id} className="text-sm">
-                  <div className="flex justify-between">
-                    <div className="text-gray-900 font-medium">
-                      {b.name} • {b.weightKg}kg
+              {computeReceipt.basketLines.map((b: any, idx: number) => (
+                <div key={b.id}>
+                  <div className="text-sm">
+                    <div className="flex justify-between">
+                      <div className="text-gray-900 font-medium">
+                        {b.name} • {b.weightKg}kg
+                      </div>
+                      <div className="font-medium">₱{b.total.toFixed(2)}</div>
                     </div>
-                    <div className="font-medium">₱{b.total.toFixed(2)}</div>
-                  </div>
-                  <div className="text-xs text-gray-600 space-y-1 mt-1">
-                    {Object.entries(b.breakdown)
-                      .filter(([_, val]) => (val as number) > 0)
-                      .map(([service, val]) => (
-                        <div key={service} className="flex justify-between">
-                          <span>{service}</span>
-                          <span>₱{(val as number).toFixed(2)}</span>
-                        </div>
-                      ))}
-                    <div className="flex justify-between text-gray-700 font-semibold mt-2 pt-1 border-t border-gray-300">
-                      <span>Estimated Duration:</span>
-                      <span>{b.estimatedDurationMinutes} min</span>
+                    <div className="text-xs text-gray-600 space-y-1 mt-1">
+                      {Object.entries(b.breakdown)
+                        .filter(([_, val]) => (val as number) > 0)
+                        .map(([service, val]) => (
+                          <div key={service} className="flex justify-between">
+                            <span>
+                              {service.charAt(0).toUpperCase() +
+                                service.slice(1)}{" "}
+                              {b[`${service}Premium`] && "(Premium)"}
+                            </span>
+                            <span>₱{(val as number).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      <div className="border-t border-gray-100 mt-2">
+                        <span>Estimated Duration:</span>
+                        <span>{b.estimatedDurationMinutes} min</span>
+                      </div>
                     </div>
                   </div>
+                  {idx < computeReceipt.basketLines.length - 1 && (
+                    <div className="border-t border-gray-200 mt-4" />
+                  )}
                 </div>
               ))}
 
@@ -154,6 +167,14 @@ export default function PaneReceipt({
             ₱{computeReceipt.taxIncluded.toFixed(2)}
           </span>
         </div>
+        {handling.deliver && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Delivery Fee</span>
+            <span className="font-medium">
+              ₱{handling.deliveryFee.toFixed(2)}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between text-base font-bold bg-blue-50 p-3 rounded-lg">
           <span>Total</span>
           <span>₱{computeReceipt.total.toFixed(2)}</span>

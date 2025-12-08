@@ -25,8 +25,8 @@ export const PRICING = {
 const newBasket = (index: number): Basket => ({
   id: `b${Date.now()}${index}`,
   name: `Basket ${index + 1}`,
-  weightKg: 3.0,
-  washCount: 1,
+  weightKg: 0,
+  washCount: 0,
   dryCount: 0,
   spinCount: 0,
   washPremium: false,
@@ -67,7 +67,7 @@ export function usePOSState() {
     deliver: false,
     pickupAddress: "",
     deliveryAddress: "",
-    deliveryFee: 0,
+    deliveryFee: 50,
     courierRef: "",
     instructions: "",
   });
@@ -500,10 +500,14 @@ export function usePOSState() {
         };
       });
 
-      // 3️⃣ Prepare customerId and total
+      // 3️⃣ Prepare customerId and total (including delivery fee if applicable)
+      const totalWithDelivery = handling.deliver
+        ? computeReceipt.total + handling.deliveryFee
+        : computeReceipt.total;
+
       const payload = {
         customerId: customerId,
-        total: computeReceipt.total,
+        total: totalWithDelivery,
         products: productsPayload,
         baskets: basketsPayload,
         payments: [],
@@ -511,7 +515,7 @@ export function usePOSState() {
 
       // 4️⃣ Prepare payment
       const paymentPayload = {
-        amount: computeReceipt.total,
+        amount: totalWithDelivery,
         method: payment.method,
         reference: payment.referenceNumber || null,
       };
