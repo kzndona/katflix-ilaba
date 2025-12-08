@@ -93,14 +93,14 @@ export default function SidebarTabs({
         <div className="mt-4 flex gap-2">
           <button
             onClick={addBasket}
-            className="flex-1 py-3 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white text-sm font-bold hover:from-green-700 hover:to-green-800 transition shadow-md hover:shadow-lg"
+            className="flex-1 py-4 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 transition shadow-md hover:shadow-lg"
           >
             + Add
           </button>
           {baskets.length > 1 && (
             <button
               onClick={() => deleteBasket(activeBasketIndex)}
-              className="flex-1 py-3 rounded-lg bg-linear-to-r from-red-600 to-red-700 text-white text-sm font-bold hover:from-red-700 hover:to-red-800 transition shadow-md hover:shadow-lg"
+              className="flex-1 py-4 rounded-lg bg-linear-to-r from-red-600 to-red-700 text-white font-bold text-base hover:from-red-700 hover:to-red-800 transition shadow-md hover:shadow-lg"
             >
               Delete
             </button>

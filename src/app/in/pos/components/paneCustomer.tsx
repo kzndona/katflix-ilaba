@@ -49,7 +49,7 @@ export default function PaneCustomer({
         {!isLoadedFromDB && (
           <div className="col-span-2">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Search or Add Customer
+              Search existing customer
             </label>
             <input
               type="text"

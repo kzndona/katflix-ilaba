@@ -40,14 +40,10 @@ export default function PaneReceipt({
   const isOrderValid = () => {
     if (!customer?.first_name || !customer?.last_name) return false;
     const hasProducts = computeReceipt.productLines.length > 0;
-    const hasServices = computeReceipt.basketLines.length > 0;
+    const hasServices = computeReceipt.basketLines.length > 0 &&
+      computeReceipt.basketLines.some((b: any) => b.weightKg > 0);
 
-    // Check if any basket has weight of 0
-    const anyBasketHasZeroWeight = computeReceipt.basketLines.some(
-      (b: any) => b.weightKg === 0
-    );
-
-    return (hasProducts || hasServices) && !anyBasketHasZeroWeight;
+    return hasProducts || hasServices;
   };
 
   return (

@@ -448,7 +448,7 @@ function EditPane({
             onChange={(v) => updateField("first_name", v)}
           />
           <Field
-            label="Middle Name"
+            label="Middle Initial"
             value={staff.middle_name ?? ""}
             onChange={(v) => updateField("middle_name", v)}
           />

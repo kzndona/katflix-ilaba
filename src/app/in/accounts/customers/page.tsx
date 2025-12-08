@@ -360,7 +360,7 @@ function DetailsPane({
           <div>
             <DetailField label="First Name" value={customer.first_name} />
             <DetailField
-              label="Middle Name"
+              label="Middle Initial"
               value={customer.middle_name || "—"}
             />
             <DetailField label="Last Name" value={customer.last_name} />

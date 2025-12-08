@@ -1,5 +1,5 @@
 // app/api/pos/newOrder/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
 
 interface ServicePayload {
@@ -38,13 +38,24 @@ interface OrderPayload {
   pickupAddress?: string | null;
   deliveryAddress?: string | null;
   shippingFee?: number;
+  source?: "pos" | "mobile"; // Track source (defaults to 'mobile' for this endpoint)
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const supabase = await createClient();
+  
+  // Verify user is authenticated via Bearer token
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Missing or invalid authentication token' },
+      { status: 401 }
+    );
+  }
+
   const body: OrderPayload = await req.json();
 
-  const { customerId, total, baskets, products, payments, pickupAddress, deliveryAddress, shippingFee } = body;
+  const { customerId, total, baskets, products, payments, pickupAddress, deliveryAddress, shippingFee, source } = body;
 
   try {
     // 1️⃣ Insert order
@@ -54,7 +65,7 @@ export async function POST(req: Request) {
         customer_id: customerId,
         total_amount: total,
         status: "processing",
-        source: "pos",
+        source: source || "mobile", // Default to mobile if not specified
         pickup_address: pickupAddress || null,
         delivery_address: deliveryAddress || null,
         shipping_fee: shippingFee || 0,

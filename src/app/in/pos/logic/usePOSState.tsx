@@ -527,6 +527,7 @@ export function usePOSState() {
         amount: totalWithDelivery,
         method: payment.method,
         reference: payment.referenceNumber || null,
+        status: "completed",
       };
 
       // 5️⃣ Send to API

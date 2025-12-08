@@ -29,9 +29,21 @@ export default function PaneBaskets({
   };
 
   // Get service price from DB by service_type
-  const getServicePrice = (serviceType: string): number => {
-    const service = services.find((s) => s.service_type === serviceType);
-    return service?.rate_per_kg || 0;
+  const getServicePrice = (serviceType: string, premium: boolean = false): number => {
+    const matches = services.filter((s) => s.service_type === serviceType);
+    if (matches.length === 0) return 0;
+    
+    if (premium) {
+      return (
+        matches.find((s) => s.name.toLowerCase().includes("premium"))?.rate_per_kg ||
+        matches[0]?.rate_per_kg || 0
+      );
+    }
+    
+    return (
+      matches.find((s) => !s.name.toLowerCase().includes("premium"))?.rate_per_kg ||
+      matches[0]?.rate_per_kg || 0
+    );
   };
 
   // Simple duration estimation (in minutes, for display purposes)
@@ -84,7 +96,7 @@ export default function PaneBaskets({
         {count}x ({estimateDuration(serviceType, count)}m)
       </div>
       <div className="text-xs text-gray-600 mt-1">
-        ₱{getServicePrice(serviceType)}/kg
+        ₱{getServicePrice(serviceType, isPremium)}/kg
       </div>
     </div>
   );
