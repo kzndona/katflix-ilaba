@@ -562,9 +562,14 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
               </h4>
               <div className="space-y-2">
                 {order.order_products.map((product) => (
-                  <div key={product.id} className="flex justify-between text-sm p-2 rounded bg-gray-50">
+                  <div
+                    key={product.id}
+                    className="flex justify-between text-sm p-2 rounded bg-gray-50"
+                  >
                     <div>
-                      <p className="font-medium text-gray-900">{product.products.item_name}</p>
+                      <p className="font-medium text-gray-900">
+                        {product.products.item_name}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {product.quantity} × ₱{product.unit_price.toFixed(2)}
                       </p>
@@ -642,8 +647,12 @@ function BasketCard({ basket }: { basket: Basket }) {
                 key={service.id}
                 className="text-xs text-gray-700 grid grid-cols-[1fr_80px_70px] gap-2"
               >
-                <span className="font-medium truncate">{service.services.name}</span>
-                <span className="text-gray-600 text-right">{service.status}</span>
+                <span className="font-medium truncate">
+                  {service.services.name}
+                </span>
+                <span className="text-gray-600 text-right">
+                  {service.status}
+                </span>
                 {service.subtotal !== null && (
                   <span className="font-medium text-right">
                     ₱{service.subtotal.toFixed(2)}
