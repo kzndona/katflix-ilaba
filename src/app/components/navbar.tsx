@@ -66,7 +66,10 @@ export default function Navbar() {
       .then(() => router.refresh());
 
   // Role-based access control
-  const canAccessPOS = userRole === "cashier" || userRole === "cashier_attendant" || userRole === "admin";
+  const canAccessPOS =
+    userRole === "cashier" ||
+    userRole === "cashier_attendant" ||
+    userRole === "admin";
   const canAccessOrders =
     userRole === "rider" ||
     userRole === "attendant" ||
