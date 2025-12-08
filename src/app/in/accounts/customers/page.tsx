@@ -108,13 +108,17 @@ export default function CustomersPage() {
     setSuccessMsg(null);
 
     const data = { ...editing };
-    // Validate required fields
+    // Validate required fields - email is only required for new customers
     const requiredFields: (keyof Customer)[] = [
       "first_name",
       "last_name",
       "phone_number",
-      "email_address",
     ];
+    
+    // Email is required only for new customers
+    if (!editing.id) {
+      requiredFields.push("email_address");
+    }
 
     for (const field of requiredFields) {
       const value = data[field];
@@ -132,12 +136,14 @@ export default function CustomersPage() {
       return;
     }
 
-    // Validate email format
-    const email = editing!.email_address;
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email!)) {
-      setErrorMsg("Email address is not valid");
-      return;
+    // Validate email format if email is provided
+    if (editing.email_address) {
+      const email = editing!.email_address;
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email!)) {
+        setErrorMsg("Email address is not valid");
+        return;
+      }
     }
 
     setSaving(true);
@@ -485,7 +491,6 @@ function EditPane({
             label="Email Address"
             value={customer.email_address ?? ""}
             onChange={(v) => updateField("email_address", v)}
-            disabled={!isNewCustomer}
           />
           <Field
             label="Phone"

@@ -107,7 +107,7 @@ export default function StaffPage() {
     setSuccessMsg(null);
 
     const data = { ...editing };
-    // Validate required fields
+    // Validate required fields - email is only required for new staff
     const requiredFields: (keyof Staff)[] = [
       "first_name",
       "last_name",
@@ -116,8 +116,12 @@ export default function StaffPage() {
       "role",
       "address",
       "phone_number",
-      "email_address",
     ];
+    
+    // Email is required only for new staff
+    if (!editing.id) {
+      requiredFields.push("email_address");
+    }
 
     for (const field of requiredFields) {
       const value = data[field];
@@ -135,12 +139,14 @@ export default function StaffPage() {
       return;
     }
 
-    // Validate email format
-    const email = editing!.email_address;
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email!)) {
-      setErrorMsg("Email address is not valid");
-      return;
+    // Validate email format if email is provided
+    if (editing.email_address) {
+      const email = editing!.email_address;
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email!)) {
+        setErrorMsg("Email address is not valid");
+        return;
+      }
     }
 
     setSaving(true);
@@ -486,7 +492,6 @@ function EditPane({
             label="Email Address"
             value={staff.email_address ?? ""}
             onChange={(v) => updateField("email_address", v)}
-            disabled={!isNewStaff}
           />
           <Field
             label="Phone"
