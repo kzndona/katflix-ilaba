@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { error } = await supabase.from("order").delete().eq("id", id);
+    const { error } = await supabase.from("orders").delete().eq("id", id);
     if (error) throw error;
 
     return NextResponse.json({ success: true });
