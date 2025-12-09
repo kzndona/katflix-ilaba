@@ -7,6 +7,12 @@
 // - Orders with baskets are marked as "processing" (requires laundry service to complete)
 // - Empty baskets (weight === 0) should be filtered on client-side before sending
 //
+// INVENTORY MANAGEMENT:
+// - Product quantities are automatically deducted when order is created
+// - Validates sufficient stock before deducting
+// - Updates product.last_updated timestamp
+// - Inventory is restored when order is deleted (see removeOrder endpoint)
+//
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3️⃣ Insert order products
+    // 3️⃣ Insert order products and deduct inventory
     if (products.length) {
       const productInserts = products.map((p) => ({
         order_id: orderId,
@@ -138,6 +144,49 @@ export async function POST(req: NextRequest) {
 
       const { error: prodErr } = await supabase.from("order_products").insert(productInserts);
       if (prodErr) throw prodErr;
+
+      // Deduct quantities from inventory
+      for (const p of products) {
+        // Get current product quantity
+        const { data: product, error: fetchErr } = await supabase
+          .from("products")
+          .select("quantity, item_name")
+          .eq("id", p.product_id)
+          .single();
+
+        if (fetchErr) {
+          console.error(`Failed to fetch product ${p.product_id}:`, fetchErr);
+          throw new Error(`Failed to fetch product inventory`);
+        }
+
+        if (!product) {
+          throw new Error(`Product ${p.product_id} not found`);
+        }
+
+        const currentQty = Number(product.quantity);
+        const orderQty = Number(p.quantity);
+        
+        // Check if sufficient quantity available
+        if (currentQty < orderQty) {
+          throw new Error(`Insufficient stock for ${product.item_name}. Available: ${currentQty}, Requested: ${orderQty}`);
+        }
+
+        const newQty = currentQty - orderQty;
+
+        // Update product quantity
+        const { error: updateErr } = await supabase
+          .from("products")
+          .update({ 
+            quantity: newQty,
+            last_updated: new Date().toISOString()
+          })
+          .eq("id", p.product_id);
+
+        if (updateErr) {
+          console.error(`Failed to update product ${p.product_id}:`, updateErr);
+          throw new Error(`Failed to update product inventory for ${product.item_name}`);
+        }
+      }
     }
 
     // 4️⃣ Insert payments
