@@ -333,10 +333,14 @@ export function usePOSState() {
 
     const basketSubtotal = basketLines.reduce((s, l) => s + l.total, 0);
 
+    // Service fee: PHP40 only if there are baskets with weight and services
+    const hasServiceBaskets = basketLines.some((b: any) => b.weightKg > 0);
+    const serviceFee = hasServiceBaskets ? 40 : 0;
+
     // Handling fee (only if delivery)
     const handlingFee = handling.deliver ? handling.deliveryFee : 0;
 
-    const subtotalBeforeTax = productSubtotal + basketSubtotal + handlingFee;
+    const subtotalBeforeTax = productSubtotal + basketSubtotal + serviceFee + handlingFee;
 
     // VAT included in subtotal
     const vatIncluded =
@@ -349,6 +353,7 @@ export function usePOSState() {
       basketLines,
       productSubtotal,
       basketSubtotal,
+      serviceFee,
       handlingFee,
       taxIncluded: vatIncluded,
       total,

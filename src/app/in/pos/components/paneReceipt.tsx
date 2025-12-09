@@ -301,6 +301,14 @@ export default function PaneReceipt({
             ₱{computeReceipt.taxIncluded.toFixed(2)}
           </span>
         </div>
+        {computeReceipt.serviceFee > 0 && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Service Fee</span>
+            <span className="font-semibold text-gray-900">
+              ₱{computeReceipt.serviceFee.toFixed(2)}
+            </span>
+          </div>
+        )}
         {handling.deliver && (
           <div className="flex justify-between">
             <span className="text-gray-600">Delivery Fee</span>
