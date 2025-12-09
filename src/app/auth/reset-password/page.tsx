@@ -21,14 +21,54 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const handlePasswordReset = async () => {
       try {
+        console.log('Full URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
+        
+        // Check for error in query params first (expired link)
+        const queryParams = new URLSearchParams(window.location.search);
+        const queryError = queryParams.get('error');
+        const errorCode = queryParams.get('error_code');
+        const errorDescription = queryParams.get('error_description');
+
+        if (queryError) {
+          console.log('Error in URL:', { queryError, errorCode, errorDescription });
+          if (errorCode === 'otp_expired') {
+            setError("This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.");
+          } else {
+            setError(`Error: ${errorDescription || queryError}`);
+          }
+          setSessionValid(false);
+          setVerifying(false);
+          return;
+        }
+        
         // Check if we have a hash in the URL (from the email link)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
         const type = hashParams.get('type');
+        const hashError = hashParams.get('error');
+
+        console.log('Parsed tokens:', { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken, hashError });
+
+        // Check for error in hash
+        if (hashError) {
+          console.log('Error in hash:', hashError);
+          const hashErrorCode = hashParams.get('error_code');
+          if (hashErrorCode === 'otp_expired') {
+            setError("This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.");
+          } else {
+            setError(`Error: ${hashParams.get('error_description') || hashError}`);
+          }
+          setSessionValid(false);
+          setVerifying(false);
+          return;
+        }
 
         // If this is a recovery/password reset link
         if (type === 'recovery' && accessToken) {
+          console.log('Attempting to set session with recovery token...');
           // Exchange the tokens for a session
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -40,12 +80,16 @@ export default function ResetPasswordPage() {
             setError("Invalid or expired reset link. Please request a new password reset.");
             setSessionValid(false);
           } else {
+            console.log('Session established successfully!');
             // Session established successfully
             setSessionValid(true);
           }
         } else {
+          console.log('No recovery token found, checking existing session...');
           // No valid token in URL, check if already has session
           const { data: { session }, error } = await supabase.auth.getSession();
+          
+          console.log('Existing session check:', { hasSession: !!session, error });
           
           if (error || !session) {
             setError("Invalid or expired reset link. Please request a new password reset.");
