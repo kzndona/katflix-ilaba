@@ -64,9 +64,56 @@ export async function POST(req: Request) {
       message = `Your order (Basket ${basket.basket_number}) is on its way to you for delivery!`;
     }
 
-    // TODO: Integrate with actual notification service (Firebase, OneSignal, SMS, etc.)
-    // For now, we'll just log the notification
-    console.log("Notification sent:", {
+    // Send SMS notification if phone number exists
+    let smsSuccess = false;
+    if (customer.phone_number) {
+      try {
+        // TODO: Replace with your actual SMS service (Twilio, Semaphore, etc.)
+        // Example for Semaphore SMS (Philippines):
+        // const smsResponse = await fetch('https://api.semaphore.co/api/v4/messages', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({
+        //     apikey: process.env.SEMAPHORE_API_KEY,
+        //     number: customer.phone_number,
+        //     message: message,
+        //     sendername: 'iLaba'
+        //   })
+        // });
+        // smsSuccess = smsResponse.ok;
+        
+        console.log("SMS would be sent to:", customer.phone_number);
+        console.log("Message:", message);
+      } catch (smsError) {
+        console.error("SMS error:", smsError);
+      }
+    }
+
+    // Send Email notification if email exists
+    let emailSuccess = false;
+    if (customer.email_address) {
+      try {
+        // TODO: Replace with your actual email service (SendGrid, Resend, etc.)
+        // Example for Resend:
+        // const { Resend } = require('resend');
+        // const resend = new Resend(process.env.RESEND_API_KEY);
+        // await resend.emails.send({
+        //   from: 'iLaba <notifications@yourdomain.com>',
+        //   to: customer.email_address,
+        //   subject: `Order Update - Basket ${basket.basket_number}`,
+        //   html: `<p>${message}</p>`
+        // });
+        // emailSuccess = true;
+        
+        console.log("Email would be sent to:", customer.email_address);
+        console.log("Subject:", `Order Update - Basket ${basket.basket_number}`);
+      } catch (emailError) {
+        console.error("Email error:", emailError);
+      }
+    }
+
+    // Log notification details
+    console.log("Notification processed:", {
       customerId: customer.id,
       customerName: `${customer.first_name} ${customer.last_name}`,
       phone: customer.phone_number,
@@ -75,16 +122,22 @@ export async function POST(req: Request) {
       notificationType,
       basketId,
       orderId,
+      smsSuccess,
+      emailSuccess,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Customer notification sent",
+      message: "Customer notification processed",
       details: {
         customerId: customer.id,
         customerName: `${customer.first_name} ${customer.last_name}`,
         notificationType,
         basketNumber: basket.basket_number,
+        phone: customer.phone_number,
+        email: customer.email_address,
+        smsReady: !!customer.phone_number,
+        emailReady: !!customer.email_address,
       },
     });
   } catch (error: any) {
