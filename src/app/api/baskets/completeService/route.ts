@@ -203,13 +203,39 @@ export async function POST(req: Request) {
 
           if (progressError) throw progressError;
 
-          // If we're transitioning from pickup to actual service, update order status to processing
+          // If we're transitioning from pickup to actual service, check if ALL baskets have completed pickup
           if (currentServiceType === "pickup") {
-            const { error: orderUpdateError } = await supabase
-              .from("orders")
-              .update({ status: "processing" })
-              .eq("id", order_id);
-            if (orderUpdateError) throw orderUpdateError;
+            // Check all baskets in this order - get their first pending service
+            const { data: allBaskets, error: allBasketsError } = await supabase
+              .from("baskets")
+              .select(`
+                id,
+                basket_services (
+                  status,
+                  services (
+                    service_type
+                  )
+                )
+              `)
+              .eq("order_id", order_id);
+
+            if (allBasketsError) throw allBasketsError;
+
+            // Check if all baskets have moved past pickup (no basket has all services as pending)
+            const allPastPickup = allBaskets?.every((b) => {
+              const services = (b.basket_services as any[]) || [];
+              // If this basket has at least one in_progress or completed service, it's past pickup
+              return services.some((s: any) => s.status === "in_progress" || s.status === "completed");
+            });
+
+            // Only update order to "processing" if all baskets are past pickup phase
+            if (allPastPickup) {
+              const { error: orderUpdateError } = await supabase
+                .from("orders")
+                .update({ status: "processing" })
+                .eq("id", order_id);
+              if (orderUpdateError) throw orderUpdateError;
+            }
           }
 
           nextServiceFound = true;
