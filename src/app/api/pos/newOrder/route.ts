@@ -147,6 +147,8 @@ export async function POST(req: NextRequest) {
 
       // Deduct quantities from inventory
       for (const p of products) {
+        console.log(`Processing product deduction: ${p.product_id}, quantity: ${p.quantity}`);
+        
         // Get current product quantity
         const { data: product, error: fetchErr } = await supabase
           .from("products")
@@ -165,6 +167,8 @@ export async function POST(req: NextRequest) {
 
         const currentQty = Number(product.quantity);
         const orderQty = Number(p.quantity);
+        
+        console.log(`Product ${product.item_name}: Current ${currentQty}, Ordering ${orderQty}`);
         
         // Check if sufficient quantity available
         if (currentQty < orderQty) {
@@ -186,6 +190,8 @@ export async function POST(req: NextRequest) {
           console.error(`Failed to update product ${p.product_id}:`, updateErr);
           throw new Error(`Failed to update product inventory for ${product.item_name}`);
         }
+        
+        console.log(`Successfully updated ${product.item_name} quantity to ${newQty}`);
       }
     }
 

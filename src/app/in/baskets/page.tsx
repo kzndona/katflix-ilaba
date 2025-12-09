@@ -373,10 +373,10 @@ export default function BasketsPage() {
                     // Special handling for virtual services (pickup/delivery)
                     if (type === "pickup") {
                       const basketCompletedPickup = hasBasketCompletedPickup(basket);
+                      // Pickup is in-progress if order status is "pick-up" AND basket hasn't completed pickup
+                      isInProgress = basket.orderStatus === "pick-up" && !basketCompletedPickup;
                       // Pickup is completed if basket has moved past pickup
                       isCompleted = basketCompletedPickup;
-                      // Pickup is in-progress if basket has pickup address AND hasn't completed pickup yet
-                      isInProgress = !!basket.pickupAddress && !basketCompletedPickup;
                     }
                     if (type === "delivery") {
                       // Delivery is in-progress when order is delivering
