@@ -439,6 +439,7 @@ export default function BasketsPage() {
 
                 {/* Action Buttons - Notify (if pickup/delivery) + Next Service */}
                 <div className="space-y-2">
+                  {/* TODO: Enable customer notifications once Realtime broadcasting is fully configured
                   {(basket.orderStatus === "pick-up" || basket.orderStatus === "delivering") && (
                     <button
                       onClick={() => notifyCustomer(basket)}
@@ -452,6 +453,7 @@ export default function BasketsPage() {
                           : "Notify (Ready for Delivery)"}
                     </button>
                   )}
+                  */}
                   <button
                     onClick={() => completeService(basket.id)}
                     disabled={
