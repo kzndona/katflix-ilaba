@@ -134,6 +134,9 @@ export async function POST(req: NextRequest) {
 
     // 3️⃣ Insert order products and deduct inventory
     if (products.length) {
+      console.log("=== PROCESSING PRODUCTS ===");
+      console.log("Products to insert:", JSON.stringify(products, null, 2));
+      
       const productInserts = products.map((p) => ({
         order_id: orderId,
         product_id: p.product_id,
@@ -142,8 +145,14 @@ export async function POST(req: NextRequest) {
         subtotal: p.subtotal,
       }));
 
+      console.log("Product inserts:", JSON.stringify(productInserts, null, 2));
+
       const { error: prodErr } = await supabase.from("order_products").insert(productInserts);
-      if (prodErr) throw prodErr;
+      if (prodErr) {
+        console.error("Failed to insert order_products:", prodErr);
+        throw prodErr;
+      }
+      console.log("✓ Order products inserted successfully");
 
       // Deduct quantities from inventory
       for (const p of products) {
