@@ -27,6 +27,9 @@ type BasketDetail = {
   customer_name?: string | null;
   phone_number?: string | null;
   email_address?: string | null;
+  pickupAddress?: string | null;
+  deliveryAddress?: string | null;
+  orderStatus?: string | null;
   handling?: {
     id: string;
     type: string;
@@ -36,7 +39,7 @@ type BasketDetail = {
   dryPremium?: boolean;
 };
 
-const serviceTypeOrder = ["wash", "dry", "spin", "iron", "fold"];
+const serviceTypeOrder = ["pickup", "wash", "dry", "spin", "iron", "fold", "delivery"];
 
 // Color palette for different orders
 const colorPalette = [
@@ -76,6 +79,19 @@ export default function BasketsPage() {
       if (!res.ok) throw new Error("Failed to load baskets");
       const data = await res.json();
       setBaskets(data || []);
+
+      // Auto-complete pickup/delivery if they are in-store (null)
+      for (const basket of data || []) {
+        // Auto-complete pickup if it's in-store (null = instore)
+        if (!basket.pickupAddress && basket.orderStatus === "pick-up") {
+          await completePickup(basket.id, true);
+        }
+        
+        // Auto-complete delivery if it's in-store (null = instore)
+        if (!basket.deliveryAddress && basket.orderStatus === "delivering") {
+          await completeDelivery(basket.id, true);
+        }
+      }
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -83,15 +99,67 @@ export default function BasketsPage() {
     }
   }
 
-  async function completeService(basketId: string) {
+  async function completeService(basketId: string, serviceType?: string, silent: boolean = false) {
     setProcessingId(basketId);
     try {
       const res = await fetch("/api/baskets/completeService", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ basketId }),
+        body: JSON.stringify({ basketId, serviceType }),
       });
       if (!res.ok) throw new Error("Failed to complete service");
+      await load();
+    } catch (err: any) {
+      if (!silent) alert(err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function completePickup(basketId: string, silent: boolean = false) {
+    setProcessingId(basketId);
+    try {
+      const res = await fetch("/api/baskets/completeService", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ basketId, serviceType: "pickup" }),
+      });
+      if (!res.ok) throw new Error("Failed to complete pickup");
+      await load();
+    } catch (err: any) {
+      if (!silent) alert(err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function completeDelivery(basketId: string, silent: boolean = false) {
+    setProcessingId(basketId);
+    try {
+      const res = await fetch("/api/baskets/completeService", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ basketId, serviceType: "delivery" }),
+      });
+      if (!res.ok) throw new Error("Failed to complete delivery");
+      await load();
+    } catch (err: any) {
+      if (!silent) alert(err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function notifyCustomer(basketId: string, orderId: string) {
+    setProcessingId(basketId);
+    try {
+      const res = await fetch("/api/baskets/notifyCustomer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ basketId, orderId }),
+      });
+      if (!res.ok) throw new Error("Failed to notify customer");
+      alert("Customer notified successfully");
       await load();
     } catch (err: any) {
       alert(err.message);
@@ -132,12 +200,36 @@ export default function BasketsPage() {
   };
 
   const canCompleteBasket = (basket: BasketDetail): boolean => {
-    // There must be an in_progress service and no pending services to complete
-    const hasInProgress = basket.services.some(
+    // Check if current service is the last one in the chain
+    const inProgressService = basket.services.find(
       (s) => s.status === "in_progress"
     );
-    const hasPending = basket.services.some((s) => s.status === "pending");
-    return hasInProgress && !hasPending;
+
+    if (!inProgressService) return false;
+
+    const currentType = inProgressService.service_type?.toLowerCase() || "";
+    const currentIndex = serviceTypeOrder.indexOf(currentType);
+
+    // Check if there are any pending services after this one
+    const hasPendingAfter = basket.services.some((s) => {
+      const sType = s.service_type?.toLowerCase() || "";
+      const sIndex = serviceTypeOrder.indexOf(sType);
+      return s.status === "pending" && sIndex > currentIndex;
+    });
+
+    return !hasPendingAfter;
+  };
+
+  const areAllBasketsReadyForDelivery = (currentBasket: BasketDetail): boolean => {
+    // Check if all baskets in this order are in delivery phase or already completed
+    const orderBaskets = baskets.filter((b) => b.order_id === currentBasket.order_id);
+    // Single basket orders are always "ready" - don't need to wait
+    if (orderBaskets.length === 1) {
+      return true;
+    }
+    return orderBaskets.every(
+      (b) => b.orderStatus === "delivering" || b.status === "completed"
+    );
   };
 
   const groupServicesByType = (basket: BasketDetail) => {
@@ -211,18 +303,29 @@ export default function BasketsPage() {
                   )}
                 </div>
 
-                {/* Handling Info - Only show if handling exists */}
-                {basket.handling && (
-                  <div className="text-sm text-gray-600 mb-4 pb-3 border-b border-gray-200">
-                    <p className="font-semibold capitalize">
-                      {basket.handling.type}
+                {/* Handling Info - Show pickup/delivery badges */}
+                {basket.pickupAddress && (
+                  <div className="mb-3 p-2 rounded bg-amber-50 border border-amber-200">
+                    <p className="text-xs font-semibold text-amber-700">
+                      🏪 PICKUP AT STORE
                     </p>
-                    {basket.handling.address && (
-                      <p className="text-gray-500 truncate text-sm">
-                        {basket.handling.address}
-                      </p>
-                    )}
+                    <p className="text-xs text-amber-600 truncate">
+                      {basket.pickupAddress}
+                    </p>
                   </div>
+                )}
+                {basket.deliveryAddress && (
+                  <div className="mb-3 p-2 rounded bg-cyan-50 border border-cyan-200">
+                    <p className="text-xs font-semibold text-cyan-700">
+                      🚚 DELIVERY TO CUSTOMER
+                    </p>
+                    <p className="text-xs text-cyan-600 truncate">
+                      {basket.deliveryAddress}
+                    </p>
+                  </div>
+                )}
+                {(basket.pickupAddress || basket.deliveryAddress) && (
+                  <div className="mb-3" />
                 )}
 
                 {/* Basket Info */}
@@ -237,7 +340,7 @@ export default function BasketsPage() {
                   )}
                 </div>
 
-                {/* Services by Type */}
+                {/* Services by Type - Full timeline including pickup/delivery */}
                 <div className="mb-4 space-y-2 grow">
                   {serviceTypeOrder.map((type) => {
                     const typeServices = grouped[type];
@@ -291,31 +394,51 @@ export default function BasketsPage() {
                   })}
                 </div>
 
-                {/* Next Button */}
-                <button
-                  onClick={() => completeService(basket.id)}
-                  disabled={
-                    (!nextServiceType && !canCompleteBasket(basket)) ||
-                    processingId === basket.id
-                  }
-                  className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
-                    processingId === basket.id
-                      ? "bg-gray-400 text-white cursor-wait"
-                      : !nextServiceType && !canCompleteBasket(basket)
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                {/* Action Buttons - Notify (if pickup/delivery) + Next Service */}
+                <div className="space-y-2">
+                  {(basket.orderStatus === "pick-up" || basket.orderStatus === "delivering") && (
+                    <button
+                      onClick={() => notifyCustomer(basket.id, basket.order_id)}
+                      disabled={processingId === basket.id}
+                      className="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-wait"
+                    >
+                      {processingId === basket.id
+                        ? "Notifying..."
+                        : basket.orderStatus === "pick-up"
+                          ? "Notify (Pickup Ready)"
+                          : "Notify (Ready for Delivery)"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => completeService(basket.id)}
+                    disabled={
+                      (!nextServiceType && !canCompleteBasket(basket)) ||
+                      processingId === basket.id ||
+                      (canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket))
+                    }
+                    className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
+                      processingId === basket.id
+                        ? "bg-gray-400 text-white cursor-wait"
+                        : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                          ? "bg-yellow-400 text-yellow-900 cursor-not-allowed"
+                          : !nextServiceType && !canCompleteBasket(basket)
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : canCompleteBasket(basket)
+                              ? "bg-linear-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg"
+                              : "bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg"
+                    }`}
+                  >
+                    {processingId === basket.id
+                      ? "Processing..."
+                      : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                        ? "⏳ Waiting for other baskets"
                         : canCompleteBasket(basket)
-                          ? "bg-linear-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg"
-                          : "bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg"
-                  }`}
-                >
-                  {processingId === basket.id
-                    ? "Processing..."
-                    : canCompleteBasket(basket)
-                      ? "Complete ✓"
-                      : nextServiceType
-                        ? "Next Service →"
-                        : "All Done"}
-                </button>
+                          ? "Complete ✓"
+                          : nextServiceType
+                            ? "Next Service →"
+                            : "All Done"}
+                  </button>
+                </div>
               </div>
             );
           })}

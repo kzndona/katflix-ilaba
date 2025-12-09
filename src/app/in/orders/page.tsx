@@ -69,6 +69,8 @@ export default function OrdersPage() {
   const [rows, setRows] = useState<Order[]>([]);
   const [filteredRows, setFilteredRows] = useState<Order[]>([]);
   const [processingRows, setProcessingRows] = useState<Order[]>([]);
+  const [pickupRows, setPickupRows] = useState<Order[]>([]);
+  const [deliveryRows, setDeliveryRows] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editing, setEditing] = useState<Order | null>(null);
@@ -128,16 +130,32 @@ export default function OrdersPage() {
       });
     }
 
-    // Separate processing and non-processing orders
+    // Separate processing, pickup, delivery, and other orders
     const processing = filtered.filter(
       (order) => order.status === "processing"
     );
+    const pickup = filtered.filter(
+      (order) => order.status === "pick-up"
+    );
+    const delivery = filtered.filter(
+      (order) => order.status === "delivering"
+    );
     const nonProcessing = filtered.filter(
-      (order) => order.status !== "processing"
+      (order) => !["processing", "pick-up", "delivering"].includes(order.status)
     );
 
     // Sort by created_at descending
     processing.sort(
+      (a, b) =>
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
+    );
+    pickup.sort(
+      (a, b) =>
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
+    );
+    delivery.sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
         new Date(a.created_at || 0).getTime()
@@ -149,6 +167,8 @@ export default function OrdersPage() {
     );
 
     setProcessingRows(processing);
+    setPickupRows(pickup);
+    setDeliveryRows(delivery);
     setFilteredRows(nonProcessing);
   }
 
@@ -323,6 +343,44 @@ export default function OrdersPage() {
                   </div>
                 )}
 
+                {/* Pickup Orders */}
+                {pickupRows.length > 0 && (
+                  <div>
+                    <div className="sticky top-0 bg-amber-50 px-4 py-3 border-b border-amber-200 font-semibold text-amber-900 text-sm">
+                      🏪 Pickup ({pickupRows.length})
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {pickupRows.map((order) => (
+                        <OrderListItem
+                          key={order.id}
+                          order={order}
+                          isSelected={selected?.id === order.id}
+                          onClick={() => selectOrder(order)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery Orders */}
+                {deliveryRows.length > 0 && (
+                  <div>
+                    <div className="sticky top-0 bg-cyan-50 px-4 py-3 border-b border-cyan-200 font-semibold text-cyan-900 text-sm">
+                      🚚 Delivery ({deliveryRows.length})
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {deliveryRows.map((order) => (
+                        <OrderListItem
+                          key={order.id}
+                          order={order}
+                          isSelected={selected?.id === order.id}
+                          onClick={() => selectOrder(order)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Non-Processing Orders */}
                 {filteredRows.length > 0 && (
                   <div>
@@ -342,7 +400,7 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {processingRows.length === 0 && filteredRows.length === 0 && (
+                {processingRows.length === 0 && pickupRows.length === 0 && deliveryRows.length === 0 && filteredRows.length === 0 && (
                   <div className="p-4 text-center text-gray-500 text-sm">
                     No orders found
                   </div>

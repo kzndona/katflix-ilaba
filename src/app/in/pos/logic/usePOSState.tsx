@@ -340,7 +340,8 @@ export function usePOSState() {
     // Handling fee (only if delivery)
     const handlingFee = handling.deliver ? handling.deliveryFee : 0;
 
-    const subtotalBeforeTax = productSubtotal + basketSubtotal + serviceFee + handlingFee;
+    const subtotalBeforeTax =
+      productSubtotal + basketSubtotal + serviceFee + handlingFee;
 
     // VAT included in subtotal
     const vatIncluded =
