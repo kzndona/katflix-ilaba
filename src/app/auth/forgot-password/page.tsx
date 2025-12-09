@@ -5,23 +5,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const supabase = createClient();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
     });
 
     setLoading(false);
@@ -29,7 +29,7 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      router.replace("/in/orders"); // redirect after successful login
+      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
     }
   };
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
         {/* Left Image Panel */}
         <div className="w-1/2 rounded-2xl shadow-xl overflow-hidden bg-blue-600">
           <Image
-            src="/images/login_carousel_1.jpg" // replace with your image path
+            src="/images/login_carousel_1.jpg"
             alt="Laundry Shop"
             className="object-cover h-full w-full"
             width={500}
@@ -47,19 +47,19 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Right Login Panel */}
+        {/* Right Form Panel */}
         <div className="w-1/2 bg-gray-100 p-48 rounded-2xl flex flex-col justify-center space-y-6">
           <div>
             <h1 className="text-6xl font-bold text-gray-800 mb-2">KATFLIX</h1>
             <h2 className="text-2xl text-gray-600 mb-4">
-              iLaba Management System
+              Forgot Password
             </h2>
             <p className="text-lg text-gray-500 mb-6">
-              Please sign-in to continue.
+              Enter your email address and we'll send you a link to reset your password.
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="flex flex-col space-y-4">
+          <form onSubmit={handleResetRequest} className="flex flex-col space-y-4">
             {/* Email */}
             <div>
               <label className="block text-md font-medium text-gray-700 mb-2">
@@ -74,43 +74,39 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-md font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
-            {/* Forgot Password */}
-            <div className="flex justify-end">
-              <a
-                href="/auth/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Forgot Password?
-              </a>
-            </div>
+            {/* Success Message */}
+            {success && (
+              <div className="bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
 
-            {/* Error Message (always preserves spacing) */}
-            <div className="min-h-5">
-              {error && <p className="text-sm text-red-600">{error}</p>}
-            </div>
-
-            {/* Sign In Button */}
+            {/* Submit Button */}
             <button
               type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-lg transition disabled:opacity-50"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg text-lg font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Sign In"}
+              {loading ? "Sending..." : "Send Reset Link"}
             </button>
+
+            {/* Back to Login */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => router.push("/auth/sign-in")}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Back to Login
+              </button>
+            </div>
           </form>
         </div>
       </div>
