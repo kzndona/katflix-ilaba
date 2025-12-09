@@ -15,42 +15,51 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
+  const [sessionValid, setSessionValid] = useState(false);
 
   // Verify and exchange the token from the email link on mount
   useEffect(() => {
     const handlePasswordReset = async () => {
-      // Check if we have a hash in the URL (from the email link)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const type = hashParams.get('type');
+      try {
+        // Check if we have a hash in the URL (from the email link)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
 
-      // If this is a recovery/password reset link
-      if (type === 'recovery' && accessToken) {
-        // Exchange the tokens for a session
-        const { data, error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || '',
-        });
+        // If this is a recovery/password reset link
+        if (type === 'recovery' && accessToken) {
+          // Exchange the tokens for a session
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
 
-        if (error || !data.session) {
-          console.error('Session error:', error);
-          setError("Invalid or expired reset link. Please request a new password reset.");
-          setVerifying(false);
+          if (error || !data.session) {
+            console.error('Session error:', error);
+            setError("Invalid or expired reset link. Please request a new password reset.");
+            setSessionValid(false);
+          } else {
+            // Session established successfully
+            setSessionValid(true);
+          }
         } else {
-          // Session established successfully
-          setVerifying(false);
+          // No valid token in URL, check if already has session
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error || !session) {
+            setError("Invalid or expired reset link. Please request a new password reset.");
+            setSessionValid(false);
+          } else {
+            setSessionValid(true);
+          }
         }
-      } else {
-        // No valid token in URL, check if already has session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
-          setError("Invalid or expired reset link. Please request a new password reset.");
-          setVerifying(false);
-        } else {
-          setVerifying(false);
-        }
+      } catch (err) {
+        console.error('Error handling password reset:', err);
+        setError("An error occurred. Please try again.");
+        setSessionValid(false);
+      } finally {
+        setVerifying(false);
       }
     };
 
@@ -130,71 +139,94 @@ export default function ResetPasswordPage() {
             </p>
           </div>
 
-          <form onSubmit={handleResetPassword} className="flex flex-col space-y-4">
-            {/* New Password */}
-            <div>
-              <label className="block text-md font-medium text-gray-700 mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-md font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+          {!sessionValid ? (
+            // Show error if session is invalid
+            <>
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+                  {error}
+                </div>
+              )}
+              
+              {/* Back to Login */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth/sign-in")}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Back to Login
+                </button>
               </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div className="bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded-lg text-sm">
-                {success}
+            </>
+          ) : (
+            <form onSubmit={handleResetPassword} className="flex flex-col space-y-4">
+              {/* New Password */}
+              <div>
+                <label className="block text-md font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
               </div>
-            )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-lg transition disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? "Updating..." : "Reset Password"}
-            </button>
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-md font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
 
-            {/* Back to Login */}
-            <div className="text-center">
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div className="bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded-lg text-sm">
+                  {success}
+                </div>
+              )}
+
+              {/* Submit Button */}
               <button
-                type="button"
-                onClick={() => router.push("/auth/sign-in")}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-lg transition disabled:opacity-50"
+                disabled={loading}
               >
-                Back to Login
+                {loading ? "Updating..." : "Reset Password"}
               </button>
-            </div>
-          </form>
+
+              {/* Back to Login */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth/sign-in")}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
