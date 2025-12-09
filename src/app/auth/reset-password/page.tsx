@@ -16,20 +16,45 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
 
-  // Verify the session from the email link on mount
+  // Verify and exchange the token from the email link on mount
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session) {
-        setError("Invalid or expired reset link. Please request a new password reset.");
-        setVerifying(false);
+    const handlePasswordReset = async () => {
+      // Check if we have a hash in the URL (from the email link)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+
+      // If this is a recovery/password reset link
+      if (type === 'recovery' && accessToken) {
+        // Exchange the tokens for a session
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        });
+
+        if (error || !data.session) {
+          console.error('Session error:', error);
+          setError("Invalid or expired reset link. Please request a new password reset.");
+          setVerifying(false);
+        } else {
+          // Session established successfully
+          setVerifying(false);
+        }
       } else {
-        setVerifying(false);
+        // No valid token in URL, check if already has session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          setError("Invalid or expired reset link. Please request a new password reset.");
+          setVerifying(false);
+        } else {
+          setVerifying(false);
+        }
       }
     };
 
-    checkSession();
+    handlePasswordReset();
   }, [supabase]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
