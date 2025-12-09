@@ -5,106 +5,52 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   try {
-    const { basketId, orderId } = await req.json();
+    const { customerId, basketId, basketNumber, oldStatus, newStatus, orderId } = await req.json();
 
-    if (!basketId || !orderId) {
+    // Validate required fields
+    if (!customerId || !basketId || !basketNumber || !newStatus) {
       return NextResponse.json(
-        { error: "basketId and orderId are required" },
+        { error: "customerId, basketId, basketNumber, and newStatus are required" },
         { status: 400 }
       );
     }
 
-    // Fetch basket and order details
-    const { data: basketData, error: basketError } = await supabase
-      .from("baskets")
-      .select(
-        `
-        id,
-        basket_number,
-        orders!inner (
-          id,
-          customer_id,
-          status,
-          pickup_address,
-          delivery_address,
-          customers!inner (
-            id,
-            first_name,
-            last_name,
-            phone_number,
-            email_address
-          )
-        )
-      `
-      )
-      .eq("id", basketId)
-      .single();
-
-    if (basketError || !basketData) {
-      throw new Error("Basket not found");
-    }
-
-    const basket = basketData as any;
-    const order = basket.orders;
-    const customer = order?.customers;
-
-    if (!customer) {
-      throw new Error("Customer information not found");
-    }
-
-    // Determine notification type based on order status
-    let notificationType = "update";
-    let message = `Your order is being processed.`;
-
-    if (order.status === "pick-up") {
-      notificationType = "pickup";
-      message = `Your order (Basket ${basket.basket_number}) is ready for pickup at the store!`;
-    } else if (order.status === "delivering") {
-      notificationType = "delivery";
-      message = `Your order (Basket ${basket.basket_number}) is on its way to you for delivery!`;
-    }
-
-    // Call Supabase Edge Function to send real-time notification
-    try {
-      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
-        'notifyCustomer',
-        {
-          body: {
-            basketId,
-            orderId,
-          },
-        }
-      );
-
-      if (edgeFunctionError) {
-        console.error("Edge function error:", edgeFunctionError);
-      } else {
-        console.log("Real-time notification sent:", edgeFunctionData);
-      }
-    } catch (broadcastError) {
-      console.error("Broadcast error:", broadcastError);
-    }
-
-    // Log notification details
-    console.log("Notification processed:", {
-      customerId: customer.id,
-      customerName: `${customer.first_name} ${customer.last_name}`,
-      phone: customer.phone_number,
-      email: customer.email_address,
-      message,
-      notificationType,
+    // Broadcast to Realtime channel
+    const channelName = `customer_notifications:${customerId}`;
+    const payload = {
+      type: "basket_status_change",
       basketId,
-      orderId,
+      basketNumber,
+      orderId: orderId || null,
+      oldStatus: oldStatus || null,
+      newStatus,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Send broadcast using Supabase Realtime
+    const channel = supabase.channel(channelName);
+    await channel.subscribe();
+    await channel.send({
+      type: "broadcast",
+      event: "notification",
+      payload,
+    });
+    await channel.unsubscribe();
+
+    console.log("Notification broadcast sent:", {
+      channel: channelName,
+      payload,
     });
 
     return NextResponse.json({
       success: true,
       message: "Customer notification sent",
       details: {
-        customerId: customer.id,
-        customerName: `${customer.first_name} ${customer.last_name}`,
-        notificationType,
-        basketNumber: basket.basket_number,
+        customerId,
+        basketId,
+        basketNumber,
+        oldStatus: oldStatus || null,
+        newStatus,
       },
     });
   } catch (error: any) {

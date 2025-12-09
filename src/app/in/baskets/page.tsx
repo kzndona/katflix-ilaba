@@ -24,6 +24,7 @@ type BasketDetail = {
   status: string;
   created_at: string | null;
   services: ServiceDetail[];
+  customer_id?: string | null;
   customer_name?: string | null;
   phone_number?: string | null;
   email_address?: string | null;
@@ -150,13 +151,32 @@ export default function BasketsPage() {
     }
   }
 
-  async function notifyCustomer(basketId: string, orderId: string) {
-    setProcessingId(basketId);
+  async function notifyCustomer(basket: BasketDetail) {
+    setProcessingId(basket.id);
     try {
+      // Determine the old and new status based on order status
+      let oldStatus = "processing";
+      let newStatus = basket.orderStatus || "processing";
+      
+      if (basket.orderStatus === "pick-up") {
+        oldStatus = "processing";
+        newStatus = "ready_for_pickup";
+      } else if (basket.orderStatus === "delivering") {
+        oldStatus = "processing";
+        newStatus = "out_for_delivery";
+      }
+
       const res = await fetch("/api/baskets/notifyCustomer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ basketId, orderId }),
+        body: JSON.stringify({
+          customerId: basket.customer_id,
+          basketId: basket.id,
+          basketNumber: basket.basket_number,
+          orderId: basket.order_id,
+          oldStatus,
+          newStatus,
+        }),
       });
       if (!res.ok) throw new Error("Failed to notify customer");
       alert("Customer notified successfully");
@@ -421,7 +441,7 @@ export default function BasketsPage() {
                 <div className="space-y-2">
                   {(basket.orderStatus === "pick-up" || basket.orderStatus === "delivering") && (
                     <button
-                      onClick={() => notifyCustomer(basket.id, basket.order_id)}
+                      onClick={() => notifyCustomer(basket)}
                       disabled={processingId === basket.id}
                       className="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-wait"
                     >
