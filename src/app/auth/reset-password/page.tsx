@@ -30,6 +30,7 @@ export default function ResetPasswordPage() {
         const queryError = queryParams.get('error');
         const errorCode = queryParams.get('error_code');
         const errorDescription = queryParams.get('error_description');
+        const code = queryParams.get('code'); // PKCE code
 
         if (queryError) {
           console.log('Error in URL:', { queryError, errorCode, errorDescription });
@@ -42,8 +43,25 @@ export default function ResetPasswordPage() {
           setVerifying(false);
           return;
         }
+
+        // Handle PKCE flow (code parameter in URL)
+        if (code) {
+          console.log('PKCE code found, exchanging for session...');
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error || !data.session) {
+            console.error('PKCE exchange error:', error);
+            setError("Invalid or expired reset link. Please request a new password reset.");
+            setSessionValid(false);
+          } else {
+            console.log('PKCE session established successfully!');
+            setSessionValid(true);
+          }
+          setVerifying(false);
+          return;
+        }
         
-        // Check if we have a hash in the URL (from the email link)
+        // Check if we have a hash in the URL (legacy token-based flow)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
@@ -66,7 +84,7 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // If this is a recovery/password reset link
+        // If this is a recovery/password reset link (legacy flow)
         if (type === 'recovery' && accessToken) {
           console.log('Attempting to set session with recovery token...');
           // Exchange the tokens for a session
@@ -85,7 +103,7 @@ export default function ResetPasswordPage() {
             setSessionValid(true);
           }
         } else {
-          console.log('No recovery token found, checking existing session...');
+          console.log('No recovery token or code found, checking existing session...');
           // No valid token in URL, check if already has session
           const { data: { session }, error } = await supabase.auth.getSession();
           
