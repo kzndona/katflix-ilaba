@@ -53,12 +53,15 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1️⃣ Insert order
+    // If no baskets exist (pure product purchase), mark as completed; otherwise mark as processing
+    const orderStatus = baskets.length === 0 ? "completed" : "processing";
+    
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
         customer_id: customerId,
         total_amount: total,
-        status: "processing",
+        status: orderStatus,
         source: source || "mobile", // Default to mobile if not specified
         pickup_address: pickupAddress || null,
         delivery_address: deliveryAddress || null,

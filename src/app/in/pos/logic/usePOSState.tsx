@@ -357,12 +357,51 @@ export function usePOSState() {
 
   const [isProcessing, setIsProcessing] = React.useState(false);
 
+  const validateBaskets = () => {
+    const warnings: string[] = [];
+    const emptyBasketIndices: number[] = [];
+
+    baskets.forEach((basket, index) => {
+      // Check if basket is empty (0kg weight)
+      if (basket.weightKg === 0) {
+        emptyBasketIndices.push(index);
+        return;
+      }
+
+      // Check if basket has weight but no services
+      const hasService =
+        basket.washCount > 0 ||
+        basket.dryCount > 0 ||
+        basket.spinCount > 0 ||
+        basket.iron ||
+        basket.fold;
+
+      if (!hasService) {
+        warnings.push(
+          `Basket ${basket.originalIndex} has weight (${basket.weightKg}kg) but no services selected.`
+        );
+      }
+    });
+
+    return { warnings, emptyBasketIndices };
+  };
+
   const saveOrder = async () => {
     // Prevent double-click/double submission
     if (isProcessing) return;
     setIsProcessing(true);
 
     try {
+      // Validate baskets first
+      const { warnings, emptyBasketIndices } = validateBaskets();
+
+      if (warnings.length > 0) {
+        alert(
+          `Please fix the following issues:\n\n${warnings.join("\n")}`
+        );
+        setIsProcessing(false);
+        return null;
+      }
       // 0️⃣ Handle customer - create if new, or update if email was added
       let customerId = customer?.id || null;
 
@@ -452,59 +491,66 @@ export function usePOSState() {
         "fold",
       ];
 
-      const basketsPayload = baskets.map((b) => {
-        const premiumMap: Record<string, boolean> = {
-          wash: b.washPremium,
-          dry: b.dryPremium,
-          spin: false,
-          iron: false,
-          fold: false,
-        };
+      const basketsPayload = baskets
+        .map((b, index) => {
+          // Skip empty baskets
+          if (b.weightKg === 0) {
+            return null;
+          }
 
-        const services = serviceTypes
-          .map((type) => {
-            const countKey =
-              type === "wash"
-                ? "washCount"
-                : type === "dry"
-                  ? "dryCount"
-                  : type === "spin"
-                    ? "spinCount"
-                    : type;
+          const premiumMap: Record<string, boolean> = {
+            wash: b.washPremium,
+            dry: b.dryPremium,
+            spin: false,
+            iron: false,
+            fold: false,
+          };
 
-            const active =
-              type === "iron" || type === "fold"
-                ? Boolean(b[countKey])
-                : (b[countKey] as number) > 0;
+          const services = serviceTypes
+            .map((type) => {
+              const countKey =
+                type === "wash"
+                  ? "washCount"
+                  : type === "dry"
+                    ? "dryCount"
+                    : type === "spin"
+                      ? "spinCount"
+                      : type;
 
-            if (!active) return null;
+              const active =
+                type === "iron" || type === "fold"
+                  ? Boolean(b[countKey])
+                  : (b[countKey] as number) > 0;
 
-            const service = getServiceByType(type, premiumMap[type]);
-            if (!service) return null;
+              if (!active) return null;
 
-            const qty =
-              type === "iron" || type === "fold" ? 1 : (b[countKey] as number);
+              const service = getServiceByType(type, premiumMap[type]);
+              if (!service) return null;
 
-            const subtotal =
-              (service.rate_per_kg ?? 0) * (b.weightKg ?? 0) * qty;
+              const qty =
+                type === "iron" || type === "fold" ? 1 : (b[countKey] as number);
 
-            return {
-              service_id: service.id,
-              rate: service.rate_per_kg,
-              subtotal,
-            };
-          })
-          .filter(Boolean);
+              const subtotal =
+                (service.rate_per_kg ?? 0) * (b.weightKg ?? 0) * qty;
 
-        return {
-          machine_id: b.machine_id || null,
-          weight: b.weightKg,
-          notes: b.notes || null,
-          subtotal:
-            computeReceipt.basketLines.find((bl) => bl.id === b.id)?.total ?? 0,
-          services,
-        };
-      });
+              return {
+                service_id: service.id,
+                rate: service.rate_per_kg,
+                subtotal,
+              };
+            })
+            .filter(Boolean);
+
+          return {
+            machine_id: b.machine_id || null,
+            weight: b.weightKg,
+            notes: b.notes || null,
+            subtotal:
+              computeReceipt.basketLines.find((bl) => bl.id === b.id)?.total ?? 0,
+            services,
+          };
+        })
+        .filter(Boolean);
 
       // 3️⃣ Prepare customerId and total (including delivery fee if applicable)
       const totalWithDelivery = handling.deliver
