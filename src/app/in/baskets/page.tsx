@@ -232,6 +232,19 @@ export default function BasketsPage() {
     );
   };
 
+  const areAllBasketsPastPickup = (currentBasket: BasketDetail): boolean => {
+    // Check if all baskets in this order have moved past pickup phase
+    const orderBaskets = baskets.filter((b) => b.order_id === currentBasket.order_id);
+    // Single basket orders are always "ready" - don't need to wait
+    if (orderBaskets.length === 1) {
+      return true;
+    }
+    // All baskets must have at least one service in progress or completed (meaning they're past pickup)
+    return orderBaskets.every(
+      (b) => b.services.some((s) => s.status === "in_progress" || s.status === "completed")
+    );
+  };
+
   const groupServicesByType = (basket: BasketDetail) => {
     const grouped: Record<string, ServiceDetail[]> = {};
     basket.services.forEach((service) => {
@@ -347,14 +360,18 @@ export default function BasketsPage() {
                     if (!typeServices || typeServices.length === 0) return null;
 
                     const inProgressType = getInProgressServiceType(basket);
-                    const isInProgress = type === inProgressType;
+                    let isInProgress = type === inProgressType;
+                    
+                    // Special handling for virtual services (pickup/delivery)
+                    if (type === "pickup" && basket.orderStatus === "pick-up") {
+                      isInProgress = true; // Show pickup as in-progress when order is in pick-up status
+                    }
+                    if (type === "delivery" && basket.orderStatus === "delivering") {
+                      isInProgress = true; // Show delivery as in-progress when order is delivering
+                    }
+                    
                     const isCompleted = typeServices.every(
                       (s) => s.status === "completed"
-                    );
-
-                    const totalPrice = typeServices.reduce(
-                      (sum, s) => sum + s.subtotal,
-                      0
                     );
 
                     // Check if wash or dry is premium
@@ -374,7 +391,7 @@ export default function BasketsPage() {
                         key={type}
                         className={`p-2 rounded text-sm border ${bgClass}`}
                       >
-                        <div className="flex justify-between items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <span className="font-semibold capitalize">
                             {type}
                             {isPremium && (
@@ -384,9 +401,6 @@ export default function BasketsPage() {
                             )}
                             {isCompleted && <span className="ml-1">✓</span>}
                             {isInProgress && <span className="ml-1">●</span>}
-                          </span>
-                          <span className="font-bold">
-                            ₱{totalPrice.toFixed(0)}
                           </span>
                         </div>
                       </div>
@@ -414,29 +428,34 @@ export default function BasketsPage() {
                     disabled={
                       (!nextServiceType && !canCompleteBasket(basket)) ||
                       processingId === basket.id ||
-                      (canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket))
+                      (canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)) ||
+                      (basket.orderStatus === "pick-up" && !areAllBasketsPastPickup(basket))
                     }
                     className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
                       processingId === basket.id
                         ? "bg-gray-400 text-white cursor-wait"
-                        : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                        : basket.orderStatus === "pick-up" && !areAllBasketsPastPickup(basket)
                           ? "bg-yellow-400 text-yellow-900 cursor-not-allowed"
-                          : !nextServiceType && !canCompleteBasket(basket)
-                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : canCompleteBasket(basket)
-                              ? "bg-linear-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg"
-                              : "bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg"
+                          : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                            ? "bg-yellow-400 text-yellow-900 cursor-not-allowed"
+                            : !nextServiceType && !canCompleteBasket(basket)
+                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                              : canCompleteBasket(basket)
+                                ? "bg-linear-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg"
+                                : "bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg"
                     }`}
                   >
                     {processingId === basket.id
                       ? "Processing..."
-                      : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                      : basket.orderStatus === "pick-up" && !areAllBasketsPastPickup(basket)
                         ? "⏳ Waiting for other baskets"
-                        : canCompleteBasket(basket)
-                          ? "Complete ✓"
-                          : nextServiceType
-                            ? "Next Service →"
-                            : "All Done"}
+                        : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                          ? "⏳ Waiting for other baskets"
+                          : canCompleteBasket(basket)
+                            ? "Complete ✓"
+                            : nextServiceType
+                              ? "Next Service →"
+                              : "All Done"}
                   </button>
                 </div>
               </div>
