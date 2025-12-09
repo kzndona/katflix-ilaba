@@ -61,8 +61,15 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1️⃣ Insert order
-    // If no baskets exist (pure product purchase), mark as completed; otherwise mark as processing
-    const orderStatus = baskets.length === 0 ? "completed" : "processing";
+    // If no baskets exist (pure product purchase), mark as completed
+    // If pickupAddress exists, start with 'pick-up' status
+    // Otherwise, mark as 'processing' (in-store laundry)
+    let orderStatus = "processing";
+    if (baskets.length === 0) {
+      orderStatus = "completed";
+    } else if (pickupAddress) {
+      orderStatus = "pick-up";
+    }
     const completedAt = baskets.length === 0 ? new Date().toISOString() : null;
     
     const { data: order, error: orderErr } = await supabase
@@ -104,12 +111,14 @@ export async function POST(req: NextRequest) {
 
       // Only insert services if present
       if (b.services?.length) {
+        // If pickup exists, keep all services as 'pending' (pickup must complete first)
+        // Otherwise, set first service as 'in_progress' (in-store laundry)
         const serviceInserts = b.services.map((s, index) => ({
           basket_id: basketId,
           service_id: s.service_id,
           rate: s.rate,
           subtotal: s.subtotal,
-          status: index === 0 ? "in_progress" : "pending",
+          status: (index === 0 && !pickupAddress) ? "in_progress" : "pending",
         }));
 
         const { error: svcErr } = await supabase.from("basket_services").insert(serviceInserts);
