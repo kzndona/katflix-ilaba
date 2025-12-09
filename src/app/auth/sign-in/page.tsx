@@ -39,7 +39,7 @@ export default function LoginPage() {
         {/* Left Image Panel */}
         <div className="w-1/2 rounded-2xl shadow-xl overflow-hidden bg-blue-600">
           <Image
-            src="/images/login_carousel_1.png" // replace with your image path
+            src="/images/login_carousel_1.jpg" // replace with your image path
             alt="Laundry Shop"
             className="object-cover h-full w-full"
             width={500}

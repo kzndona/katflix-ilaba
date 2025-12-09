@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatToPST } from "@/src/app/utils/dateUtils";
 
 type Machine = {
   id: string;
@@ -177,9 +178,7 @@ export default function MachinesPage() {
                 <td className="p-2 border text-center">{r.type}</td>
                 <td className="p-2 border text-center">{r.status}</td>
                 <td className="p-2 border text-center">
-                  {r.last_serviced_at
-                    ? new Date(r.last_serviced_at).toLocaleString()
-                    : "-"}
+                  {formatToPST(r.last_serviced_at)}
                 </td>
               </tr>
             ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatToPST } from "@/src/app/utils/dateUtils";
 
 type ServiceDetail = {
   id: string;

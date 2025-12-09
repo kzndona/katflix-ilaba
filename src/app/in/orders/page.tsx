@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatToPST, formatDateToPST } from "@/src/app/utils/dateUtils";
 
 type Basket = {
   id: string;
@@ -422,9 +423,7 @@ function OrderListItem({
             {order.status.toUpperCase()}
           </div>
           <div className="text-xs text-gray-500 mt-2">
-            {order.created_at
-              ? new Date(order.created_at).toLocaleDateString()
-              : "—"}
+            {formatDateToPST(order.created_at)}
           </div>
         </div>
         <div className="text-right">
@@ -484,19 +483,11 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
             <DetailField label="🔧 Source" value={order.source} />
             <DetailField
               label="📅 Created"
-              value={
-                order.created_at
-                  ? new Date(order.created_at).toLocaleString()
-                  : "—"
-              }
+              value={formatToPST(order.created_at)}
             />
             <DetailField
               label="✅ Completed"
-              value={
-                order.completed_at
-                  ? new Date(order.completed_at).toLocaleString()
-                  : "—"
-              }
+              value={formatToPST(order.completed_at)}
             />
           </div>
 

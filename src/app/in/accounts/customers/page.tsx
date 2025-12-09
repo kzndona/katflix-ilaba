@@ -223,10 +223,10 @@ export default function CustomersPage() {
 
   return (
     <div className="p-6 h-screen bg-gray-50 flex flex-col">
-      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
+      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
         {/* LEFT PANE - Customers List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col">
-          <div className="p-6 border-b border-gray-200">
+        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
+          <div className="p-6 border-b border-gray-200 shrink-0">
             <h2 className="text-3xl font-bold mb-4">Customers</h2>
             <input
               type="text"
@@ -237,7 +237,7 @@ export default function CustomersPage() {
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {filteredRows.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
                 {rows.length === 0 ? "No customers yet" : "No results"}
@@ -272,7 +272,7 @@ export default function CustomersPage() {
             )}
           </div>
 
-          <div className="p-6 border-t border-gray-200">
+          <div className="p-6 border-t border-gray-200 shrink-0">
             <button
               onClick={openNew}
               className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
@@ -283,7 +283,7 @@ export default function CustomersPage() {
         </div>
 
         {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col">
+        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col min-h-0">
           {isEditingDetails && editing ? (
             <EditPane
               customer={editing}

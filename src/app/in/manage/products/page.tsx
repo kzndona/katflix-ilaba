@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatToPST } from "@/src/app/utils/dateUtils";
 
 type Products = {
   id: string;
@@ -252,9 +253,7 @@ export default function ProductsPage() {
                 <td className="p-2 border text-center">{r.quantity}</td>
                 <td className="p-2 border text-center">{r.reorder_level}</td>
                 <td className="p-2 border text-center">
-                  {r.last_updated
-                    ? new Date(r.last_updated).toLocaleString()
-                    : "-"}
+                  {formatToPST(r.last_updated)}
                 </td>
               </tr>
             ))}
