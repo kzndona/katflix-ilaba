@@ -396,9 +396,7 @@ export function usePOSState() {
       const { warnings, emptyBasketIndices } = validateBaskets();
 
       if (warnings.length > 0) {
-        alert(
-          `Please fix the following issues:\n\n${warnings.join("\n")}`
-        );
+        alert(`Please fix the following issues:\n\n${warnings.join("\n")}`);
         setIsProcessing(false);
         return null;
       }
@@ -528,7 +526,9 @@ export function usePOSState() {
               if (!service) return null;
 
               const qty =
-                type === "iron" || type === "fold" ? 1 : (b[countKey] as number);
+                type === "iron" || type === "fold"
+                  ? 1
+                  : (b[countKey] as number);
 
               const subtotal =
                 (service.rate_per_kg ?? 0) * (b.weightKg ?? 0) * qty;
@@ -546,7 +546,8 @@ export function usePOSState() {
             weight: b.weightKg,
             notes: b.notes || null,
             subtotal:
-              computeReceipt.basketLines.find((bl) => bl.id === b.id)?.total ?? 0,
+              computeReceipt.basketLines.find((bl) => bl.id === b.id)?.total ??
+              0,
             services,
           };
         })

@@ -1,4 +1,12 @@
 // app/api/pos/newOrder/route.ts
+// 
+// Order creation endpoint used by both POS (staff) and mobile (customer) booking
+//
+// KEY BEHAVIOR FOR MOBILE:
+// - Orders with ONLY products (baskets.length === 0) are automatically marked as "completed"
+// - Orders with baskets are marked as "processing" (requires laundry service to complete)
+// - Empty baskets (weight === 0) should be filtered on client-side before sending
+//
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -32,7 +40,7 @@ interface PaymentPayload {
 interface OrderPayload {
   customerId: string | null;
   total: number;
-  baskets: BasketPayload[];
+  baskets: BasketPayload[]; // Empty array for product-only orders (will auto-complete)
   products: ProductPayload[];
   payments?: PaymentPayload[];
   pickupAddress?: string | null;
