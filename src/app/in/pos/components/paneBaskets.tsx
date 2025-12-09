@@ -120,7 +120,7 @@ export default function PaneBaskets({
           label="−"
           subLabel="Decrease Weight"
           onClick={() =>
-            updateActiveBasket({ weightKg: Math.max(0, b.weightKg - 0.5) })
+            updateActiveBasket({ weightKg: Math.max(0, b.weightKg - 8) })
           }
           color="blue"
           active={true}
@@ -130,7 +130,7 @@ export default function PaneBaskets({
           subLabel="Increase Weight"
           onClick={() =>
             updateActiveBasket({
-              weightKg: parseFloat((b.weightKg + 0.5).toFixed(1)),
+              weightKg: parseFloat((b.weightKg + 8).toFixed(1)),
             })
           }
           color="green"
