@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
 
@@ -14,6 +14,23 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(true);
+
+  // Verify the session from the email link on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        setError("Invalid or expired reset link. Please request a new password reset.");
+        setVerifying(false);
+      } else {
+        setVerifying(false);
+      }
+    };
+
+    checkSession();
+  }, [supabase]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +67,17 @@ export default function ResetPasswordPage() {
       }, 2000);
     }
   };
+
+  // Show loading state while verifying session
+  if (verifying) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="text-xl text-gray-600">Verifying reset link...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100 p-2">
