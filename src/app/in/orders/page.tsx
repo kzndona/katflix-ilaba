@@ -82,9 +82,12 @@ export default function OrdersPage() {
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    setDateFrom(today);
-    setDateTo(today);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    setDateFrom(yesterday.toISOString().split("T")[0]);
+    setDateTo(today.toISOString().split("T")[0]);
     load();
   }, []);
 

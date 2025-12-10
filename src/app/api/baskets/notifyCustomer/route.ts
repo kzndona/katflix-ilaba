@@ -5,52 +5,88 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   try {
-    const { customerId, basketId, basketNumber, oldStatus, newStatus, orderId } = await req.json();
+    const { basketId, orderId } = await req.json();
 
-    // Validate required fields
-    if (!customerId || !basketId || !basketNumber || !newStatus) {
+    if (!basketId || !orderId) {
       return NextResponse.json(
-        { error: "customerId, basketId, basketNumber, and newStatus are required" },
+        { error: "basketId and orderId are required" },
         { status: 400 }
       );
     }
 
-    // Broadcast to Realtime channel
-    const channelName = `customer_notifications:${customerId}`;
-    const payload = {
-      type: "basket_status_change",
+    // Fetch basket and order details
+    const { data: basketData, error: basketError } = await supabase
+      .from("baskets")
+      .select(
+        `
+        id,
+        basket_number,
+        orders!inner (
+          id,
+          customer_id,
+          status,
+          pickup_address,
+          delivery_address,
+          customers!inner (
+            id,
+            first_name,
+            last_name,
+            phone_number,
+            email_address
+          )
+        )
+      `
+      )
+      .eq("id", basketId)
+      .single();
+
+    if (basketError || !basketData) {
+      throw new Error("Basket not found");
+    }
+
+    const basket = basketData as any;
+    const order = basket.orders;
+    const customer = order?.customers;
+
+    if (!customer) {
+      throw new Error("Customer information not found");
+    }
+
+    // Determine notification type based on order status
+    let notificationType = "update";
+    let message = `Your order is being processed.`;
+
+    if (order.status === "pick-up") {
+      notificationType = "pickup";
+      message = `Your order (Basket ${basket.basket_number}) is ready for pickup at the store!`;
+    } else if (order.status === "delivering") {
+      notificationType = "delivery";
+      message = `Your order (Basket ${basket.basket_number}) is on its way to you for delivery!`;
+    }
+
+    // Log notification details for processing
+    console.log("Notification ready to send:", {
+      customerId: customer.id,
+      customerName: `${customer.first_name} ${customer.last_name}`,
+      phone: customer.phone_number,
+      email: customer.email_address,
+      message,
+      notificationType,
       basketId,
-      basketNumber,
-      orderId: orderId || null,
-      oldStatus: oldStatus || null,
-      newStatus,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Send broadcast using Supabase Realtime
-    const channel = supabase.channel(channelName);
-    await channel.subscribe();
-    await channel.send({
-      type: "broadcast",
-      event: "notification",
-      payload,
+      orderId,
     });
-    await channel.unsubscribe();
 
-    console.log("Notification broadcast sent:", {
-      channel: channelName,
-      payload,
-    });
+    // TODO: Implement actual notification service (SMS/Email/Push)
+    // For now, this serves as a logging mechanism for staff to manually notify customers
 
     return NextResponse.json({
       success: true,
       message: "Customer notification sent",
       details: {
-        customerId,
-        basketId,
-        basketNumber,
-        oldStatus: oldStatus || null,
-        newStatus,
+        customerId: customer.id,
+        customerName: `${customer.first_name} ${customer.last_name}`,
+        notificationType,
+        basketNumber: basket.basket_number,
       },
     });
   } catch (error: any) {
