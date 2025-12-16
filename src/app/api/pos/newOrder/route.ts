@@ -7,6 +7,12 @@
 // - Orders with baskets are marked as "processing" (requires laundry service to complete)
 // - Empty baskets (weight === 0) should be filtered on client-side before sending
 //
+// INVENTORY MANAGEMENT:
+// - Product quantities are automatically deducted when order is created
+// - Validates sufficient stock before deducting
+// - Updates product.last_updated timestamp
+// - Inventory is restored when order is deleted (see removeOrder endpoint)
+//
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -61,8 +67,15 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1️⃣ Insert order
-    // If no baskets exist (pure product purchase), mark as completed; otherwise mark as processing
-    const orderStatus = baskets.length === 0 ? "completed" : "processing";
+    // If no baskets exist (pure product purchase), mark as completed
+    // If pickupAddress exists, start with 'pick-up' status
+    // Otherwise, mark as 'processing' (in-store laundry)
+    let orderStatus = "processing";
+    if (baskets.length === 0) {
+      orderStatus = "completed";
+    } else if (pickupAddress) {
+      orderStatus = "pick-up";
+    }
     const completedAt = baskets.length === 0 ? new Date().toISOString() : null;
     
     const { data: order, error: orderErr } = await supabase
@@ -104,12 +117,14 @@ export async function POST(req: NextRequest) {
 
       // Only insert services if present
       if (b.services?.length) {
+        // If pickup exists, keep all services as 'pending' (pickup must complete first)
+        // Otherwise, set first service as 'in_progress' (in-store laundry)
         const serviceInserts = b.services.map((s, index) => ({
           basket_id: basketId,
           service_id: s.service_id,
           rate: s.rate,
           subtotal: s.subtotal,
-          status: index === 0 ? "in_progress" : "pending",
+          status: (index === 0 && !pickupAddress) ? "in_progress" : "pending",
         }));
 
         const { error: svcErr } = await supabase.from("basket_services").insert(serviceInserts);
@@ -117,8 +132,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3️⃣ Insert order products
+    // 3️⃣ Insert order products and deduct inventory
     if (products.length) {
+      console.log("=== PROCESSING PRODUCTS ===");
+      console.log("Products to insert:", JSON.stringify(products, null, 2));
+      
       const productInserts = products.map((p) => ({
         order_id: orderId,
         product_id: p.product_id,
@@ -127,8 +145,63 @@ export async function POST(req: NextRequest) {
         subtotal: p.subtotal,
       }));
 
+      console.log("Product inserts:", JSON.stringify(productInserts, null, 2));
+
       const { error: prodErr } = await supabase.from("order_products").insert(productInserts);
-      if (prodErr) throw prodErr;
+      if (prodErr) {
+        console.error("Failed to insert order_products:", prodErr);
+        throw prodErr;
+      }
+      console.log("✓ Order products inserted successfully");
+
+      // Deduct quantities from inventory
+      for (const p of products) {
+        console.log(`Processing product deduction: ${p.product_id}, quantity: ${p.quantity}`);
+        
+        // Get current product quantity
+        const { data: product, error: fetchErr } = await supabase
+          .from("products")
+          .select("quantity, item_name")
+          .eq("id", p.product_id)
+          .single();
+
+        if (fetchErr) {
+          console.error(`Failed to fetch product ${p.product_id}:`, fetchErr);
+          throw new Error(`Failed to fetch product inventory`);
+        }
+
+        if (!product) {
+          throw new Error(`Product ${p.product_id} not found`);
+        }
+
+        const currentQty = Number(product.quantity);
+        const orderQty = Number(p.quantity);
+        
+        console.log(`Product ${product.item_name}: Current ${currentQty}, Ordering ${orderQty}`);
+        
+        // Check if sufficient quantity available
+        if (currentQty < orderQty) {
+          throw new Error(`Insufficient stock for ${product.item_name}. Available: ${currentQty}, Requested: ${orderQty}`);
+        }
+
+        const newQty = currentQty - orderQty;
+
+        // Update product quantity
+        const { error: updateErr } = await supabase
+          .from("products")
+          .update({ 
+            quantity: newQty,
+            last_updated: new Date().toISOString()
+          })
+          .eq("id", p.product_id);
+
+        if (updateErr) {
+          console.error(`Failed to update product ${p.product_id}:`, updateErr);
+          throw new Error(`Failed to update product inventory for ${product.item_name}`);
+        }
+        
+        console.log(`Successfully updated ${product.item_name} quantity to ${newQty}`);
+      }
     }
 
     // 4️⃣ Insert payments

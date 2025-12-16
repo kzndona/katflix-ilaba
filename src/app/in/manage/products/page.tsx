@@ -22,6 +22,12 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Quantity adjustment modal state
+  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [quantityAdjustment, setQuantityAdjustment] = useState<string>("");
+  const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">("add");
 
   useEffect(() => {
     load();
@@ -208,16 +214,92 @@ export default function ProductsPage() {
     }
   }
 
+  function openQuantityModal() {
+    setQuantityModalOpen(true);
+    setSelectedProductId("");
+    setQuantityAdjustment("");
+    setAdjustmentType("add");
+    setErrorMsg(null);
+  }
+
+  async function adjustQuantity() {
+    if (!selectedProductId || !quantityAdjustment) {
+      setErrorMsg("Please select a product and enter an amount");
+      return;
+    }
+
+    const amount = Number(quantityAdjustment);
+    if (isNaN(amount) || amount <= 0) {
+      setErrorMsg("Amount must be a positive number");
+      return;
+    }
+
+    setErrorMsg(null);
+    setSaving(true);
+
+    try {
+      const product = rows.find((r) => r.id === selectedProductId);
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      const currentQty = Number(product.quantity);
+      const newQty = adjustmentType === "add" ? currentQty + amount : currentQty - amount;
+
+      if (newQty < 0) {
+        setErrorMsg("Cannot reduce quantity below 0");
+        setSaving(false);
+        return;
+      }
+
+      const payload = {
+        id: selectedProductId,
+        item_name: product.item_name,
+        unit: product.unit,
+        unit_cost: Number(product.unit_cost),
+        unit_price: Number(product.unit_price),
+        quantity: Math.trunc(newQty),
+        reorder_level: Number(product.reorder_level),
+      };
+
+      const res = await fetch("/api/manage/products/saveProduct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(body.error || `Server responded ${res.status}`);
+
+      await load();
+      setQuantityModalOpen(false);
+    } catch (err) {
+      console.error("Quantity adjustment failed:", err);
+      setErrorMsg("Failed to adjust quantity");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="text-xl font-semibold">Products</div>
-        <button
-          onClick={openNew}
-          className="px-3 py-1 bg-blue-600 text-white rounded"
-        >
-          Add New
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openQuantityModal}
+            className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            Adjust Quantity
+          </button>
+          <button
+            onClick={openNew}
+            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Add New
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -352,6 +434,115 @@ export default function ProductsPage() {
                 disabled={saving}
               >
                 {saving ? "Saving..." : editing.id ? "Save" : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quantity Adjustment Modal */}
+      {quantityModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 w-[480px] rounded shadow space-y-4">
+            <div className="text-lg font-semibold">Adjust Product Quantity</div>
+
+            {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
+
+            <div className="space-y-4">
+              {/* Product Dropdown */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium mb-1">Select Product</label>
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">-- Choose a product --</option>
+                  {rows.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.item_name} (Current: {product.quantity} {product.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Add/Subtract Toggle */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium mb-1">Action</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAdjustmentType("add")}
+                    className={`flex-1 px-4 py-2 rounded font-medium transition ${
+                      adjustmentType === "add"
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    Add (+)
+                  </button>
+                  <button
+                    onClick={() => setAdjustmentType("subtract")}
+                    className={`flex-1 px-4 py-2 rounded font-medium transition ${
+                      adjustmentType === "subtract"
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    Subtract (-)
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium mb-1">Amount</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={quantityAdjustment}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, "");
+                    setQuantityAdjustment(cleaned);
+                  }}
+                  placeholder="Enter quantity to adjust"
+                  className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Preview */}
+              {selectedProductId && quantityAdjustment && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                  <div className="text-sm font-medium text-blue-900">Preview:</div>
+                  <div className="text-sm text-blue-700 mt-1">
+                    {(() => {
+                      const product = rows.find((r) => r.id === selectedProductId);
+                      if (!product) return "";
+                      const current = Number(product.quantity);
+                      const amount = Number(quantityAdjustment);
+                      const newQty = adjustmentType === "add" ? current + amount : current - amount;
+                      return `${product.item_name}: ${current} ${adjustmentType === "add" ? "+" : "-"} ${amount} = ${newQty} ${product.unit}`;
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setQuantityModalOpen(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={adjustQuantity}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+                disabled={saving || !selectedProductId || !quantityAdjustment}
+              >
+                {saving ? "Adjusting..." : "Apply"}
               </button>
             </div>
           </div>

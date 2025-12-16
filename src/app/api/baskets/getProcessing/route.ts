@@ -88,6 +88,7 @@ export async function GET(req: Request) {
         price: basket.price,
         status: basket.status,
         created_at: basket.created_at,
+        customer_id: basket.orders?.customer_id || null,
         customer_name: basket.orders?.customers
           ? `${basket.orders.customers.first_name} ${basket.orders.customers.last_name}`
           : null,

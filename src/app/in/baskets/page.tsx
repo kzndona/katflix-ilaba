@@ -24,6 +24,7 @@ type BasketDetail = {
   status: string;
   created_at: string | null;
   services: ServiceDetail[];
+  customer_id?: string | null;
   customer_name?: string | null;
   phone_number?: string | null;
   email_address?: string | null;
@@ -162,13 +163,32 @@ export default function BasketsPage() {
     }
   }
 
-  async function notifyCustomer(basketId: string, orderId: string) {
-    setProcessingId(basketId);
+  async function notifyCustomer(basket: BasketDetail) {
+    setProcessingId(basket.id);
     try {
+      // Determine the old and new status based on order status
+      let oldStatus = "processing";
+      let newStatus = basket.orderStatus || "processing";
+      
+      if (basket.orderStatus === "pick-up") {
+        oldStatus = "processing";
+        newStatus = "ready_for_pickup";
+      } else if (basket.orderStatus === "delivering") {
+        oldStatus = "processing";
+        newStatus = "out_for_delivery";
+      }
+
       const res = await fetch("/api/baskets/notifyCustomer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ basketId, orderId }),
+        body: JSON.stringify({
+          customerId: basket.customer_id,
+          basketId: basket.id,
+          basketNumber: basket.basket_number,
+          orderId: basket.order_id,
+          oldStatus,
+          newStatus,
+        }),
       });
       if (!res.ok) throw new Error("Failed to notify customer");
       alert("Customer notified successfully");
@@ -245,6 +265,24 @@ export default function BasketsPage() {
     }
     return orderBaskets.every(
       (b) => b.orderStatus === "delivering" || b.status === "completed"
+    );
+  };
+
+  const hasBasketCompletedPickup = (basket: BasketDetail): boolean => {
+    // Check if THIS basket has moved past pickup (has at least one service in progress or completed)
+    return basket.services.some((s) => s.status === "in_progress" || s.status === "completed");
+  };
+
+  const areAllBasketsPastPickup = (currentBasket: BasketDetail): boolean => {
+    // Check if all baskets in this order have moved past pickup phase
+    const orderBaskets = baskets.filter((b) => b.order_id === currentBasket.order_id);
+    // Single basket orders are always "ready" - don't need to wait
+    if (orderBaskets.length === 1) {
+      return true;
+    }
+    // All baskets must have at least one service in progress or completed (meaning they're past pickup)
+    return orderBaskets.every(
+      (b) => b.services.some((s) => s.status === "in_progress" || s.status === "completed")
     );
   };
 
@@ -363,15 +401,23 @@ export default function BasketsPage() {
                     if (!typeServices || typeServices.length === 0) return null;
 
                     const inProgressType = getInProgressServiceType(basket);
-                    const isInProgress = type === inProgressType;
-                    const isCompleted = typeServices.every(
+                    let isInProgress = type === inProgressType;
+                    let isCompleted = typeServices.every(
                       (s) => s.status === "completed"
                     );
-
-                    const totalPrice = typeServices.reduce(
-                      (sum, s) => sum + s.subtotal,
-                      0
-                    );
+                    
+                    // Special handling for virtual services (pickup/delivery)
+                    if (type === "pickup") {
+                      const basketCompletedPickup = hasBasketCompletedPickup(basket);
+                      // Pickup is in-progress if order status is "pick-up" AND basket hasn't completed pickup
+                      isInProgress = basket.orderStatus === "pick-up" && !basketCompletedPickup;
+                      // Pickup is completed if basket has moved past pickup
+                      isCompleted = basketCompletedPickup;
+                    }
+                    if (type === "delivery") {
+                      // Delivery is in-progress when order is delivering
+                      isInProgress = basket.orderStatus === "delivering";
+                    }
 
                     // Check if wash or dry is premium
                     const isPremium =
@@ -390,7 +436,7 @@ export default function BasketsPage() {
                         key={type}
                         className={`p-2 rounded text-sm border ${bgClass}`}
                       >
-                        <div className="flex justify-between items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <span className="font-semibold capitalize">
                             {type}
                             {isPremium && (
@@ -401,9 +447,6 @@ export default function BasketsPage() {
                             {isCompleted && <span className="ml-1">✓</span>}
                             {isInProgress && <span className="ml-1">●</span>}
                           </span>
-                          <span className="font-bold">
-                            ₱{totalPrice.toFixed(0)}
-                          </span>
                         </div>
                       </div>
                     );
@@ -412,10 +455,9 @@ export default function BasketsPage() {
 
                 {/* Action Buttons - Notify (if pickup/delivery) + Next Service */}
                 <div className="space-y-2">
-                  {(basket.orderStatus === "pick-up" ||
-                    basket.orderStatus === "delivering") && (
+                  {(basket.orderStatus === "pick-up" || basket.orderStatus === "delivering") && (
                     <button
-                      onClick={() => notifyCustomer(basket.id, basket.order_id)}
+                      onClick={() => notifyCustomer(basket)}
                       disabled={processingId === basket.id}
                       className="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-wait"
                     >
@@ -426,19 +468,18 @@ export default function BasketsPage() {
                           : "Notify (Ready for Delivery)"}
                     </button>
                   )}
+                  */}
                   <button
                     onClick={() => completeService(basket.id)}
                     disabled={
                       (!nextServiceType && !canCompleteBasket(basket)) ||
                       processingId === basket.id ||
-                      (canCompleteBasket(basket) &&
-                        !areAllBasketsReadyForDelivery(basket))
+                      (canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket))
                     }
                     className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
                       processingId === basket.id
                         ? "bg-gray-400 text-white cursor-wait"
-                        : canCompleteBasket(basket) &&
-                            !areAllBasketsReadyForDelivery(basket)
+                        : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
                           ? "bg-yellow-400 text-yellow-900 cursor-not-allowed"
                           : !nextServiceType && !canCompleteBasket(basket)
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -449,8 +490,7 @@ export default function BasketsPage() {
                   >
                     {processingId === basket.id
                       ? "Processing..."
-                      : canCompleteBasket(basket) &&
-                          !areAllBasketsReadyForDelivery(basket)
+                      : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
                         ? "⏳ Waiting for other baskets"
                         : canCompleteBasket(basket)
                           ? "Complete ✓"

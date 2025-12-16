@@ -64,9 +64,8 @@ export async function POST(req: Request) {
       message = `Your order (Basket ${basket.basket_number}) is on its way to you for delivery!`;
     }
 
-    // TODO: Integrate with actual notification service (Firebase, OneSignal, SMS, etc.)
-    // For now, we'll just log the notification
-    console.log("Notification sent:", {
+    // Log notification details for processing
+    console.log("Notification ready to send:", {
       customerId: customer.id,
       customerName: `${customer.first_name} ${customer.last_name}`,
       phone: customer.phone_number,
@@ -76,6 +75,9 @@ export async function POST(req: Request) {
       basketId,
       orderId,
     });
+
+    // TODO: Implement actual notification service (SMS/Email/Push)
+    // For now, this serves as a logging mechanism for staff to manually notify customers
 
     return NextResponse.json({
       success: true,

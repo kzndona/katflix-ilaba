@@ -149,12 +149,12 @@ export default function Navbar() {
               >
                 Products
               </button>
-              <button
+              {/* <button
                 onClick={goToMachines}
                 className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
               >
                 Machines
-              </button>
+              </button> */}
               <button
                 onClick={goToServices}
                 className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"

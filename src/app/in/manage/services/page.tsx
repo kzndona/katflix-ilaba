@@ -177,7 +177,6 @@ export default function ServicesPage() {
             <tr>
               <th className="p-2 border">Type</th>
               <th className="p-2 border">Name</th>
-              <th className="p-2 border">Active</th>
               <th className="p-2 border">Rate/kg</th>
               <th className="p-2 border">Base Duration</th>
             </tr>
@@ -191,9 +190,6 @@ export default function ServicesPage() {
               >
                 <td className="p-2 border text-center">{r.service_type}</td>
                 <td className="p-2 border text-center">{r.name}</td>
-                <td className="p-2 border text-center">
-                  {r.is_active ? "Yes" : "No"}
-                </td>
                 <td className="p-2 border text-center">
                   {r.rate_per_kg ?? "-"}
                 </td>
