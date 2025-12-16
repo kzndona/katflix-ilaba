@@ -39,7 +39,15 @@ type BasketDetail = {
   dryPremium?: boolean;
 };
 
-const serviceTypeOrder = ["pickup", "wash", "dry", "spin", "iron", "fold", "delivery"];
+const serviceTypeOrder = [
+  "pickup",
+  "wash",
+  "dry",
+  "spin",
+  "iron",
+  "fold",
+  "delivery",
+];
 
 // Color palette for different orders
 const colorPalette = [
@@ -86,7 +94,7 @@ export default function BasketsPage() {
         if (!basket.pickupAddress && basket.orderStatus === "pick-up") {
           await completePickup(basket.id, true);
         }
-        
+
         // Auto-complete delivery if it's in-store (null = instore)
         if (!basket.deliveryAddress && basket.orderStatus === "delivering") {
           await completeDelivery(basket.id, true);
@@ -99,7 +107,11 @@ export default function BasketsPage() {
     }
   }
 
-  async function completeService(basketId: string, serviceType?: string, silent: boolean = false) {
+  async function completeService(
+    basketId: string,
+    serviceType?: string,
+    silent: boolean = false
+  ) {
     setProcessingId(basketId);
     try {
       const res = await fetch("/api/baskets/completeService", {
@@ -220,9 +232,13 @@ export default function BasketsPage() {
     return !hasPendingAfter;
   };
 
-  const areAllBasketsReadyForDelivery = (currentBasket: BasketDetail): boolean => {
+  const areAllBasketsReadyForDelivery = (
+    currentBasket: BasketDetail
+  ): boolean => {
     // Check if all baskets in this order are in delivery phase or already completed
-    const orderBaskets = baskets.filter((b) => b.order_id === currentBasket.order_id);
+    const orderBaskets = baskets.filter(
+      (b) => b.order_id === currentBasket.order_id
+    );
     // Single basket orders are always "ready" - don't need to wait
     if (orderBaskets.length === 1) {
       return true;
@@ -396,7 +412,8 @@ export default function BasketsPage() {
 
                 {/* Action Buttons - Notify (if pickup/delivery) + Next Service */}
                 <div className="space-y-2">
-                  {(basket.orderStatus === "pick-up" || basket.orderStatus === "delivering") && (
+                  {(basket.orderStatus === "pick-up" ||
+                    basket.orderStatus === "delivering") && (
                     <button
                       onClick={() => notifyCustomer(basket.id, basket.order_id)}
                       disabled={processingId === basket.id}
@@ -414,12 +431,14 @@ export default function BasketsPage() {
                     disabled={
                       (!nextServiceType && !canCompleteBasket(basket)) ||
                       processingId === basket.id ||
-                      (canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket))
+                      (canCompleteBasket(basket) &&
+                        !areAllBasketsReadyForDelivery(basket))
                     }
                     className={`w-full px-3 py-3 rounded-lg font-semibold text-base transition-all ${
                       processingId === basket.id
                         ? "bg-gray-400 text-white cursor-wait"
-                        : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                        : canCompleteBasket(basket) &&
+                            !areAllBasketsReadyForDelivery(basket)
                           ? "bg-yellow-400 text-yellow-900 cursor-not-allowed"
                           : !nextServiceType && !canCompleteBasket(basket)
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -430,7 +449,8 @@ export default function BasketsPage() {
                   >
                     {processingId === basket.id
                       ? "Processing..."
-                      : canCompleteBasket(basket) && !areAllBasketsReadyForDelivery(basket)
+                      : canCompleteBasket(basket) &&
+                          !areAllBasketsReadyForDelivery(basket)
                         ? "⏳ Waiting for other baskets"
                         : canCompleteBasket(basket)
                           ? "Complete ✓"

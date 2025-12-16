@@ -134,12 +134,8 @@ export default function OrdersPage() {
     const processing = filtered.filter(
       (order) => order.status === "processing"
     );
-    const pickup = filtered.filter(
-      (order) => order.status === "pick-up"
-    );
-    const delivery = filtered.filter(
-      (order) => order.status === "delivering"
-    );
+    const pickup = filtered.filter((order) => order.status === "pick-up");
+    const delivery = filtered.filter((order) => order.status === "delivering");
     const nonProcessing = filtered.filter(
       (order) => !["processing", "pick-up", "delivering"].includes(order.status)
     );
@@ -400,11 +396,14 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {processingRows.length === 0 && pickupRows.length === 0 && deliveryRows.length === 0 && filteredRows.length === 0 && (
-                  <div className="p-4 text-center text-gray-500 text-sm">
-                    No orders found
-                  </div>
-                )}
+                {processingRows.length === 0 &&
+                  pickupRows.length === 0 &&
+                  deliveryRows.length === 0 &&
+                  filteredRows.length === 0 && (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      No orders found
+                    </div>
+                  )}
               </>
             )}
           </div>
