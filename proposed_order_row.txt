@@ -1,0 +1,146 @@
+// TABLE FIELDS
+
+id, // UUID
+source: "store" | "app",
+customer_id, // customers.id FK
+cashier_id, staff.id FK | null // POS: cashier. Mobile: manager who approved
+status: "pending" | "for_pick-up" | "processing" | "for_delivery" | "completed" | "cancelled", // fulfillment workflow. order can only be "completed" if all baskets' services are "completed" or "skipped", if all handlings are "completed" or "skipped", and payment_status is "successful"
+created_at, // timestamp
+approved_at, // timestamp | null (if store: auto_approve. if app: upon cashier's approval)
+completed_at, // timestamp | null
+cancelled_at, // timestamp | null
+total_amount,
+order_note,
+handling, // JSON part
+breakdown, // JSON part
+cancellation, // JSON part
+
+handling: {
+    pickup: {
+        address,
+        latitude, // for google maps integration (nullable for in-store)
+        longitude, // for google maps integration (nullable for in-store)
+        status: "pending" | "in_progress" | "completed" | "skipped"
+        started_at, // timestamp | null
+        completed_at, // timestamp | null
+        completed_by, // staff.id FK
+        duration_in_minutes,
+    }
+    delivery: {
+        address,
+        latitude, // for google maps integration
+        longitude, // for google maps integration
+        status: "pending" | "in_progress" | "completed" | "skipped"
+        started_at, // timestamp | null
+        completed_at, // timestamp | null
+        completed_by, // staff.id FK
+        duration_in_minutes,
+    }
+}
+
+breakdown: {
+    items: [
+        {
+            id, // line item UUID (do line items require a UUID everytime?)
+
+            // products table reference at order time
+            product_id, // products.id FK
+            product_name,
+            quantity,
+            unit_price, // snapshot at order time
+            subtotal,
+
+            // discount (if any)
+            discount: {
+                amount, // float
+                reason, // string | null
+            }
+        }
+    ]
+
+    baskets: [
+        {
+            basket_number,
+
+            weight, // weight of laundry
+            basket_notes, // string | null
+
+            services: [
+                {
+                    id, // line item UUID (same question as in items)
+
+                    service_id, // services.id FK
+                    service_name,
+
+                    is_premium, // boolean (only applicable to "wash" and "dry" service type)
+                    multiplier, // aka quantity
+                    rate_per_kg, // snapshot at order time
+                    subtotal,
+
+                    status: "pending" | "in_progress" | "completed" | "skipped"
+                    started_at, // timestamp | null
+                    completed_at, // timestamp | null
+                    completed_by, // staff.id FK
+                    duration_in_minutes,
+                }
+            ]
+
+            total, // of all services in a basket
+        }
+    ]
+
+    fees: [
+        {
+            id, // line item ID again?
+            type: "service_fee" | "handling_fee",
+            description,
+            amount,
+        }
+    ]
+
+    discounts: [
+        {
+            id,
+            type: "loyalty" | "manager" | "promotional,
+            applied_to: "handling_fee" | "service_fee" | "order_total",
+            value_type: "percentage" | "fixed_amount",
+            value, // if percentage: 5 means 5%. if fixed: 50 means PHP50.00
+            reason,
+            applied_amount // actual PHP deducted
+
+        }
+    ] | null
+
+    summary: {
+        subtotal_products, number | null // including discount
+        subtotal_services, number | null // including discount
+        handling, number | null // including discount
+        service_fee, number | null // including discount
+        discounts, // all of discounts applied
+
+        vat_rate, // default to 12%
+        vat_amount, // grand_total * 0.12
+        vat_model: "inclusive",
+
+        grand_total, // grand_total should be VAT inclusive, meaning VAT is not added to grand_total
+    }
+
+    payment: {
+        method: "cash" | "gcash",
+        amount_paid: number,
+        change: number,
+        reference_number?: string,              // GCash transaction reference
+        payment_status: "successful" | "processing" | "failed",
+        completed_at: timestamp
+    }
+}
+
+cancellation: {
+    reason: "customer_request" | "payment_failed" | "damaged" | "other",
+    notes: string | null,
+    requested_at: timestamp,
+    requested_by: UUID FK (staff or null for customer),
+    refund_status: "pending" | "processed" | "failed"
+} | null  // null if not cancelled
+
+// a product_logs row containing id, quantity, and unit_price is made for every product purchased in an order.

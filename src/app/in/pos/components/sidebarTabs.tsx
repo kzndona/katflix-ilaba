@@ -10,6 +10,7 @@ type Props = {
   setActiveBasketIndex: (i: number) => void;
   addBasket: () => void;
   deleteBasket: (i: number) => void;
+  customer: any | null; // Add customer prop to check if selected
 };
 
 export default function SidebarTabs({
@@ -20,7 +21,11 @@ export default function SidebarTabs({
   setActiveBasketIndex,
   addBasket,
   deleteBasket,
+  customer,
 }: Props) {
+  // Customer must have name AND phone to proceed
+  const isCustomerValid =
+    customer?.first_name && customer?.last_name && customer?.phone_number;
   return (
     <aside className="bg-white border-r border-gray-200 p-4 flex flex-col h-full rounded-lg">
       <div className="space-y-2">
@@ -36,23 +41,31 @@ export default function SidebarTabs({
         </button>
 
         <button
-          onClick={() => setActivePane("handling")}
+          onClick={() => isCustomerValid && setActivePane("handling")}
+          disabled={!isCustomerValid}
           className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
             activePane === "handling"
               ? "bg-blue-600 text-white"
-              : "hover:bg-gray-100 text-gray-700"
+              : isCustomerValid
+                ? "hover:bg-gray-100 text-gray-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
+          title={!isCustomerValid ? "Select a customer first" : ""}
         >
           Pickup & Delivery
         </button>
 
         <button
-          onClick={() => setActivePane("products")}
+          onClick={() => isCustomerValid && setActivePane("products")}
+          disabled={!isCustomerValid}
           className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
             activePane === "products"
               ? "bg-blue-600 text-white"
-              : "hover:bg-gray-100 text-gray-700"
+              : isCustomerValid
+                ? "hover:bg-gray-100 text-gray-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
+          title={!isCustomerValid ? "Select a customer first" : ""}
         >
           Products
         </button>

@@ -36,9 +36,13 @@ export default function PaneReceipt({
   saveOrder,
   resetPOS,
 }: Props) {
+  // Check if customer is selected (gate for checkout)
+  const isCustomerValid =
+    customer?.first_name && customer?.last_name && customer?.phone_number;
+
   // Check if order is valid
   const isOrderValid = () => {
-    if (!customer?.first_name || !customer?.last_name) return false;
+    if (!isCustomerValid) return false;
     const hasProducts = computeReceipt.productLines.length > 0;
     const hasServices =
       computeReceipt.basketLines.length > 0 &&

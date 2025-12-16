@@ -63,6 +63,7 @@ export default function POSPage() {
           setActiveBasketIndex={pos.setActiveBasketIndex}
           addBasket={pos.addBasket}
           deleteBasket={pos.deleteBasket}
+          customer={pos.customer}
         />
 
         <main className="bg-white border border-gray-100 rounded-lg p-6 overflow-auto h-full">
