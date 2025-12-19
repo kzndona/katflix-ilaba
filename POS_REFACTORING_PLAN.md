@@ -9,6 +9,7 @@ This document outlines how the current POS system will be refactored to work wit
 ## Current System Architecture
 
 ### Data Flow (Current)
+
 ```
 POS Component
   ↓
@@ -33,6 +34,7 @@ saveOrder() - POST /api/pos/newOrder
 ```
 
 ### Database Schema (Current - Being Replaced)
+
 ```sql
 orders
 ├─ baskets (1:M)
@@ -47,6 +49,7 @@ orders
 ## New System Architecture
 
 ### Data Flow (New)
+
 ```
 POS Component
   ↓
@@ -78,6 +81,7 @@ saveOrder() - POST /api/orders (CREATE)
 ```
 
 ### Database Schema (New)
+
 ```sql
 orders
 ├─ breakdown (JSONB - contains items, baskets, services, fees, discounts, summary, payment, audit_log)
@@ -99,6 +103,7 @@ product_transactions
 ### 1. Customer Management
 
 **Current:**
+
 ```typescript
 // Customer state in memory, optionally save to DB
 const [customer, setCustomer] = useState<Customer | null>(null);
@@ -110,6 +115,7 @@ if (!customer.id) {
 ```
 
 **New:**
+
 ```typescript
 // MUST check/create customer before proceeding
 const [customer, setCustomer] = useState<Customer | null>(null);
@@ -124,7 +130,7 @@ if (!customer.id) {
     email_address, // optional
     birthdate, // optional
     gender, // optional
-    address // optional
+    address, // optional
   });
   setCustomer(newCustomer);
 }
@@ -134,6 +140,7 @@ if (!customer.id) {
 ```
 
 **Process:**
+
 ```
 1. User searches for customer
 2. If found → select existing customer
@@ -143,6 +150,7 @@ if (!customer.id) {
 ```
 
 **API Endpoint:**
+
 ```typescript
 POST /api/customers
 Request:
@@ -174,19 +182,21 @@ Response:
 ### 2. Handling State
 
 **Current:**
+
 ```typescript
 const [handling, setHandling] = useState({
-  pickup: true,           // boolean
-  deliver: false,         // boolean
-  pickupAddress: "",      // string
-  deliveryAddress: "",    // string
-  deliveryFee: 50,        // number
-  courierRef: "",         // string
-  instructions: "",       // string
+  pickup: true, // boolean
+  deliver: false, // boolean
+  pickupAddress: "", // string
+  deliveryAddress: "", // string
+  deliveryFee: 50, // number
+  courierRef: "", // string
+  instructions: "", // string
 });
 ```
 
 **New - In Memory (Same):**
+
 ```typescript
 // Same state for UI
 const [handling, setHandling] = useState({
@@ -196,11 +206,12 @@ const [handling, setHandling] = useState({
   deliveryAddress: "",
   deliveryFee: 50,
   courierRef: "",
-  instructions: ""
+  instructions: "",
 });
 ```
 
 **New - In Database (JSONB structure):**
+
 ```json
 {
   "pickup": {
@@ -229,30 +240,31 @@ const [handling, setHandling] = useState({
 ```
 
 **Transformation Function:**
+
 ```typescript
 const buildHandlingJSON = (handling) => ({
   pickup: {
     address: handling.pickup ? handling.pickupAddress : null,
-    latitude: null,  // Can be set by rider later
+    latitude: null, // Can be set by rider later
     longitude: null,
     notes: handling.instructions,
-    status: handling.pickup ? 'pending' : 'skipped',
+    status: handling.pickup ? "pending" : "skipped",
     started_at: null,
     completed_at: null,
     completed_by: null,
-    duration_in_minutes: null
+    duration_in_minutes: null,
   },
   delivery: {
     address: handling.deliver ? handling.deliveryAddress : null,
     latitude: null,
     longitude: null,
     notes: handling.instructions,
-    status: handling.deliver ? 'pending' : 'skipped',
+    status: handling.deliver ? "pending" : "skipped",
     started_at: null,
     completed_at: null,
     completed_by: null,
-    duration_in_minutes: null
-  }
+    duration_in_minutes: null,
+  },
 });
 ```
 
@@ -261,22 +273,25 @@ const buildHandlingJSON = (handling) => ({
 ### 3. Products Management
 
 **Current:**
+
 ```typescript
 // Load all products at component mount
 const [products, setProducts] = useState<Product[]>([]);
 
 // Track user's selection in orderProductCounts
-const [orderProductCounts, setOrderProductCounts] = useState<Record<string, number>>({});
+const [orderProductCounts, setOrderProductCounts] = useState<
+  Record<string, number>
+>({});
 
 // At receipt: build product lines from counts and product data
 const productLines = Object.entries(orderProductCounts).map(([pid, qty]) => {
-  const p = products.find(x => x.id === pid);
+  const p = products.find((x) => x.id === pid);
   return {
     id: pid,
     name: p.item_name,
     qty,
     price: p.unit_price,
-    lineTotal: p.unit_price * qty
+    lineTotal: p.unit_price * qty,
   };
 });
 
@@ -285,58 +300,63 @@ const productLines = Object.entries(orderProductCounts).map(([pid, qty]) => {
 ```
 
 **New:**
+
 ```typescript
 // Same loading and state
 const [products, setProducts] = useState<Product[]>([]);
-const [orderProductCounts, setOrderProductCounts] = useState<Record<string, number>>({});
+const [orderProductCounts, setOrderProductCounts] = useState<
+  Record<string, number>
+>({});
 
 // At receipt: build breakdown.items array (same logic)
 const breakdownItems = Object.entries(orderProductCounts).map(([pid, qty]) => {
-  const p = products.find(x => x.id === pid);
+  const p = products.find((x) => x.id === pid);
   return {
-    id: crypto.randomUUID(),  // NEW: line item UUID
+    id: crypto.randomUUID(), // NEW: line item UUID
     product_id: pid,
     product_name: p.item_name,
     quantity: qty,
-    unit_price: p.unit_price,  // Snapshot at order time
+    unit_price: p.unit_price, // Snapshot at order time
     subtotal: p.unit_price * qty,
     discount: {
       amount: 0,
-      reason: null
-    }
+      reason: null,
+    },
   };
 });
 
-// At save: 
+// At save:
 // 1. Insert breakdown with items array
 // 2. For each product in order: INSERT INTO product_transactions
 // 3. For each product: UPDATE products SET quantity -= qty
 ```
 
 **Product Transactions (NEW):**
+
 ```typescript
 // For each product in the order
 for (const [productId, qty] of Object.entries(orderProductCounts)) {
   // Create audit log entry
-  await supabase.from('product_transactions').insert({
+  await supabase.from("product_transactions").insert({
     product_id: productId,
     order_id: orderId,
     staff_id: cashierId,
-    change_type: 'consume',
+    change_type: "consume",
     quantity: qty,
     reason: `Consumed in order ${orderId}`,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   });
-  
+
   // Deduct from inventory
   await supabase
-    .from('products')
-    .update({ quantity: db.raw('quantity - ?', [qty]) })
-    .eq('id', productId);
+    .from("products")
+    .update({ quantity: db.raw("quantity - ?", [qty]) })
+    .eq("id", productId);
 }
 ```
 
 **API Endpoint (GET products):**
+
 ```typescript
 GET /api/products?is_active=true
 Response:
@@ -359,25 +379,26 @@ Response:
 ### 4. Services Management
 
 **Current:**
+
 ```typescript
 // Load all services at component mount
 const [services, setServices] = useState<LaundryService[]>([]);
 
 // At receipt: map services to basket services by type and premium flag
-const basketLines = baskets.map(basket => {
+const basketLines = baskets.map((basket) => {
   const serviceBreakdown = {};
   if (basket.washCount > 0) {
     serviceBreakdown.wash = basket.washCount;
   }
   // ... similar for dry, spin, iron, fold
-  
+
   const services = [];
   // Build service objects from serviceBreakdown
-  
+
   return {
     id: basket.id,
-    services,  // Array of service objects
-    total: calculateBasketTotal(services)
+    services, // Array of service objects
+    total: calculateBasketTotal(services),
   };
 });
 
@@ -385,6 +406,7 @@ const basketLines = baskets.map(basket => {
 ```
 
 **New:**
+
 ```typescript
 // Same loading
 const [services, setServices] = useState<LaundryService[]>([]);
@@ -392,34 +414,34 @@ const [services, setServices] = useState<LaundryService[]>([]);
 // At receipt: build breakdown.baskets[].services array
 const breakdownBaskets = baskets.map((basket, basketIndex) => {
   const basketServices = [];
-  
+
   // Wash service
   if (basket.washCount > 0) {
-    const washService = getServiceByType('wash', basket.washPremium);
+    const washService = getServiceByType("wash", basket.washPremium);
     basketServices.push({
       id: crypto.randomUUID(),
       service_id: washService.id,
       service_name: washService.name,
       is_premium: basket.washPremium,
       multiplier: basket.washCount,
-      rate_per_kg: washService.rate_per_kg,  // Snapshot
+      rate_per_kg: washService.rate_per_kg, // Snapshot
       subtotal: basket.weightKg * washService.rate_per_kg * basket.washCount,
-      status: 'pending',
+      status: "pending",
       started_at: null,
       completed_at: null,
       completed_by: null,
-      duration_in_minutes: washService.base_duration_minutes * basket.washCount
+      duration_in_minutes: washService.base_duration_minutes * basket.washCount,
     });
   }
-  
+
   // Similar for dry, spin, iron, fold...
-  
+
   return {
     basket_number: basket.originalIndex,
     weight: basket.weightKg,
     basket_notes: basket.notes,
     services: basketServices,
-    total: basketServices.reduce((sum, s) => sum + s.subtotal, 0)
+    total: basketServices.reduce((sum, s) => sum + s.subtotal, 0),
   };
 });
 
@@ -427,6 +449,7 @@ const breakdownBaskets = baskets.map((basket, basketIndex) => {
 ```
 
 **API Endpoint (GET services):**
+
 ```typescript
 GET /api/services?is_active=true
 Response:
@@ -450,25 +473,26 @@ Response:
 ### 5. Receipt Calculation
 
 **Current:**
+
 ```typescript
 const computeReceipt = useMemo(() => {
   // Product lines
   const productLines = [...];
   const productSubtotal = productLines.reduce((s, l) => s + l.lineTotal, 0);
-  
+
   // Basket/service lines
   const basketLines = [...];
   const serviceSubtotal = basketLines.reduce((s, l) => s + l.total, 0);
-  
+
   // Fees
   const serviceFee = basketLines.length * PRICING.serviceFeePerBasket;
   const deliveryFee = handling.deliver ? handling.deliveryFee : 0;
-  
+
   // Totals
   const subtotal = productSubtotal + serviceSubtotal + deliveryFee;
   const vat = subtotal * PRICING.taxRate;
   const total = subtotal + vat;
-  
+
   return {
     productLines,
     basketLines,
@@ -484,14 +508,15 @@ const computeReceipt = useMemo(() => {
 ```
 
 **New - Same Logic, Different Output:**
+
 ```typescript
 const computeReceipt = useMemo(() => {
   // Build breakdown JSONB object (NEW)
   const breakdown = {
-    items: buildBreakdownItems(),        // From orderProductCounts
-    baskets: buildBreakdownBaskets(),    // From baskets state
-    fees: buildFeesArray(),              // Calculated
-    discounts: null,                     // Can be added later
+    items: buildBreakdownItems(), // From orderProductCounts
+    baskets: buildBreakdownBaskets(), // From baskets state
+    fees: buildFeesArray(), // Calculated
+    discounts: null, // Can be added later
     summary: {
       subtotal_products: productSubtotal,
       subtotal_services: serviceSubtotal,
@@ -499,20 +524,21 @@ const computeReceipt = useMemo(() => {
       service_fee: serviceFee,
       discounts: [],
       vat_rate: 0.12,
-      vat_amount: (productSubtotal + serviceSubtotal + serviceFee + deliveryFee) * 0.12,
-      vat_model: 'inclusive',
-      grand_total: total  // VAT inclusive
+      vat_amount:
+        (productSubtotal + serviceSubtotal + serviceFee + deliveryFee) * 0.12,
+      vat_model: "inclusive",
+      grand_total: total, // VAT inclusive
     },
     payment: {
       method: payment.method,
       amount_paid: payment.amountPaid || 0,
       change: (payment.amountPaid || 0) - total,
       reference_number: payment.referenceNumber || null,
-      payment_status: 'processing',
-      completed_at: null
-    }
+      payment_status: "processing",
+      completed_at: null,
+    },
   };
-  
+
   // Also return for UI display (same as before)
   return {
     productLines,
@@ -524,7 +550,7 @@ const computeReceipt = useMemo(() => {
     subtotal,
     vat,
     total,
-    breakdown  // NEW: the JSONB to be stored
+    breakdown, // NEW: the JSONB to be stored
   };
 }, [orderProductCounts, baskets, products, handling, payment]);
 ```
@@ -536,56 +562,56 @@ const computeReceipt = useMemo(() => {
 ### 6. Order Creation & Saving
 
 **Current:**
+
 ```typescript
 const saveOrder = async () => {
   // Create order row
   const order = await supabase
-    .from('orders')
+    .from("orders")
     .insert({
       customer_id: customer.id,
       total_amount: computeReceipt.total,
-      status: 'completed',  // Hard-coded
-      source: 'store'
+      status: "completed", // Hard-coded
+      source: "store",
     })
     .select()
     .single();
-  
+
   const orderId = order.id;
-  
+
   // Insert baskets
   for (const basket of baskets) {
     const b = await supabase
-      .from('baskets')
+      .from("baskets")
       .insert({
         order_id: orderId,
         basket_number: basket.originalIndex,
         weight: basket.weightKg,
-        status: 'processing'
+        status: "processing",
       })
       .select()
       .single();
-    
+
     // Insert basket_services
     // ... nested loop for services
   }
-  
+
   // Insert order_products
   for (const [productId, qty] of Object.entries(orderProductCounts)) {
-    await supabase
-      .from('order_products')
-      .insert({
-        order_id: orderId,
-        product_id: productId,
-        quantity: qty
-      });
+    await supabase.from("order_products").insert({
+      order_id: orderId,
+      product_id: productId,
+      quantity: qty,
+    });
   }
-  
+
   // Deduct from inventory
   // ... manual updates
 };
 ```
 
 **New:**
+
 ```typescript
 const saveOrder = async () => {
   // 1. Validate customer exists (create if needed)
@@ -594,77 +620,80 @@ const saveOrder = async () => {
     const newCustomer = await createCustomer(customer);
     customerId = newCustomer.id;
   }
-  
+
   // 2. Build complete breakdown JSONB
   const breakdown = computeReceipt.breakdown;
-  
+
   // 3. Add initial audit log entry
-  breakdown.audit_log = [{
-    action: 'created',
-    timestamp: new Date().toISOString(),
-    changed_by: cashierId
-  }];
-  
+  breakdown.audit_log = [
+    {
+      action: "created",
+      timestamp: new Date().toISOString(),
+      changed_by: cashierId,
+    },
+  ];
+
   // 4. Build complete handling JSONB
   const handling = buildHandlingJSON(handleingState);
-  
+
   // 5. Create order with ALL data in one INSERT
   const { data: order, error } = await supabase
-    .from('orders')
+    .from("orders")
     .insert({
-      source: 'store',
+      source: "store",
       customer_id: customerId,
       cashier_id: cashierId,
-      status: 'processing',  // Or 'completed' if no baskets
+      status: "processing", // Or 'completed' if no baskets
       created_at: new Date().toISOString(),
-      approved_at: new Date().toISOString(),  // Auto-approve for POS
+      approved_at: new Date().toISOString(), // Auto-approve for POS
       total_amount: computeReceipt.total,
       breakdown: breakdown,
       handling: handling,
-      cancellation: null
+      cancellation: null,
     })
     .select()
     .single();
-  
+
   if (error) throw error;
   const orderId = order.id;
-  
+
   // 6. Log product transactions (one per product qty)
-  const productTransactions = Object.entries(orderProductCounts).map(([productId, qty]) => ({
-    product_id: productId,
-    order_id: orderId,
-    staff_id: cashierId,
-    change_type: 'consume',
-    quantity: qty,
-    reason: `Consumed in order ${orderId}`,
-    created_at: new Date().toISOString()
-  }));
-  
+  const productTransactions = Object.entries(orderProductCounts).map(
+    ([productId, qty]) => ({
+      product_id: productId,
+      order_id: orderId,
+      staff_id: cashierId,
+      change_type: "consume",
+      quantity: qty,
+      reason: `Consumed in order ${orderId}`,
+      created_at: new Date().toISOString(),
+    })
+  );
+
   if (productTransactions.length > 0) {
-    await supabase
-      .from('product_transactions')
-      .insert(productTransactions);
+    await supabase.from("product_transactions").insert(productTransactions);
   }
-  
+
   // 7. Deduct from product inventory
   for (const [productId, qty] of Object.entries(orderProductCounts)) {
     await supabase
-      .from('products')
+      .from("products")
       .update({
-        quantity: raw('quantity - ?', [qty]),
-        last_updated: new Date().toISOString()
+        quantity: raw("quantity - ?", [qty]),
+        last_updated: new Date().toISOString(),
       })
-      .eq('id', productId);
+      .eq("id", productId);
   }
-  
+
   // 8. Clear POS state
   resetPOS();
-  
+
   return orderId;
 };
 ```
 
 **API Endpoint (POST /api/orders - CREATE):**
+
 ```typescript
 POST /api/orders
 
@@ -717,56 +746,61 @@ const updateServiceStatus = async (
   orderId: UUID,
   basketIndex: number,
   serviceIndex: number,
-  newStatus: 'in_progress' | 'completed',
+  newStatus: "in_progress" | "completed",
   completedBy: UUID
 ) => {
   const { data: order } = await supabase
-    .from('orders')
-    .select('breakdown')
-    .eq('id', orderId)
+    .from("orders")
+    .select("breakdown")
+    .eq("id", orderId)
     .single();
-  
+
   // Get current service
-  const currentService = order.breakdown.baskets[basketIndex].services[serviceIndex];
-  
+  const currentService =
+    order.breakdown.baskets[basketIndex].services[serviceIndex];
+
   // Build updated breakdown with JSONB operations
   let updatedBreakdown = order.breakdown;
-  
+
   // Update service status
-  updatedBreakdown.baskets[basketIndex].services[serviceIndex].status = newStatus;
-  updatedBreakdown.baskets[basketIndex].services[serviceIndex].started_at = 
+  updatedBreakdown.baskets[basketIndex].services[serviceIndex].status =
+    newStatus;
+  updatedBreakdown.baskets[basketIndex].services[serviceIndex].started_at =
     currentService.started_at || new Date().toISOString();
-  
-  if (newStatus === 'completed') {
-    updatedBreakdown.baskets[basketIndex].services[serviceIndex].completed_at = new Date().toISOString();
-    updatedBreakdown.baskets[basketIndex].services[serviceIndex].completed_by = completedBy;
+
+  if (newStatus === "completed") {
+    updatedBreakdown.baskets[basketIndex].services[serviceIndex].completed_at =
+      new Date().toISOString();
+    updatedBreakdown.baskets[basketIndex].services[serviceIndex].completed_by =
+      completedBy;
   }
-  
+
   // Add audit log entry
   updatedBreakdown.audit_log = [
     ...(updatedBreakdown.audit_log || []),
     {
-      action: 'service_status_changed',
+      action: "service_status_changed",
       service_path: `baskets.${basketIndex}.services.${serviceIndex}`,
       from_status: currentService.status,
       to_status: newStatus,
       timestamp: new Date().toISOString(),
-      changed_by: completedBy
-    }
+      changed_by: completedBy,
+    },
   ];
-  
+
   // Update order
   await supabase
-    .from('orders')
+    .from("orders")
     .update({
       breakdown: updatedBreakdown,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', orderId);
+    .eq("id", orderId);
 };
 ```
 
 **API Endpoint (PATCH /api/orders/:id/service-status):**
+
 ```typescript
 PATCH /api/orders/:id/service-status
 
@@ -894,6 +928,7 @@ Can query this: `SELECT breakdown->'audit_log' FROM orders WHERE id = 'order-123
 ## Data Validation & Constraints
 
 ### At Order Creation
+
 - ✅ Customer exists (create if not)
 - ✅ Cashier exists (authenticated user)
 - ✅ At least 1 product OR 1 basket with service
@@ -903,12 +938,14 @@ Can query this: `SELECT breakdown->'audit_log' FROM orders WHERE id = 'order-123
 - ✅ Handling (pickup or delivery) specified
 
 ### At Service Status Update
+
 - ✅ Service exists at specified indices
 - ✅ Status transition valid (pending→in_progress→completed, or skip any)
 - ✅ Completed_by staff exists and is active
 - ✅ Can only update service if order status allows
 
 ### At Order Cancellation
+
 - ✅ Order status must be cancellable (not already completed)
 - ✅ Reason must be specified
 - ✅ Inventory restored (credit back to products)
@@ -918,17 +955,17 @@ Can query this: `SELECT breakdown->'audit_log' FROM orders WHERE id = 'order-123
 
 ## Key Differences Summary
 
-| Aspect | Current | New |
-|--------|---------|-----|
-| Customer | May not be saved | MUST be saved to DB first |
-| Baskets Table | Separate table | In breakdown JSONB |
-| Basket Services | Separate table | In breakdown.baskets[].services[] |
-| Order Products | Separate table | In breakdown.items[] |
-| Payments | Separate table | In breakdown.payment |
-| Inventory Log | Manual deduction | product_transactions table |
-| Service Status Updates | Not supported | PATCH /api/orders/:id/service-status |
-| Audit Trail | order_status_history table | breakdown.audit_log array |
-| Order Immutability | Editable | Immutable items/baskets, editable services/timestamps |
+| Aspect                 | Current                    | New                                                   |
+| ---------------------- | -------------------------- | ----------------------------------------------------- |
+| Customer               | May not be saved           | MUST be saved to DB first                             |
+| Baskets Table          | Separate table             | In breakdown JSONB                                    |
+| Basket Services        | Separate table             | In breakdown.baskets[].services[]                     |
+| Order Products         | Separate table             | In breakdown.items[]                                  |
+| Payments               | Separate table             | In breakdown.payment                                  |
+| Inventory Log          | Manual deduction           | product_transactions table                            |
+| Service Status Updates | Not supported              | PATCH /api/orders/:id/service-status                  |
+| Audit Trail            | order_status_history table | breakdown.audit_log array                             |
+| Order Immutability     | Editable                   | Immutable items/baskets, editable services/timestamps |
 
 ---
 
@@ -961,4 +998,3 @@ Can query this: `SELECT breakdown->'audit_log' FROM orders WHERE id = 'order-123
    - Function to query order with full breakdown
    - Function to query product inventory history
    - Function to list orders with status filters
-

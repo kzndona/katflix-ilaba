@@ -5,6 +5,7 @@
 ### Problem 1: Started/Completed Timestamps Duplicated Across Layers
 
 **Current Structure:**
+
 ```json
 breakdown: {
   baskets: [
@@ -43,6 +44,7 @@ handling: {
 ```
 
 **Issues:**
+
 - ❌ Same timestamp appears twice (in object + in audit_log)
 - ❌ `completed_by` appears twice
 - ❌ If one is updated, the other might not be
@@ -54,10 +56,12 @@ handling: {
 ## Solution: Separation of Concerns
 
 ### Principle
+
 - **Object timestamps** (started_at, completed_at): Current state representation
 - **audit_log entries**: Change history (WHO changed it, WHEN, WHAT)
 
 ### Rule
+
 **Don't duplicate the timestamp in audit_log - just reference it**
 
 ---
@@ -106,6 +110,7 @@ breakdown: {
 ```
 
 **Pros:**
+
 - ✅ Single source for current state (the object fields)
 - ✅ audit_log records WHO made the change (not duplicate data)
 - ✅ No data inconsistency possible
@@ -113,6 +118,7 @@ breakdown: {
 - ✅ Efficient: one update operation per change
 
 **Cons:**
+
 - Must reconstruct full history from audit_log (little bit slower to query)
 - But querying current state is super fast (just read the field)
 
@@ -153,12 +159,14 @@ breakdown: {
 ```
 
 **Pros:**
+
 - ✅ Zero duplication - single source of truth
 - ✅ Audit log IS the state machine
 - ✅ Perfect for compliance (everything tracked)
 - ✅ No inconsistency possible
 
 **Cons:**
+
 - ❌ Must parse audit_log to get current state
 - ❌ Queries slower: need to find latest entry per service
 - ❌ Complex: `SELECT breakdown->'audit_log' where service_path = X ORDER BY timestamp DESC LIMIT 1`
@@ -169,6 +177,7 @@ breakdown: {
 ## My Recommendation: **Option A (Minimal Duplication)**
 
 **Why:**
+
 1. **Fast reads**: Service current state in object, no query needed
 2. **Clean writes**: Update object, add one audit_log entry
 3. **No inconsistency**: Can't have mismatched state
@@ -179,16 +188,16 @@ breakdown: {
 
 ## Updated Responsibility Matrix
 
-| Data | Location | Purpose | Updated When |
-|------|----------|---------|--------------|
-| Service status | `breakdown.baskets[].services[].status` | Current state (display, logic) | Status changes |
-| Service started time | `breakdown.baskets[].services[].started_at` | Current state (display, duration calc) | Service starts |
+| Data                   | Location                                      | Purpose                                | Updated When      |
+| ---------------------- | --------------------------------------------- | -------------------------------------- | ----------------- |
+| Service status         | `breakdown.baskets[].services[].status`       | Current state (display, logic)         | Status changes    |
+| Service started time   | `breakdown.baskets[].services[].started_at`   | Current state (display, duration calc) | Service starts    |
 | Service completed time | `breakdown.baskets[].services[].completed_at` | Current state (display, duration calc) | Service completes |
-| Service completed by | `breakdown.baskets[].services[].completed_by` | Current state (attribution) | Service completes |
-| **What happened** | `breakdown.audit_log[].action` | History (audit trail) | Every change |
-| **Who made it** | `breakdown.audit_log[].changed_by` | History (audit trail) | Every change |
-| **When it happened** | `breakdown.audit_log[].timestamp` | History (audit trail) | Every change |
-| **Where it happened** | `breakdown.audit_log[].service_path` | History (audit trail) | Every change |
+| Service completed by   | `breakdown.baskets[].services[].completed_by` | Current state (attribution)            | Service completes |
+| **What happened**      | `breakdown.audit_log[].action`                | History (audit trail)                  | Every change      |
+| **Who made it**        | `breakdown.audit_log[].changed_by`            | History (audit trail)                  | Every change      |
+| **When it happened**   | `breakdown.audit_log[].timestamp`             | History (audit trail)                  | Every change      |
+| **Where it happened**  | `breakdown.audit_log[].service_path`          | History (audit trail)                  | Every change      |
 
 ---
 
@@ -239,27 +248,30 @@ audit_log: [
 ## Update Operations (Implementation)
 
 ### Current State Update (object)
+
 ```typescript
 // Update object directly
-service.status = 'completed';
+service.status = "completed";
 service.completed_at = new Date().toISOString();
 service.completed_by = staffId;
 ```
 
 ### Audit Log Entry (single operation)
+
 ```typescript
 // Add to audit_log (no timestamp duplication)
 audit_log.push({
-  action: 'service_completed',
+  action: "service_completed",
   service_path: `baskets.${idx}.services.${sidx}`,
-  from_status: 'in_progress',
-  to_status: 'completed',
-  timestamp: new Date().toISOString(),  // Recorded once
-  changed_by: staffId
+  from_status: "in_progress",
+  to_status: "completed",
+  timestamp: new Date().toISOString(), // Recorded once
+  changed_by: staffId,
 });
 ```
 
 ### Single Database Operation
+
 ```sql
 UPDATE orders SET
   breakdown = jsonb_set(
@@ -293,6 +305,7 @@ WHERE id = order_id;
 ## Querying Examples
 
 ### Get current service state (FAST)
+
 ```sql
 SELECT breakdown->'baskets'->0->'services'->0 as service
 FROM orders WHERE id = 'order-uuid';
@@ -308,10 +321,11 @@ FROM orders WHERE id = 'order-uuid';
 ```
 
 ### Get service change history (AUDIT)
+
 ```sql
-SELECT breakdown->'audit_log' 
-FROM orders 
-WHERE id = 'order-uuid' 
+SELECT breakdown->'audit_log'
+FROM orders
+WHERE id = 'order-uuid'
   AND breakdown->'audit_log' @> '[{"service_path": "baskets.0.services.0"}]';
 
 -- Returns:
@@ -322,6 +336,7 @@ WHERE id = 'order-uuid'
 ```
 
 ### Reconstruct service state at any point in time
+
 ```sql
 WITH service_events AS (
   SELECT jsonb_array_elements(breakdown->'audit_log') as event
@@ -338,29 +353,30 @@ ORDER BY event->>'timestamp' ASC;
 
 ## Summary of Responsibilities (Updated)
 
-| Responsibility | Before | After | Storage |
-|---|---|---|---|
-| **Track current service state** | ✅ service object | ✅ service object | `services[].{status, started_at, completed_at, completed_by}` |
-| **Track who changed what** | ❌ Not tracked | ✅ audit_log entry | `audit_log[].{action, changed_by, timestamp}` |
-| **Track change history** | ❌ order_status_history table | ✅ audit_log array | `audit_log[]` |
-| **Fast current state read** | ❌ Must JOIN | ✅ Direct field access | Single object read |
-| **Full audit trail** | ❌ Limited | ✅ Complete | Complete history |
-| **Space efficiency** | ⚠️ Multiple tables | ✅ Single JSONB | Minimal |
+| Responsibility                  | Before                        | After                  | Storage                                                       |
+| ------------------------------- | ----------------------------- | ---------------------- | ------------------------------------------------------------- |
+| **Track current service state** | ✅ service object             | ✅ service object      | `services[].{status, started_at, completed_at, completed_by}` |
+| **Track who changed what**      | ❌ Not tracked                | ✅ audit_log entry     | `audit_log[].{action, changed_by, timestamp}`                 |
+| **Track change history**        | ❌ order_status_history table | ✅ audit_log array     | `audit_log[]`                                                 |
+| **Fast current state read**     | ❌ Must JOIN                  | ✅ Direct field access | Single object read                                            |
+| **Full audit trail**            | ❌ Limited                    | ✅ Complete            | Complete history                                              |
+| **Space efficiency**            | ⚠️ Multiple tables            | ✅ Single JSONB        | Minimal                                                       |
 
 ---
 
 ## Answer to Your Question
 
 **Before fix:** YES, huge duplication and potential inconsistency
+
 - started_at/completed_at in object
 - Same timestamps repeated in audit_log
 - completed_by in object AND audit_log
 - Risk: Update one, forget the other → data corruption
 
 **After fix:** NO duplication
+
 - Object fields = current state (read-only after set)
 - audit_log = history of changes only
 - Single source of truth per piece of data
 - One atomic update operation per change
 - No inconsistency possible
-

@@ -20,6 +20,7 @@ PUT /api/orders/:id           // Update
 ```
 
 **Pros:**
+
 - ✅ Single source of truth for order logic
 - ✅ Easier to maintain consistent business rules
 - ✅ Simpler authentication (one endpoint to protect)
@@ -27,6 +28,7 @@ PUT /api/orders/:id           // Update
 - ✅ Transaction handling in one place (all-or-nothing)
 
 **Cons:**
+
 - ❌ Fat endpoint - does too much
 - ❌ Harder to scale individual operations
 - ❌ Complex action routing logic needed
@@ -40,6 +42,7 @@ PUT /api/orders/:id           // Update
 ### Option B: Separate Endpoints (`/api/orders/create`, `/api/orders/update`, etc.)
 
 **Endpoints:**
+
 ```
 POST /api/orders/create
 GET /api/orders/fetch/:id
@@ -49,6 +52,7 @@ PATCH /api/orders/update-service-status/:id
 ```
 
 **Pros:**
+
 - ✅ Clear responsibility separation (SRP)
 - ✅ Specific error handling per operation
 - ✅ Easier to test individual operations
@@ -57,6 +61,7 @@ PATCH /api/orders/update-service-status/:id
 - ✅ Easier to add logging/monitoring per operation
 
 **Cons:**
+
 - ❌ More endpoints to maintain
 - ❌ Risk of duplicated logic
 - ❌ Need versioning strategy
@@ -70,6 +75,7 @@ PATCH /api/orders/update-service-status/:id
 ### Option C: RESTful Style (`/api/orders`, standard HTTP verbs)
 
 **Endpoints:**
+
 ```
 POST /api/orders                    // Create
 GET /api/orders/:id                 // Read (fetch one)
@@ -80,6 +86,7 @@ GET /api/orders?filter=status:completed  // List with filters
 ```
 
 **Pros:**
+
 - ✅ Standard REST conventions (familiar to most developers)
 - ✅ Great for CRUD-heavy APIs
 - ✅ Easy to understand for new developers
@@ -88,6 +95,7 @@ GET /api/orders?filter=status:completed  // List with filters
 - ✅ Works well with API clients (Postman, etc.)
 
 **Cons:**
+
 - ❌ HTTP verbs (PUT/PATCH) semantics sometimes ambiguous
 - ❌ Complex operations don't map well to CRUD
 - ❌ DELETE semantics: hard delete vs soft delete vs cancel?
@@ -116,6 +124,7 @@ PATCH /api/orders/:id/handling-status         // Update handling stage status
 ```
 
 **Why this works for you:**
+
 - ✅ Orders are mostly CRUD (create, read, update)
 - ✅ Complex updates (service status) are well-defined and separate
 - ✅ Cancel is not a DELETE - it's a specific business operation
@@ -151,12 +160,14 @@ Response:
 ```
 
 **How it works:**
+
 1. Validate service exists at breakdown.baskets[basket_index].services[service_index]
 2. Update JSONB field directly: `jsonb_set(breakdown, '{"baskets",0,"services",1,"status"}', '"completed"')`
 3. Update `completed_at` and `completed_by` in same operation
 4. Return full order (proving the change)
 
 **Pros:**
+
 - ✅ Simple, direct update
 - ✅ Single database operation
 - ✅ Full order returned for audit trail
@@ -164,6 +175,7 @@ Response:
 - ✅ History available via: ORDER history (point-in-time recovery if DB supports)
 
 **Cons:**
+
 - ❌ No separate audit log stored
 - ❌ Cannot see WHO changed it or WHEN exactly (only final state in breakdown)
 - ❌ Hard to trace intermediate states
@@ -186,7 +198,7 @@ breakdown: {
   discounts: [ ... ],
   summary: { ... },
   payment: { ... },
-  
+
   // NEW: Audit log array
   audit_log: [
     {
@@ -232,7 +244,7 @@ Request:
 }
 
 Database Operation:
-UPDATE orders SET 
+UPDATE orders SET
   breakdown = jsonb_set(
     jsonb_set(
       breakdown,
@@ -252,6 +264,7 @@ RETURNING *;
 ```
 
 **Pros:**
+
 - ✅ Complete audit trail in one JSONB column
 - ✅ Can see exact history of all changes
 - ✅ Can reconstruct order state at any point in time
@@ -260,6 +273,7 @@ RETURNING *;
 - ✅ Perfect for compliance/debugging
 
 **Cons:**
+
 - ❌ JSONB grows over time (not a problem, but note it)
 - ❌ Complex jsonb_set() operations (need helper functions)
 - ❌ Harder to query specific changes (require JSON navigation)
@@ -275,17 +289,20 @@ RETURNING *;
 **Concept:** Rely on database change history/versioning
 
 **How it works:**
+
 - PostgreSQL has transaction visibility/MVCC
 - Enable `pg_stat_statements` to track queries
 - Use `SELECT * FROM orders WHERE id=X` at different times
 - Or use `temporal_tables` extension for automatic versioning
 
 **Pros:**
+
 - ✅ Automatic, no code needed
 - ✅ Complete history without extra storage
 - ✅ Can query any point in time
 
 **Cons:**
+
 - ❌ Requires PostgreSQL extensions (temporal_tables)
 - ❌ Hard to query who made the change (no user info)
 - ❌ More complex setup
@@ -301,6 +318,7 @@ RETURNING *;
 **Use Approach B (Audit Array in Breakdown)**
 
 **Why:**
+
 - ✅ Complete audit trail without separate tables
 - ✅ Everything in one immutable JSONB snapshot
 - ✅ Can query history easily
@@ -309,6 +327,7 @@ RETURNING *;
 - ✅ Easy to extend (add more actions as needed)
 
 **Implementation:**
+
 ```typescript
 // Helper function to append to audit log
 const addAuditLog = (breakdown, action, details, stafffId) => {
@@ -320,20 +339,20 @@ const addAuditLog = (breakdown, action, details, stafffId) => {
         action,
         timestamp: new Date().toISOString(),
         changed_by: staffId,
-        ...details
-      }
-    ]
+        ...details,
+      },
+    ],
   };
 };
 
 // Usage when updating service status
 const newBreakdown = addAuditLog(
   breakdown,
-  'service_completed',
+  "service_completed",
   {
     service_path: `baskets.${basketIdx}.services.${serviceIdx}`,
     from_status: breakdown.baskets[basketIdx].services[serviceIdx].status,
-    to_status: 'completed'
+    to_status: "completed",
   },
   attendantId
 );
@@ -343,19 +362,18 @@ const newBreakdown = addAuditLog(
 
 ## Summary Table
 
-| Aspect | Option A (Comprehensive) | Option B (Separate) | Option C (RESTful) |
-|--------|--------------------------|---------------------|--------------------|
-| Simplicity | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
-| Maintainability | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Scalability | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| Standards Compliance | ⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Recommendation** | ❌ | ✅ (for complex ops) | ✅ **PRIMARY** |
+| Aspect               | Option A (Comprehensive) | Option B (Separate)  | Option C (RESTful) |
+| -------------------- | ------------------------ | -------------------- | ------------------ |
+| Simplicity           | ⭐⭐⭐                   | ⭐⭐                 | ⭐⭐⭐⭐           |
+| Maintainability      | ⭐⭐                     | ⭐⭐⭐⭐             | ⭐⭐⭐⭐           |
+| Scalability          | ⭐⭐                     | ⭐⭐⭐⭐             | ⭐⭐⭐             |
+| Standards Compliance | ⭐                       | ⭐⭐⭐               | ⭐⭐⭐⭐⭐         |
+| **Recommendation**   | ❌                       | ✅ (for complex ops) | ✅ **PRIMARY**     |
 
-| Aspect | Approach A (Direct) | Approach B (Audit Array) | Approach C (MVCC) |
-|--------|---------------------|--------------------------|-------------------|
-| Audit Trail | ⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Complexity | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ |
-| Query Performance | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| Compliance | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Recommendation** | ❌ | ✅ **PRIMARY** | ⭐ (enterprise only) |
-
+| Aspect             | Approach A (Direct) | Approach B (Audit Array) | Approach C (MVCC)    |
+| ------------------ | ------------------- | ------------------------ | -------------------- |
+| Audit Trail        | ⭐                  | ⭐⭐⭐⭐⭐               | ⭐⭐⭐⭐             |
+| Complexity         | ⭐⭐⭐⭐⭐          | ⭐⭐⭐                   | ⭐                   |
+| Query Performance  | ⭐⭐⭐⭐            | ⭐⭐⭐                   | ⭐⭐                 |
+| Compliance         | ⭐⭐                | ⭐⭐⭐⭐⭐               | ⭐⭐⭐⭐             |
+| **Recommendation** | ❌                  | ✅ **PRIMARY**           | ⭐ (enterprise only) |
