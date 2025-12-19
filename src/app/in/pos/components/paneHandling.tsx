@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
+import { HandlingState } from "../logic/orderTypes";
 
 type Props = {
-  handling: any;
-  setHandling: (h: any) => void;
+  handling: HandlingState;
+  setHandling: (h: HandlingState) => void;
 };
 
 export default function PaneHandling({ handling, setHandling }: Props) {

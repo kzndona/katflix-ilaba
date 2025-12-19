@@ -2,25 +2,13 @@
 
 import React from "react";
 import { PRICING } from "../logic/usePOSState";
-
-type HandlingInfo = {
-  pickup: boolean;
-  deliver: boolean;
-  pickupAddress: string;
-  deliveryAddress: string;
-  deliveryFee: number;
-  courierRef: string;
-  instructions: string;
-};
+import { HandlingState } from "../logic/orderTypes";
 
 type Props = {
   customer: any;
   computeReceipt: any;
-  handling: HandlingInfo; // <-- update type
+  handling: HandlingState;
   setShowConfirm: (v: boolean) => void;
-  setOrderProductCounts: (o: any) => void;
-  setBaskets: (b: any) => void;
-  setActiveBasketIndex: (i: number) => void;
   saveOrder: () => Promise<void>;
   resetPOS: () => void;
 };
@@ -30,47 +18,21 @@ export default function PaneReceipt({
   computeReceipt,
   handling,
   setShowConfirm,
-  setOrderProductCounts,
-  setBaskets,
-  setActiveBasketIndex,
   saveOrder,
   resetPOS,
 }: Props) {
-  // Check if customer is selected (gate for checkout)
-  const isCustomerValid =
-    customer?.first_name && customer?.last_name && customer?.phone_number;
+  const isCustomerValid = customer?.first_name && customer?.last_name && customer?.phone_number;
+  const hasProducts = computeReceipt.productLines.length > 0;
+  const hasServices =
+    computeReceipt.basketLines.length > 0 &&
+    computeReceipt.basketLines.some((b: any) => b.weightKg > 0);
 
-  // Check if order is valid
-  const isOrderValid = () => {
-    if (!isCustomerValid) return false;
-    const hasProducts = computeReceipt.productLines.length > 0;
-    const hasServices =
-      computeReceipt.basketLines.length > 0 &&
-      computeReceipt.basketLines.some((b: any) => b.weightKg > 0);
+  const isOrderValid = isCustomerValid && (hasProducts || hasServices);
 
-    return hasProducts || hasServices;
-  };
-
-  // Check for baskets with weight but no services
-  const getBasketWarnings = () => {
-    const warnings: string[] = [];
-    computeReceipt.basketLines.forEach((b: any) => {
-      if (b.weightKg > 0) {
-        // Check if any service has a value > 0
-        const hasService = Object.values(b.breakdown).some(
-          (val: any) => val > 0
-        );
-        if (!hasService) {
-          warnings.push(
-            `${b.name} has weight (${b.weightKg}kg) but no services`
-          );
-        }
-      }
-    });
-    return warnings;
-  };
-
-  const basketWarnings = getBasketWarnings();
+  const basketWarnings = computeReceipt.basketLines
+    .filter((b: any) => b.weightKg > 0)
+    .filter((b: any) => !Object.values(b.breakdown).some((val: any) => val > 0))
+    .map((b: any) => `${b.name} has weight (${b.weightKg}kg) but no services`);
 
   return (
     <aside className="bg-white border-l border-gray-200 p-6 flex flex-col h-full overflow-hidden rounded-lg">
@@ -131,7 +93,7 @@ export default function PaneReceipt({
                   ⚠️ Baskets with no services
                 </div>
                 <div className="text-xs text-yellow-800 space-y-1">
-                  {basketWarnings.map((warning, idx) => (
+                  {basketWarnings.map((warning: string, idx: number) => (
                     <div key={idx}>• {warning}</div>
                   ))}
                 </div>
@@ -332,7 +294,7 @@ export default function PaneReceipt({
       <div className="mt-6 flex gap-3">
         <button
           onClick={() => setShowConfirm(true)}
-          disabled={!isOrderValid() || basketWarnings.length > 0}
+          disabled={!isOrderValid || basketWarnings.length > 0}
           className="flex-1 py-4 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition shadow-md hover:shadow-lg"
         >
           Checkout

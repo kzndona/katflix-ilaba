@@ -67,3 +67,6 @@ export type Payment = {
   amountPaid?: number;
   referenceNumber?: string;
 };
+
+// Re-export order types for convenience
+export * from './orderTypes';

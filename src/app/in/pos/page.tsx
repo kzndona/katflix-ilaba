@@ -112,9 +112,6 @@ export default function POSPage() {
           computeReceipt={pos.computeReceipt}
           handling={pos.handling}
           setShowConfirm={pos.setShowConfirm}
-          setOrderProductCounts={pos.orderProductCounts as any}
-          setBaskets={pos.baskets as any}
-          setActiveBasketIndex={pos.setActiveBasketIndex}
           saveOrder={pos.saveOrder}
           resetPOS={pos.resetPOS}
         />
