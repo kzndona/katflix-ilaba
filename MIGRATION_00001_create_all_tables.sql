@@ -15,11 +15,11 @@ CREATE TABLE public.customers (
   first_name TEXT NOT NULL,
   middle_name TEXT,
   last_name TEXT NOT NULL,
-  birthdate DATE,
-  gender TEXT CHECK (gender IN ('male', 'female')),
+  birthdate DATE NOT NULL,
+  gender TEXT NOT NULL CHECK (gender IN ('male', 'female', 'other')),
   address TEXT,
-  phone_number TEXT UNIQUE,
-  email_address TEXT UNIQUE,
+  phone_number TEXT NOT NULL,
+  email_address TEXT,
   loyalty_points INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -36,21 +36,34 @@ CREATE TABLE public.staff (
   first_name TEXT NOT NULL,
   middle_name TEXT,
   last_name TEXT NOT NULL,
-  birthdate DATE,
-  gender TEXT CHECK (gender IN ('male', 'female')),
-  role TEXT NOT NULL CHECK (role IN ('admin', 'cashier', 'attendant', 'rider')),
-  address TEXT,
-  phone_number TEXT,
-  email_address TEXT UNIQUE,
+  birthdate DATE NOT NULL,
+  gender TEXT NOT NULL CHECK (gender IN ('male', 'female')),
+  address TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  email_address TEXT NOT NULL UNIQUE,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_by UUID REFERENCES staff(id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_staff_role ON staff(role);
 CREATE INDEX idx_staff_is_active ON staff(is_active);
 CREATE INDEX idx_staff_auth_id ON staff(auth_id);
+
+-- Roles table
+CREATE TABLE public.roles (
+  id TEXT PRIMARY KEY CHECK (id IN ('admin', 'cashier', 'attendant', 'rider'))
+);
+
+-- Staff-Roles junction table
+CREATE TABLE public.staff_roles (
+  staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
+  role_id TEXT REFERENCES roles(id) ON DELETE CASCADE,
+  PRIMARY KEY (staff_id, role_id)
+);
+
+CREATE INDEX idx_staff_roles_role_id ON staff_roles(role_id);
+CREATE INDEX idx_staff_roles_staff_id ON staff_roles(staff_id);
 
 -- Products table
 CREATE TABLE public.products (
@@ -139,9 +152,9 @@ CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_source ON orders(source);
 CREATE INDEX idx_orders_created_at ON orders(created_at);
 CREATE INDEX idx_orders_total_amount ON orders(total_amount);
-CREATE INDEX idx_orders_breakdown_payment ON orders USING GIN (breakdown -> 'payment');
-CREATE INDEX idx_orders_handling_pickup ON orders USING GIN (handling -> 'pickup');
-CREATE INDEX idx_orders_handling_delivery ON orders USING GIN (handling -> 'delivery');
+CREATE INDEX idx_orders_breakdown_payment ON orders USING GIN ((breakdown -> 'payment'));
+CREATE INDEX idx_orders_handling_pickup ON orders USING GIN ((handling -> 'pickup'));
+CREATE INDEX idx_orders_handling_delivery ON orders USING GIN ((handling -> 'delivery'));
 
 -- ============================================================================
 -- PART 3: AUDIT & TRACKING
