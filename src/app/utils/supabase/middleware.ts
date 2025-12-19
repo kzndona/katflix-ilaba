@@ -55,51 +55,57 @@ export async function updateSession(request: NextRequest) {
 
 
 
-  // Query staff table for user role
+  // Query staff table and their roles (via staff_roles junction table)
   if (user) {
-    const { data: staffData, error } = await supabase
+    const { data: staffData, error: staffError } = await supabase
       .from('staff')
-      .select('role')
-      .eq('auth_id', user.sub) // user.sub is the Supabase auth user id
+      .select('id, is_active')
+      .eq('auth_id', user.sub)
       .single()
 
-    const role = staffData?.role
-
-    // Helper function to get appropriate home page for role
-    const getHomePageForRole = (userRole: string): string => {
-      switch (userRole) {
-        case 'cashier':
-          return '/in/pos'
-        case 'rider':
-          return '/in/orders'
-        case 'attendant':
-          return '/in/baskets'
-        case 'cashier_attendant':
-          return '/in/baskets'
-        case 'admin':
-          return '/in/orders'
-        default:
-          return '/in/orders'
-      }
-    }
-
-    // Redirect to login if no role found
-    if (!role) {
+    if (!staffData || !staffData.is_active) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/sign-in'
+      console.log("PROXY: Staff not found or inactive, redirecting to /auth/sign-in")
       return NextResponse.redirect(url)
+    }
+
+    // Query roles for this staff member
+    const { data: staffRolesData, error: rolesError } = await supabase
+      .from('staff_roles')
+      .select('role_id')
+      .eq('staff_id', staffData.id)
+
+    const roles = staffRolesData?.map(r => r.role_id) || []
+
+    // If no roles assigned, redirect to login
+    if (roles.length === 0) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/sign-in'
+      console.log("PROXY: No roles assigned, redirecting to /auth/sign-in")
+      return NextResponse.redirect(url)
+    }
+
+    // Helper function to get appropriate home page based on roles
+    const getHomePageForRoles = (userRoles: string[]): string => {
+      // Priority order: admin > cashier > attendant > rider
+      if (userRoles.includes('admin')) return '/in/orders'
+      if (userRoles.includes('cashier')) return '/in/pos'
+      if (userRoles.includes('attendant')) return '/in/baskets'
+      if (userRoles.includes('rider')) return '/in/orders'
+      return '/in/orders' // default fallback
     }
 
     // Redirect logged-in users from auth pages to their appropriate home page
     const isBackNavigation = request.headers.get('sec-fetch-user') !== '?1'
     if (!isBackNavigation && request.nextUrl.pathname.startsWith('/auth/sign-in')) {
       const url = request.nextUrl.clone()
-      url.pathname = getHomePageForRole(role)
+      url.pathname = getHomePageForRoles(roles)
       return NextResponse.redirect(url)
     }
 
     // CASHIER - Can only access POS
-    if (role === 'cashier') {
+    if (roles.includes('cashier') && !roles.includes('admin') && !roles.includes('attendant')) {
       if (request.nextUrl.pathname.startsWith('/in/') && !request.nextUrl.pathname.startsWith('/in/pos')) {
         const url = request.nextUrl.clone()
         url.pathname = '/in/pos'
@@ -109,7 +115,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // RIDER - Can access Orders only
-    if (role === 'rider') {
+    if (roles.includes('rider') && !roles.includes('admin') && !roles.includes('attendant') && !roles.includes('cashier')) {
       if (request.nextUrl.pathname.startsWith('/in/') && !request.nextUrl.pathname.startsWith('/in/orders')) {
         const url = request.nextUrl.clone()
         url.pathname = '/in/orders'
@@ -118,8 +124,8 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // ATTENDANT - Can access Orders, Baskets, Manage
-    if (role === 'attendant') {
+    // ATTENDANT - Can access Orders, Baskets, Manage (but not POS)
+    if (roles.includes('attendant') && !roles.includes('admin') && !roles.includes('cashier')) {
       const allowedPaths = ['/in/orders', '/in/baskets', '/in/manage']
       const isAllowed = allowedPaths.some(path => request.nextUrl.pathname.startsWith(path))
       
@@ -131,30 +137,17 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // CASHIER_ATTENDANT - Can access POS, Orders, Baskets, Manage
-    if (role === 'cashier_attendant') {
-      const allowedPaths = ['/in/pos', '/in/orders', '/in/baskets', '/in/manage']
-      const isAllowed = allowedPaths.some(path => request.nextUrl.pathname.startsWith(path))
-      
-      if (request.nextUrl.pathname.startsWith('/in/') && !isAllowed) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/in/baskets'
-        console.log(`PROXY: Cashier Attendant unauthorized access, redirecting to /in/baskets`)
-        return NextResponse.redirect(url)
-      }
-    }
-
     // ADMIN - Can access everything, so no restrictions
 
     // API-level access control
     // Only admin can access /api/staff
-    if (role !== 'admin' && request.nextUrl.pathname.startsWith('/api/staff')) {
+    if (!roles.includes('admin') && request.nextUrl.pathname.startsWith('/api/staff')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Only admin, attendant, and cashier_attendant can access /api/manage
+    // Only admin and attendant can access /api/manage
     if (
-      (role !== 'admin' && role !== 'attendant' && role !== 'cashier_attendant') &&
+      (!roles.includes('admin') && !roles.includes('attendant')) &&
       request.nextUrl.pathname.startsWith('/api/manage')
     ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
