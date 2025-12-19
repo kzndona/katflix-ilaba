@@ -21,7 +21,8 @@ export default function PaneReceipt({
   saveOrder,
   resetPOS,
 }: Props) {
-  const isCustomerValid = customer?.first_name && customer?.last_name && customer?.phone_number;
+  const isCustomerValid =
+    customer?.first_name && customer?.last_name && customer?.phone_number;
   const hasProducts = computeReceipt.productLines.length > 0;
   const hasServices =
     computeReceipt.basketLines.length > 0 &&

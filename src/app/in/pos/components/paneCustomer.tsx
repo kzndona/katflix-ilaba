@@ -27,7 +27,11 @@ export default function PaneCustomer({
   const [createError, setCreateError] = React.useState<string | null>(null);
 
   const handleCreateCustomer = async () => {
-    if (!customer?.first_name || !customer?.last_name || !customer?.phone_number) {
+    if (
+      !customer?.first_name ||
+      !customer?.last_name ||
+      !customer?.phone_number
+    ) {
       setCreateError("First name, last name, and phone number are required");
       return;
     }
@@ -94,7 +98,9 @@ export default function PaneCustomer({
                     <div className="font-medium text-gray-900">
                       {s.first_name} {s.last_name}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">{s.phone_number}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {s.phone_number}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -108,11 +114,18 @@ export default function PaneCustomer({
           </label>
           <input
             value={customer?.first_name ?? ""}
-            onChange={(e) => setCustomer({ ...customer, first_name: e.target.value } as Customer)}
+            onChange={(e) =>
+              setCustomer({
+                ...customer,
+                first_name: e.target.value,
+              } as Customer)
+            }
             disabled={isLoadedFromDB}
             placeholder="Required"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
             }`}
           />
         </div>
@@ -123,18 +136,27 @@ export default function PaneCustomer({
           </label>
           <input
             value={customer?.last_name ?? ""}
-            onChange={(e) => setCustomer({ ...customer, last_name: e.target.value } as Customer)}
+            onChange={(e) =>
+              setCustomer({
+                ...customer,
+                last_name: e.target.value,
+              } as Customer)
+            }
             disabled={isLoadedFromDB}
             placeholder="Required"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
             }`}
           />
         </div>
 
         {isLoadedFromDB && (
           <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-900">Customer loaded. ID: {customer?.id}</p>
+            <p className="text-sm text-blue-900">
+              Customer loaded. ID: {customer?.id}
+            </p>
           </div>
         )}
 
@@ -151,7 +173,9 @@ export default function PaneCustomer({
             disabled={isLoadedFromDB}
             placeholder="Required"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
             }`}
           />
         </div>
@@ -163,11 +187,18 @@ export default function PaneCustomer({
           <input
             type="email"
             value={customer?.email_address ?? ""}
-            onChange={(e) => setCustomer({ ...customer, email_address: e.target.value } as Customer)}
+            onChange={(e) =>
+              setCustomer({
+                ...customer,
+                email_address: e.target.value,
+              } as Customer)
+            }
             disabled={isLoadedFromDB}
             placeholder="Optional"
             className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+              isLoadedFromDB
+                ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                : ""
             }`}
           />
         </div>
@@ -182,7 +213,12 @@ export default function PaneCustomer({
           {!isLoadedFromDB && (
             <button
               onClick={handleCreateCustomer}
-              disabled={isCreating || !customer?.first_name || !customer?.last_name || !customer?.phone_number}
+              disabled={
+                isCreating ||
+                !customer?.first_name ||
+                !customer?.last_name ||
+                !customer?.phone_number
+              }
               className="flex-1 px-4 py-4 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:bg-gray-400 transition text-base"
             >
               {isCreating ? "Creating..." : "Create Customer"}

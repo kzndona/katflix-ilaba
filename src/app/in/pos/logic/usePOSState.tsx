@@ -391,12 +391,20 @@ export function usePOSState() {
       handlingFee,
       taxIncluded: vatIncluded,
       total,
-      
+
       // NEW: Database storage objects
       breakdown,
       handling: buildHandlingJSON(handling, handling.instructions),
     };
-  }, [orderProductCounts, baskets, products, handling, payment.method, payment.amountPaid, services]);
+  }, [
+    orderProductCounts,
+    baskets,
+    products,
+    handling,
+    payment.method,
+    payment.amountPaid,
+    services,
+  ]);
 
   const [isProcessing, setIsProcessing] = React.useState(false);
 
@@ -457,18 +465,23 @@ export function usePOSState() {
 
       // Get authenticated cashier (from context/auth)
       const supabase = createClient();
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (!user || userError) {
-        alert("Unable to get authenticated staff. Please refresh and try again.");
+        alert(
+          "Unable to get authenticated staff. Please refresh and try again."
+        );
         setIsProcessing(false);
         return null;
       }
 
       // Get cashier ID (staff record with this auth_id)
       const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('id')
-        .eq('auth_id', user.id)
+        .from("staff")
+        .select("id")
+        .eq("auth_id", user.id)
         .single();
 
       if (staffError || !staffData) {
@@ -496,17 +509,18 @@ export function usePOSState() {
         ...breakdownWithAudit,
         payment: {
           ...breakdownWithAudit.payment,
-          payment_status: 'successful' as const,
+          payment_status: "successful" as const,
           completed_at: new Date().toISOString(),
         },
       };
 
       // PREPARE order payload
       const orderPayload = {
-        source: 'store' as const,
+        source: "store" as const,
         customer_id: customer.id,
         cashier_id: cashierId,
-        status: computeReceipt.basketLines.length > 0 ? 'processing' : 'completed',
+        status:
+          computeReceipt.basketLines.length > 0 ? "processing" : "completed",
         total_amount: computeReceipt.total,
         order_note: null,
         breakdown: breakdownWithPayment,
@@ -514,38 +528,40 @@ export function usePOSState() {
       };
 
       // CALL new API endpoint
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload),
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error('Failed to create order:', errText);
-        alert('Failed to save order. Please try again.');
+        console.error("Failed to create order:", errText);
+        alert("Failed to save order. Please try again.");
         setIsProcessing(false);
         return null;
       }
 
       const data = await res.json();
       if (!data.success || !data.order?.id) {
-        alert('Order saved but response invalid. Please check.');
+        alert("Order saved but response invalid. Please check.");
         setIsProcessing(false);
         return null;
       }
 
       const orderId = data.order.id;
-      console.log('✓ Order created:', orderId);
-      alert(`Order saved successfully!\nOrder ID: ${orderId}\nTotal: ₱${computeReceipt.total.toFixed(2)}`);
+      console.log("✓ Order created:", orderId);
+      alert(
+        `Order saved successfully!\nOrder ID: ${orderId}\nTotal: ₱${computeReceipt.total.toFixed(2)}`
+      );
 
       // RESET POS
       resetPOS();
 
       return orderId;
     } catch (err) {
-      console.error('saveOrder error:', err);
-      alert('Unexpected error while saving order. Check console.');
+      console.error("saveOrder error:", err);
+      alert("Unexpected error while saving order. Check console.");
       return null;
     } finally {
       setIsProcessing(false);
