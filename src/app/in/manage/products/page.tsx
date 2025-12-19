@@ -19,12 +19,14 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
+
   // Quantity adjustment modal state
   const [quantityModalOpen, setQuantityModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantityAdjustment, setQuantityAdjustment] = useState<string>("");
-  const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">("add");
+  const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">(
+    "add"
+  );
 
   useEffect(() => {
     load();
@@ -228,7 +230,8 @@ export default function ProductsPage() {
       }
 
       const currentQty = Number(product.quantity);
-      const newQty = adjustmentType === "add" ? currentQty + amount : currentQty - amount;
+      const newQty =
+        adjustmentType === "add" ? currentQty + amount : currentQty - amount;
 
       if (newQty < 0) {
         setErrorMsg("Cannot reduce quantity below 0");
@@ -425,7 +428,9 @@ export default function ProductsPage() {
             <div className="space-y-4">
               {/* Product Dropdown */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Select Product</label>
+                <label className="text-sm font-medium mb-1">
+                  Select Product
+                </label>
                 <select
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
@@ -487,14 +492,21 @@ export default function ProductsPage() {
               {/* Preview */}
               {selectedProductId && quantityAdjustment && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                  <div className="text-sm font-medium text-blue-900">Preview:</div>
+                  <div className="text-sm font-medium text-blue-900">
+                    Preview:
+                  </div>
                   <div className="text-sm text-blue-700 mt-1">
                     {(() => {
-                      const product = rows.find((r) => r.id === selectedProductId);
+                      const product = rows.find(
+                        (r) => r.id === selectedProductId
+                      );
                       if (!product) return "";
                       const current = Number(product.quantity);
                       const amount = Number(quantityAdjustment);
-                      const newQty = adjustmentType === "add" ? current + amount : current - amount;
+                      const newQty =
+                        adjustmentType === "add"
+                          ? current + amount
+                          : current - amount;
                       return `${product.item_name}: ${current} ${adjustmentType === "add" ? "+" : "-"} ${amount} = ${newQty}`;
                     })()}
                   </div>

@@ -94,7 +94,7 @@ export default function OrdersPage() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     setDateFrom(yesterday.toISOString().split("T")[0]);
     setDateTo(today.toISOString().split("T")[0]);
     load();
@@ -147,9 +147,12 @@ export default function OrdersPage() {
       (order) => order.status === "processing"
     );
     const pickup = filtered.filter((order) => order.status === "for_pick-up");
-    const delivery = filtered.filter((order) => order.status === "for_delivery");
+    const delivery = filtered.filter(
+      (order) => order.status === "for_delivery"
+    );
     const nonProcessing = filtered.filter(
-      (order) => !["processing", "for_pick-up", "for_delivery"].includes(order.status)
+      (order) =>
+        !["processing", "for_pick-up", "for_delivery"].includes(order.status)
     );
 
     // Sort by created_at descending
@@ -467,7 +470,7 @@ function OrderListItem({
       pending: "text-gray-600",
       "for_pick-up": "text-blue-600",
       processing: "text-orange-600",
-      "for_delivery": "text-purple-600",
+      for_delivery: "text-purple-600",
       completed: "text-green-600",
       cancelled: "text-red-600",
     }[order.status] || "text-gray-600";
@@ -675,11 +678,7 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
   );
 }
 
-function BasketCard({
-  basket,
-}: {
-  basket: Order["breakdown"]["baskets"][0];
-}) {
+function BasketCard({ basket }: { basket: Order["breakdown"]["baskets"][0] }) {
   return (
     <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">
       <div className="flex justify-between items-start mb-2">
