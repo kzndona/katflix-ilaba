@@ -3,30 +3,6 @@
 import { useEffect, useState } from "react";
 import { formatToPST, formatDateToPST } from "@/src/app/utils/dateUtils";
 
-type Basket = {
-  id: string;
-  basket_number: number;
-  weight: number | null;
-  notes: string | null;
-  price: number | null;
-  status: string;
-  created_at: string | null;
-  basket_services: BasketService[];
-};
-
-type BasketService = {
-  id: string;
-  service_id: string;
-  rate: number | null;
-  subtotal: number | null;
-  status: string;
-  services: {
-    id: string;
-    name: string;
-    service_type: string;
-  };
-};
-
 type Customer = {
   id: string;
   first_name: string;
@@ -35,33 +11,66 @@ type Customer = {
   phone_number: string | null;
 };
 
-type OrderProduct = {
-  id: string;
-  product_id: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  products: {
-    id: string;
-    item_name: string;
-  };
-};
-
 type Order = {
   id: string;
   source: string;
   customer_id: string | null;
   status: string;
-  payment_status: string;
   total_amount: number;
-  discount: number;
-  pickup_address: string | null;
-  delivery_address: string | null;
-  shipping_fee: number;
+  order_note: string | null;
   created_at: string | null;
   completed_at: string | null;
-  baskets: Basket[];
-  order_products: OrderProduct[];
+  handling: {
+    pickup: {
+      address: string;
+      status: "pending" | "in_progress" | "completed" | "skipped";
+      notes: string | null;
+    };
+    delivery: {
+      address: string;
+      status: "pending" | "in_progress" | "completed" | "skipped";
+      notes: string | null;
+    };
+  };
+  breakdown: {
+    items: Array<{
+      id: string;
+      product_id: string;
+      product_name: string;
+      quantity: number;
+      unit_price: number;
+      subtotal: number;
+    }>;
+    baskets: Array<{
+      basket_number: number;
+      weight: number;
+      basket_notes: string | null;
+      services: Array<{
+        id: string;
+        service_id: string;
+        service_name: string;
+        is_premium: boolean;
+        multiplier: number;
+        rate_per_kg: number;
+        subtotal: number;
+        status: "pending" | "in_progress" | "completed" | "skipped";
+      }>;
+      total: number;
+    }>;
+    summary: {
+      subtotal_products: number | null;
+      subtotal_services: number | null;
+      handling: number | null;
+      service_fee: number | null;
+      grand_total: number;
+    };
+    payment: {
+      method: "cash" | "gcash";
+      amount_paid: number;
+      change: number;
+      payment_status: "successful" | "processing" | "failed";
+    };
+  };
   customers: Customer | null;
 };
 
@@ -137,10 +146,10 @@ export default function OrdersPage() {
     const processing = filtered.filter(
       (order) => order.status === "processing"
     );
-    const pickup = filtered.filter((order) => order.status === "pick-up");
-    const delivery = filtered.filter((order) => order.status === "delivering");
+    const pickup = filtered.filter((order) => order.status === "for_pick-up");
+    const delivery = filtered.filter((order) => order.status === "for_delivery");
     const nonProcessing = filtered.filter(
-      (order) => !["processing", "pick-up", "delivering"].includes(order.status)
+      (order) => !["processing", "for_pick-up", "for_delivery"].includes(order.status)
     );
 
     // Sort by created_at descending
@@ -195,7 +204,6 @@ export default function OrdersPage() {
   function validateForm(data: Order) {
     if (!data.source.trim()) return "Source is required";
     if (!data.status.trim()) return "Status is required";
-    if (!data.payment_status.trim()) return "Payment status is required";
     return null;
   }
 
@@ -218,12 +226,8 @@ export default function OrdersPage() {
         ...(editing.customer_id ? { customer_id: editing.customer_id } : {}),
         source: editing.source,
         status: editing.status,
-        payment_status: editing.payment_status,
         total_amount: editing.total_amount,
-        discount: editing.discount,
-        pickup_address: editing.pickup_address || null,
-        delivery_address: editing.delivery_address || null,
-        shipping_fee: editing.shipping_fee,
+        order_note: editing.order_note || null,
         completed_at: editing.completed_at || null,
       };
 
@@ -460,9 +464,10 @@ function OrderListItem({
 
   const statusColor =
     {
+      pending: "text-gray-600",
+      "for_pick-up": "text-blue-600",
       processing: "text-orange-600",
-      "pick-up": "text-blue-600",
-      delivering: "text-purple-600",
+      "for_delivery": "text-purple-600",
       completed: "text-green-600",
       cancelled: "text-red-600",
     }[order.status] || "text-gray-600";
@@ -491,7 +496,7 @@ function OrderListItem({
             ₱{order.total_amount.toFixed(2)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {order.baskets?.length || 0} baskets
+            {order.breakdown?.baskets?.length || 0} baskets
           </div>
         </div>
       </div>
@@ -539,16 +544,17 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
           {/* Order Status & Dates */}
           <div className="grid grid-cols-3 gap-4">
             <DetailField label="📊 Status" value={order.status} />
-            <DetailField label="💳 Payment" value={order.payment_status} />
-            <DetailField label="🔧 Source" value={order.source} />
+            <DetailField label="� Source" value={order.source} />
             <DetailField
               label="📅 Created"
               value={formatToPST(order.created_at)}
             />
-            <DetailField
-              label="✅ Completed"
-              value={formatToPST(order.completed_at)}
-            />
+            {order.completed_at && (
+              <DetailField
+                label="✅ Completed"
+                value={formatToPST(order.completed_at)}
+              />
+            )}
           </div>
 
           {/* Customer Contact */}
@@ -565,76 +571,84 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
             </div>
           )}
 
-          {/* Addresses */}
-          <div className="pt-2 border-t border-gray-100">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">
-              🚚 Delivery Info
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500">Pickup Address</p>
-                <p className="text-sm text-gray-900">
-                  {order.pickup_address || "In-store"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Delivery Address</p>
-                <p className="text-sm text-gray-900">
-                  {order.delivery_address || "In-store"}
-                </p>
+          {/* Handling */}
+          {order.handling && (
+            <div className="pt-2 border-t border-gray-100">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                🚚 Pickup & Delivery
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500">Pickup Address</p>
+                  <p className="text-sm text-gray-900">
+                    {order.handling.pickup.address || "In-store"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Delivery Address</p>
+                  <p className="text-sm text-gray-900">
+                    {order.handling.delivery.address || "In-store"}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Pricing */}
-          <div className="pt-2 border-t border-gray-100">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">
-              💰 Charges
-            </h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Amount:</span>
-                <span className="font-medium">
-                  ₱{order.total_amount.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Discount:</span>
-                <span className="font-medium">
-                  ₱{order.discount.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Shipping Fee:</span>
-                <span className="font-medium">
-                  ₱{order.shipping_fee.toFixed(2)}
-                </span>
+          {/* Pricing Summary */}
+          {order.breakdown?.summary && (
+            <div className="pt-2 border-t border-gray-100">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                💰 Summary
+              </h4>
+              <div className="space-y-1 text-sm">
+                {order.breakdown.summary.subtotal_products !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Products:</span>
+                    <span className="font-medium">
+                      ₱{order.breakdown.summary.subtotal_products.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {order.breakdown.summary.subtotal_services !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Services:</span>
+                    <span className="font-medium">
+                      ₱{order.breakdown.summary.subtotal_services.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1 border-t border-gray-200">
+                  <span className="text-gray-700 font-semibold">Total:</span>
+                  <span className="font-bold text-lg">
+                    ₱{order.total_amount.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Products */}
-          {order.order_products && order.order_products.length > 0 && (
+          {order.breakdown?.items && order.breakdown.items.length > 0 && (
             <div className="pt-2 border-t border-gray-100">
               <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                🛍️ Products ({order.order_products.length})
+                🛍️ Products ({order.breakdown.items.length})
               </h4>
               <div className="space-y-2">
-                {order.order_products.map((product) => (
+                {order.breakdown.items.map((item) => (
                   <div
-                    key={product.id}
+                    key={item.id}
                     className="flex justify-between text-sm p-2 rounded bg-gray-50"
                   >
                     <div>
                       <p className="font-medium text-gray-900">
-                        {product.products.item_name}
+                        {item.product_name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {product.quantity} × ₱{product.unit_price.toFixed(2)}
+                        {item.quantity} × ₱{item.unit_price.toFixed(2)}
                       </p>
                     </div>
                     <p className="font-medium text-gray-900">
-                      ₱{product.subtotal.toFixed(2)}
+                      ₱{item.subtotal.toFixed(2)}
                     </p>
                   </div>
                 ))}
@@ -643,14 +657,14 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
           )}
 
           {/* Baskets Section */}
-          {order.baskets && order.baskets.length > 0 && (
+          {order.breakdown?.baskets && order.breakdown.baskets.length > 0 && (
             <div className="pt-2 border-t border-gray-100">
               <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                🧺 Baskets ({order.baskets.length})
+                🧺 Baskets ({order.breakdown.baskets.length})
               </h4>
               <div className="space-y-3">
-                {order.baskets.map((basket) => (
-                  <BasketCard key={basket.id} basket={basket} />
+                {order.breakdown.baskets.map((basket, idx) => (
+                  <BasketCard key={idx} basket={basket} />
                 ))}
               </div>
             </div>
@@ -661,62 +675,51 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
   );
 }
 
-function BasketCard({ basket }: { basket: Basket }) {
-  const statusColor =
-    {
-      processing: "bg-orange-50 border-orange-200",
-      "pick-up": "bg-blue-50 border-blue-200",
-      delivering: "bg-purple-50 border-purple-200",
-      completed: "bg-green-50 border-green-200",
-      cancelled: "bg-red-50 border-red-200",
-    }[basket.status] || "bg-gray-50 border-gray-200";
-
+function BasketCard({
+  basket,
+}: {
+  basket: Order["breakdown"]["baskets"][0];
+}) {
   return (
-    <div className={`border rounded-lg p-3 ${statusColor}`}>
+    <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">
       <div className="flex justify-between items-start mb-2">
         <div>
           <h5 className="font-semibold text-sm">
             Basket #{basket.basket_number}
           </h5>
-          {basket.weight !== null && (
-            <p className="text-xs text-gray-600">Weight: {basket.weight} kg</p>
-          )}
+          <p className="text-xs text-gray-600">Weight: {basket.weight} kg</p>
         </div>
         <div className="text-right">
-          <div className="text-xs font-semibold text-gray-700">
-            {basket.status}
+          <div className="text-sm font-semibold">
+            ₱{basket.total.toFixed(2)}
           </div>
-          {basket.price !== null && (
-            <div className="text-sm font-semibold">
-              ₱{basket.price.toFixed(2)}
-            </div>
-          )}
         </div>
       </div>
 
-      {basket.notes && (
-        <p className="text-xs text-gray-700 mb-2 italic">"{basket.notes}"</p>
+      {basket.basket_notes && (
+        <p className="text-xs text-gray-700 mb-2 italic">
+          "{basket.basket_notes}"
+        </p>
       )}
 
-      {basket.basket_services && basket.basket_services.length > 0 && (
+      {basket.services && basket.services.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
           <div className="space-y-1">
-            {basket.basket_services.map((service) => (
+            {basket.services.map((service) => (
               <div
                 key={service.id}
-                className="text-xs text-gray-700 grid grid-cols-[1fr_80px_70px] gap-2"
+                className="text-xs text-gray-700 grid grid-cols-[1fr_70px_80px] gap-2"
               >
                 <span className="font-medium truncate">
-                  {service.services.name}
+                  {service.service_name}
+                  {service.is_premium && " (Premium)"}
                 </span>
                 <span className="text-gray-600 text-right">
-                  {service.status}
+                  ×{service.multiplier}
                 </span>
-                {service.subtotal !== null && (
-                  <span className="font-medium text-right">
-                    ₱{service.subtotal.toFixed(2)}
-                  </span>
-                )}
+                <span className="font-medium text-right">
+                  ₱{service.subtotal.toFixed(2)}
+                </span>
               </div>
             ))}
           </div>
@@ -790,22 +793,12 @@ function EditPane({
               value={order.status}
               onChange={(v) => updateField("status", v)}
               options={[
+                { value: "pending", label: "Pending" },
+                { value: "for_pick-up", label: "For Pick-up" },
                 { value: "processing", label: "Processing" },
-                { value: "pick-up", label: "Pick-up" },
-                { value: "delivering", label: "Delivering" },
+                { value: "for_delivery", label: "For Delivery" },
                 { value: "completed", label: "Completed" },
                 { value: "cancelled", label: "Cancelled" },
-              ]}
-            />
-
-            <Select
-              label="Payment Status"
-              value={order.payment_status}
-              onChange={(v) => updateField("payment_status", v)}
-              options={[
-                { value: "processing", label: "Processing" },
-                { value: "successful", label: "Successful" },
-                { value: "failed", label: "Failed" },
               ]}
             />
 
@@ -817,33 +810,13 @@ function EditPane({
             />
 
             <Field
-              label="Discount"
-              value={order.discount.toString()}
-              onChange={(v) => updateField("discount", parseFloat(v))}
-              type="number"
-            />
-
-            <Field
-              label="Shipping Fee"
-              value={order.shipping_fee.toString()}
-              onChange={(v) => updateField("shipping_fee", parseFloat(v))}
-              type="number"
+              label="Order Note"
+              value={order.order_note ?? ""}
+              onChange={(v) => updateField("order_note", v)}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            <Field
-              label="Pickup Address"
-              value={order.pickup_address ?? ""}
-              onChange={(v) => updateField("pickup_address", v)}
-            />
-
-            <Field
-              label="Delivery Address"
-              value={order.delivery_address ?? ""}
-              onChange={(v) => updateField("delivery_address", v)}
-            />
-
             <Field
               label="Completed At"
               value={order.completed_at ?? ""}

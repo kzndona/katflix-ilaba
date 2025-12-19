@@ -15,46 +15,12 @@ export async function GET(req: Request) {
         source,
         customer_id,
         status,
-        payment_status,
         total_amount,
-        discount,
-        pickup_address,
-        delivery_address,
-        shipping_fee,
+        order_note,
         created_at,
         completed_at,
-        baskets (
-          id,
-          basket_number,
-          weight,
-          notes,
-          price,
-          status,
-          created_at,
-          basket_services (
-            id,
-            service_id,
-            rate,
-            subtotal,
-            status,
-            services (
-              id,
-              name,
-              service_type
-            )
-          )
-        ),
-        order_products (
-          id,
-          product_id,
-          quantity,
-          unit_price,
-          subtotal,
-          products (
-            id,
-            item_name
-          )
-        ),
+        handling,
+        breakdown,
         customers (
           id,
           first_name,
@@ -69,7 +35,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching orders with baskets:", error);
+    console.error("Error fetching orders:", error);
     return NextResponse.json(
       { error: "Failed to fetch orders" },
       { status: 500 }

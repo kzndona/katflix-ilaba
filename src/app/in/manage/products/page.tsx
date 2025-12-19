@@ -2,17 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatToPST } from "@/src/app/utils/dateUtils";
 
 type Products = {
   id: string;
   item_name: string;
-  unit: string;
-  unit_cost: string; // form value as string
   unit_price: string; // form value as string
   quantity: string; // form value as string (whole number)
   reorder_level: string; // form value as string (whole number)
-  last_updated: string | null;
+  is_active: boolean;
 };
 
 export default function ProductsPage() {
@@ -47,11 +44,6 @@ export default function ProductsPage() {
       const normalized: Products[] = (data || []).map((r: any) => ({
         id: r.id,
         item_name: r.item_name ?? "",
-        unit: r.unit ?? "",
-        unit_cost:
-          r.unit_cost !== undefined && r.unit_cost !== null
-            ? Number(r.unit_cost).toFixed(2)
-            : "0.00",
         unit_price:
           r.unit_price !== undefined && r.unit_price !== null
             ? Number(r.unit_price).toFixed(2)
@@ -64,7 +56,7 @@ export default function ProductsPage() {
           r.reorder_level !== undefined && r.reorder_level !== null
             ? String(Math.trunc(Number(r.reorder_level)))
             : "0",
-        last_updated: r.last_updated ?? null,
+        is_active: r.is_active ?? true,
       }));
       setRows(normalized);
     } catch (err) {
@@ -79,12 +71,10 @@ export default function ProductsPage() {
     setEditing({
       id: "",
       item_name: "",
-      unit: "",
-      unit_cost: "0.00",
       unit_price: "0.00",
       quantity: "0",
       reorder_level: "0",
-      last_updated: null,
+      is_active: true,
     });
     setModalOpen(true);
     setErrorMsg(null);
@@ -105,8 +95,6 @@ export default function ProductsPage() {
     // required fields
     const required: (keyof Products)[] = [
       "item_name",
-      "unit",
-      "unit_cost",
       "unit_price",
       "quantity",
       "reorder_level",
@@ -119,14 +107,11 @@ export default function ProductsPage() {
       }
     }
 
-    // unit_cost & unit_price: numeric >= 0 with up to 2 decimals
+    // unit_price: numeric >= 0 with up to 2 decimals
     const moneyPattern = /^\d+(\.\d{1,2})?$/;
-    if (!moneyPattern.test(data.unit_cost))
-      return "unit_cost must be a non-negative number with up to 2 decimals";
     if (!moneyPattern.test(data.unit_price))
       return "unit_price must be a non-negative number with up to 2 decimals";
 
-    if (Number(data.unit_cost) < 0) return "unit_cost cannot be negative";
     if (Number(data.unit_price) < 0) return "unit_price cannot be negative";
 
     // quantity & reorder_level: whole numbers, >= 0
@@ -163,11 +148,10 @@ export default function ProductsPage() {
         // keep id if present (empty string means create)
         ...(data.id ? { id: data.id } : {}),
         item_name: data.item_name.trim(),
-        unit: data.unit.trim(),
-        unit_cost: Number(Number(data.unit_cost).toFixed(2)),
         unit_price: Number(Number(data.unit_price).toFixed(2)),
         quantity: Number(Math.trunc(Number(data.quantity))),
         reorder_level: Number(Math.trunc(Number(data.reorder_level))),
+        is_active: data.is_active,
       };
 
       const res = await fetch("/api/manage/products/saveProduct", {
@@ -255,11 +239,10 @@ export default function ProductsPage() {
       const payload = {
         id: selectedProductId,
         item_name: product.item_name,
-        unit: product.unit,
-        unit_cost: Number(product.unit_cost),
         unit_price: Number(product.unit_price),
         quantity: Math.trunc(newQty),
         reorder_level: Number(product.reorder_level),
+        is_active: true,
       };
 
       const res = await fetch("/api/manage/products/saveProduct", {
@@ -311,12 +294,10 @@ export default function ProductsPage() {
           <thead className="bg-gray-100">
             <tr>
               <th className="p-2 border">Item</th>
-              <th className="p-2 border">Unit</th>
-              <th className="p-2 border">Unit Cost</th>
               <th className="p-2 border">Unit Price</th>
               <th className="p-2 border">Quantity</th>
               <th className="p-2 border">Reorder Level</th>
-              <th className="p-2 border">Last Updated</th>
+              <th className="p-2 border">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -329,13 +310,11 @@ export default function ProductsPage() {
                 <td className="p-2 border truncate text-center">
                   {r.item_name}
                 </td>
-                <td className="p-2 border truncate text-center">{r.unit}</td>
-                <td className="p-2 border text-right">₱{r.unit_cost}</td>
                 <td className="p-2 border text-right">₱{r.unit_price}</td>
                 <td className="p-2 border text-center">{r.quantity}</td>
                 <td className="p-2 border text-center">{r.reorder_level}</td>
                 <td className="p-2 border text-center">
-                  {formatToPST(r.last_updated)}
+                  {r.is_active ? "✓ Active" : "✗ Inactive"}
                 </td>
               </tr>
             ))}
@@ -358,28 +337,14 @@ export default function ProductsPage() {
                 value={editing.item_name}
                 onChange={(v) => updateField("item_name", v)}
               />
-              <Field
-                label="Unit"
-                value={editing.unit}
-                onChange={(v) => updateField("unit", v)}
-              />
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Unit Cost"
-                  value={editing.unit_cost}
-                  type="number"
-                  step="0.01"
-                  onChange={(v) => updateField("unit_cost", v)}
-                />
-                <Field
-                  label="Unit Price"
-                  value={editing.unit_price}
-                  type="number"
-                  step="0.01"
-                  onChange={(v) => updateField("unit_price", v)}
-                />
-              </div>
+              <Field
+                label="Unit Price"
+                value={editing.unit_price}
+                type="number"
+                step="0.01"
+                onChange={(v) => updateField("unit_price", v)}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <Field
@@ -405,6 +370,15 @@ export default function ProductsPage() {
                       cleaned === "" ? "0" : cleaned
                     );
                   }}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label className="text-sm">Active</label>
+                <input
+                  type="checkbox"
+                  checked={editing.is_active}
+                  onChange={(e) => updateField("is_active", e.target.checked)}
                 />
               </div>
             </div>
@@ -460,7 +434,7 @@ export default function ProductsPage() {
                   <option value="">-- Choose a product --</option>
                   {rows.map((product) => (
                     <option key={product.id} value={product.id}>
-                      {product.item_name} (Current: {product.quantity} {product.unit})
+                      {product.item_name} (Current: {product.quantity})
                     </option>
                   ))}
                 </select>
@@ -521,7 +495,7 @@ export default function ProductsPage() {
                       const current = Number(product.quantity);
                       const amount = Number(quantityAdjustment);
                       const newQty = adjustmentType === "add" ? current + amount : current - amount;
-                      return `${product.item_name}: ${current} ${adjustmentType === "add" ? "+" : "-"} ${amount} = ${newQty} ${product.unit}`;
+                      return `${product.item_name}: ${current} ${adjustmentType === "add" ? "+" : "-"} ${amount} = ${newQty}`;
                     })()}
                   </div>
                 </div>
