@@ -20,6 +20,7 @@ handling: {
         address,
         latitude, // for google maps integration (nullable for in-store)
         longitude, // for google maps integration (nullable for in-store)
+        notes,
         status: "pending" | "in_progress" | "completed" | "skipped"
         started_at, // timestamp | null
         completed_at, // timestamp | null
@@ -30,6 +31,7 @@ handling: {
         address,
         latitude, // for google maps integration
         longitude, // for google maps integration
+        notes,
         status: "pending" | "in_progress" | "completed" | "skipped"
         started_at, // timestamp | null
         completed_at, // timestamp | null
@@ -133,6 +135,42 @@ breakdown: {
         payment_status: "successful" | "processing" | "failed",
         completed_at: timestamp
     }
+
+    audit_log: [
+        {
+            action: "created" | "service_status_changed" | "handling_started" | "handling_completed" | "payment_processed" | "order_approved" | "order_cancelled",
+            timestamp: timestamp,  // ONLY timestamp recorded here (not duplicated in object)
+            changed_by: UUID FK (staff.id),
+            
+            // Additional context based on action type
+            // For service_status_changed:
+            service_path?: "baskets.{basket_idx}.services.{service_idx}",
+            from_status?: string,  // previous status
+            to_status?: string,    // new status (now reflected in service.status)
+            
+            // For handling_started/completed:
+            handling_stage?: "pickup" | "delivery",
+            duration_minutes?: number,
+            
+            // For payment_processed:
+            payment_method?: string,
+            payment_amount?: number,
+            
+            // For order_approved (mobile orders):
+            approval_reason?: string,
+            
+            // For order_cancelled:
+            cancellation_reason?: string,
+            
+            // Generic details field for other info
+            details?: object
+        }
+    ]
+    
+    // NOTE: Timestamps (started_at, completed_at) and staff IDs (completed_by)
+    // are stored directly on services and handling objects for current state.
+    // audit_log records WHO made changes (changed_by) and WHEN (timestamp),
+    // but does NOT duplicate the state timestamps to avoid inconsistency.
 }
 
 cancellation: {
@@ -143,4 +181,21 @@ cancellation: {
     refund_status: "pending" | "processed" | "failed"
 } | null  // null if not cancelled
 
-// a product_logs row containing id, quantity, and unit_price is made for every product purchased in an order.
+// AUDIT & TRACKING
+
+// 1. product_transactions table
+// - One row created for every product quantity change
+// - change_type: 'consume' (from order creation), 'add', 'remove', 'adjust'
+// - Logged at order creation time for all products in the order
+// - Example: Order with 2x Detergent → creates product_transactions row with quantity=2, change_type='consume'
+// - Used to deduct from products.quantity and maintain complete inventory audit trail
+
+// 2. breakdown.audit_log array
+// - Complete history of all order state changes
+// - Captures WHO changed it, WHEN, and WHAT changed
+// - Service status changes, handling progress, payment, cancellations all logged
+// - Enables full order audit trail without separate tables
+// - Queryable: SELECT breakdown->'audit_log' FROM orders WHERE id = 'order-uuid'
+
+// Together: products.quantity tracks current stock, product_transactions tracks history,
+// and breakdown.audit_log tracks all order-level changes for compliance and debugging
