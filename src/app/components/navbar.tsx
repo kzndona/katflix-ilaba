@@ -10,44 +10,58 @@ export default function Navbar() {
   const supabase = createClient();
   const [manageOpen, setManageOpen] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user role on component mount
+  // Fetch user roles on component mount
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserRoles = async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          setUserRole(null);
+          setUserRoles([]);
           setLoading(false);
           return;
         }
 
-        // Fetch staff record to get role
-        const { data, error } = await supabase
+        // Fetch staff record to check is_active
+        const { data: staffData, error: staffError } = await supabase
           .from("staff")
-          .select("role")
+          .select("id, is_active")
           .eq("auth_id", user.id)
           .single();
 
-        if (error) {
-          console.error("Error fetching user role:", error);
-          setUserRole(null);
+        if (staffError || !staffData || !staffData.is_active) {
+          console.error("Staff not found or inactive:", staffError);
+          setUserRoles([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch roles via staff_roles junction table
+        const { data: staffRolesData, error: rolesError } = await supabase
+          .from("staff_roles")
+          .select("role_id")
+          .eq("staff_id", staffData.id);
+
+        if (rolesError) {
+          console.error("Error fetching user roles:", rolesError);
+          setUserRoles([]);
         } else {
-          setUserRole(data?.role || null);
+          const roles = staffRolesData?.map((r) => r.role_id) || [];
+          setUserRoles(roles);
         }
       } catch (err) {
-        console.error("Error in fetchUserRole:", err);
-        setUserRole(null);
+        console.error("Error in fetchUserRoles:", err);
+        setUserRoles([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserRole();
+    fetchUserRoles();
   }, [supabase]);
 
   // Placeholder navigation functions
@@ -68,23 +82,16 @@ export default function Navbar() {
 
   // Role-based access control
   const canAccessPOS =
-    userRole === "cashier" ||
-    userRole === "cashier_attendant" ||
-    userRole === "admin";
+    userRoles.includes("admin") || userRoles.includes("cashier");
   const canAccessOrders =
-    userRole === "rider" ||
-    userRole === "attendant" ||
-    userRole === "cashier_attendant" ||
-    userRole === "admin";
+    userRoles.includes("admin") ||
+    userRoles.includes("attendant") ||
+    userRoles.includes("rider");
   const canAccessBaskets =
-    userRole === "attendant" ||
-    userRole === "cashier_attendant" ||
-    userRole === "admin";
+    userRoles.includes("admin") || userRoles.includes("attendant");
   const canAccessManage =
-    userRole === "attendant" ||
-    userRole === "cashier_attendant" ||
-    userRole === "admin";
-  const canAccessAccounts = userRole === "admin";
+    userRoles.includes("admin") || userRoles.includes("attendant");
+  const canAccessAccounts = userRoles.includes("admin");
 
   if (loading) {
     return (
