@@ -119,6 +119,7 @@ export const buildBreakdownItems = (
       product_name: product.item_name,
       quantity,
       unit_price: product.unit_price, // Snapshot at order time
+      unit_cost: product.unit_cost ?? 0, // Snapshot at order time for margin analysis
       subtotal,
       discount: {
         amount: 0,

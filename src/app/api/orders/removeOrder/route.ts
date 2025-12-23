@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { restoreInventory } from "../inventoryHelpers";
 
 export async function POST(req: Request) {
   try {
@@ -11,52 +12,35 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // First, get all order products to restore inventory
-    const { data: orderProducts, error: fetchErr } = await supabase
-      .from("order_products")
-      .select("product_id, quantity")
-      .eq("order_id", id);
+    // Get the order with breakdown to access product items
+    const { data: order, error: orderFetchErr } = await supabase
+      .from("orders")
+      .select("id, breakdown")
+      .eq("id", id)
+      .single();
 
-    if (fetchErr) {
-      console.error("Failed to fetch order products:", fetchErr);
-      throw new Error("Failed to fetch order products");
+    if (orderFetchErr || !order) {
+      return NextResponse.json(
+        { error: "Order not found" },
+        { status: 404 }
+      );
     }
 
-    // Restore inventory for each product
-    if (orderProducts && orderProducts.length > 0) {
-      for (const op of orderProducts) {
-        // Get current product quantity
-        const { data: product, error: productFetchErr } = await supabase
-          .from("products")
-          .select("quantity")
-          .eq("id", op.product_id)
-          .single();
+    // Restore inventory from breakdown items
+    if (order.breakdown?.items && order.breakdown.items.length > 0) {
+      const restorationResult = await restoreInventory(
+        supabase,
+        id,
+        order.breakdown.items.map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+        }))
+      );
 
-        if (productFetchErr) {
-          console.error(`Failed to fetch product ${op.product_id}:`, productFetchErr);
-          // Continue anyway - product might have been deleted
-          continue;
-        }
-
-        if (product) {
-          const currentQty = Number(product.quantity);
-          const returnQty = Number(op.quantity);
-          const newQty = currentQty + returnQty;
-
-          // Update product quantity
-          const { error: updateErr } = await supabase
-            .from("products")
-            .update({ 
-              quantity: newQty,
-              last_updated: new Date().toISOString()
-            })
-            .eq("id", op.product_id);
-
-          if (updateErr) {
-            console.error(`Failed to restore inventory for product ${op.product_id}:`, updateErr);
-            // Continue anyway to complete the deletion
-          }
-        }
+      if (!restorationResult.success) {
+        console.warn('Some inventory restorations failed:', restorationResult.failedProducts);
+        // Log but continue with deletion
       }
     }
 

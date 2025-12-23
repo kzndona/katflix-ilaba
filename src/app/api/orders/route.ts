@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateStockAvailability, deductInventory } from './inventoryHelpers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +26,29 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Missing required fields: customer_id, cashier_id, breakdown, handling' },
         { status: 400 }
       );
+    }
+
+    // Validate stock availability before proceeding
+    if (breakdown.items && breakdown.items.length > 0) {
+      const stockCheck = await validateStockAvailability(
+        supabase,
+        breakdown.items.map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+        }))
+      );
+
+      if (!stockCheck.available) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Insufficient stock for one or more items',
+            insufficientItems: stockCheck.insufficientItems,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Verify customer exists
@@ -93,24 +117,21 @@ export async function POST(req: NextRequest) {
 
     const order = orderData[0];
 
-    // Create product_transactions for inventory tracking
+    // Deduct inventory for products
     if (breakdown.items && breakdown.items.length > 0) {
-      const transactions = breakdown.items.map((item: any) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: -item.quantity, // Negative for deduction
-        transaction_type: 'order_placed',
-        notes: `Order ${order.id}: ${item.quantity}x ${item.product_name}`,
-        created_at: new Date().toISOString(),
-      }));
+      const deductionResult = await deductInventory(
+        supabase,
+        order.id,
+        breakdown.items.map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+        }))
+      );
 
-      const { error: txError } = await supabase
-        .from('product_transactions')
-        .insert(transactions);
-
-      if (txError) {
-        console.error('Failed to create product transactions:', txError);
-        // Don't fail the order, just warn
+      if (!deductionResult.success) {
+        console.warn('Some inventory deductions failed:', deductionResult.failedProducts);
+        // Don't fail the order, but log the warning
       }
     }
 

@@ -2,6 +2,7 @@ export type Product = {
   id: string;
   item_name: string;
   unit_price: number;
+  unit_cost?: number; // Cost at time of order snapshot
 };
 
 export type Customer = {

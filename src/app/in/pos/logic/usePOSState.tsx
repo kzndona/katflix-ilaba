@@ -147,7 +147,7 @@ export function usePOSState() {
 
       const { data, error } = await supabase
         .from("products")
-        .select("id, item_name, unit_price")
+        .select("id, item_name, unit_price, unit_cost")
         .order("item_name", { ascending: true });
 
       if (error) {
@@ -544,16 +544,30 @@ export function usePOSState() {
         body: JSON.stringify(orderPayload),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errText = await res.text();
-        console.error("Failed to create order:", errText);
-        alert("Failed to save order. Please try again.");
+        // Handle stock validation errors specifically
+        if (res.status === 400 && data.insufficientItems) {
+          const itemsList = data.insufficientItems
+            .map(
+              (item: any) =>
+                `- ${item.productName}: need ${item.requested}, have ${item.available}`
+            )
+            .join("\n");
+          alert(
+            `Insufficient stock for:\n\n${itemsList}\n\nPlease adjust quantities and try again.`
+          );
+        } else {
+          console.error("Failed to create order:", data.error);
+          alert(data.error || "Failed to save order. Please try again.");
+        }
         setIsProcessing(false);
         return null;
       }
 
-      const data = await res.json();
       if (!data.success || !data.order?.id) {
+        alert("Order created but with unexpected response format.");
         setIsProcessing(false);
         return null;
       }

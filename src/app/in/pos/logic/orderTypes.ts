@@ -55,6 +55,7 @@ export interface OrderItem {
   product_name: string;
   quantity: number;
   unit_price: number;                 // Snapshot at order time
+  unit_cost: number;                  // Snapshot at order time (for margin analysis)
   subtotal: number;
   discount: {
     amount: number;
