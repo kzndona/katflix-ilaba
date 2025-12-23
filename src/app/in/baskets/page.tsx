@@ -392,8 +392,7 @@ export default function BasketsPage() {
                             const isDone =
                               service.status === "completed" ||
                               service.status === "skipped";
-                            const isActive =
-                              service.status === "in_progress";
+                            const isActive = service.status === "in_progress";
                             const isPending = service.status === "pending";
 
                             const statusIcon = isDone
@@ -438,9 +437,9 @@ export default function BasketsPage() {
                           })}
 
                         {/* DELIVERY - Only show if pending or in progress */}
-                        {(order.handling.delivery.address &&
+                        {order.handling.delivery.address &&
                           (order.handling.delivery.status === "pending" ||
-                            order.handling.delivery.status === "in_progress")) &&
+                            order.handling.delivery.status === "in_progress") &&
                           (() => {
                             const isActive =
                               order.handling.delivery.status === "in_progress";
@@ -508,7 +507,7 @@ export default function BasketsPage() {
                         </button>
                       ) : (
                         <div className="text-xs text-gray-500 text-center py-2 px-2 bg-green-50 rounded border border-green-200">
-                          Order Complete ✓
+                          Basket Complete ✓
                         </div>
                       )}
                     </div>
@@ -519,7 +518,6 @@ export default function BasketsPage() {
           ))}
         </div>
       )}
-
     </div>
   );
 }
