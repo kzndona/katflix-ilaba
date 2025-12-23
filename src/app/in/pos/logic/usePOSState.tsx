@@ -11,6 +11,7 @@ import {
   HandlingJSON,
   OrderRow,
 } from "./types";
+import { HandlingState } from "./orderTypes";
 import {
   buildHandlingJSON,
   buildBreakdownJSON,
@@ -76,10 +77,10 @@ export function usePOSState() {
   >("customer");
 
   // Handling (pickup/delivery)
-  const [handling, setHandling] = React.useState({
+  const [handling, setHandling] = React.useState<HandlingState>({
     pickup: true,
     deliver: false,
-    pickupAddress: "",
+    pickupAddress: null,
     deliveryAddress: "",
     deliveryFee: 50,
     courierRef: "",
@@ -293,7 +294,7 @@ export function usePOSState() {
 
     const productSubtotal = productLines.reduce((s, l) => s + l.lineTotal, 0);
 
-    const basketLines: ReceiptBasketLine[] = baskets.map((b) => {
+    const allBasketLines: ReceiptBasketLine[] = baskets.map((b) => {
       const weight = b.weightKg;
 
       const washService = getServiceByType("wash", b.washPremium);
@@ -344,6 +345,11 @@ export function usePOSState() {
         estimatedDurationMinutes: calculateBasketDuration(b),
       };
     });
+
+    // Filter out empty baskets (weightKg === 0) for actual order processing
+    const basketLines: ReceiptBasketLine[] = allBasketLines.filter(
+      (b) => b.weightKg > 0
+    );
 
     const basketSubtotal = basketLines.reduce((s, l) => s + l.total, 0);
 
@@ -520,7 +526,11 @@ export function usePOSState() {
         customer_id: customer.id,
         cashier_id: cashierId,
         status:
-          computeReceipt.basketLines.length > 0 ? "processing" : "completed",
+          computeReceipt.basketLines.length > 0 ||
+          computeReceipt.handling.pickup.status === 'pending' ||
+          computeReceipt.handling.delivery.status === 'pending'
+            ? "processing"
+            : "completed",
         total_amount: computeReceipt.total,
         order_note: null,
         breakdown: breakdownWithPayment,
@@ -578,7 +588,7 @@ export function usePOSState() {
     setHandling({
       pickup: true,
       deliver: false,
-      pickupAddress: "",
+      pickupAddress: null,
       deliveryAddress: "",
       deliveryFee: 0,
       courierRef: "",

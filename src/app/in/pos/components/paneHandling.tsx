@@ -34,7 +34,7 @@ export default function PaneHandling({ handling, setHandling }: Props) {
               className="w-6 h-6 rounded"
             />
             <span className="font-semibold text-gray-900 text-base">
-              Pickup at Store
+              Receive at Store
             </span>
           </label>
 

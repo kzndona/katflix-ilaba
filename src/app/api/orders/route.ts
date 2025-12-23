@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create order with complete JSONB
+    const finalStatus = status || 'processing';
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert([
@@ -63,12 +64,13 @@ export async function POST(req: NextRequest) {
           source: source || 'store',
           customer_id,
           cashier_id,
-          status: status || 'processing',
+          status: finalStatus,
           total_amount,
           order_note: order_note || null,
           breakdown: breakdown,
           handling: handling,
           cancellation: null,
+          completed_at: finalStatus === 'completed' ? new Date().toISOString() : null,
           created_at: new Date().toISOString(),
         },
       ])

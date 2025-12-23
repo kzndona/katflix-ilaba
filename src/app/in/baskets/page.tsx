@@ -128,9 +128,9 @@ export default function BasketsPage() {
         (o: any) =>
           o.status !== "completed" &&
           (o.status === "pending" ||
-          o.status === "for_pick-up" ||
-          o.status === "processing" ||
-          o.status === "for_delivery")
+            o.status === "for_pick-up" ||
+            o.status === "processing" ||
+            o.status === "for_delivery")
       );
 
       setOrders(processingOrders);
@@ -152,18 +152,26 @@ export default function BasketsPage() {
   const canStartDelivery = (order: Order): boolean => {
     const baskets = order.breakdown?.baskets || [];
     return baskets.every((b) =>
-      b.services.every((s) => s.status === "completed" || s.status === "skipped")
+      b.services.every(
+        (s) => s.status === "completed" || s.status === "skipped"
+      )
     );
   };
 
   // Get the next action for a basket
   const getBasketNextAction = (
     basket: any
-  ): { label: string; action: "start" | "complete" | "ready"; serviceIndex: number } | null => {
+  ): {
+    label: string;
+    action: "start" | "complete" | "ready";
+    serviceIndex: number;
+  } | null => {
     const services = basket.services || [];
 
     // PRIORITY 1: If any service is currently in_progress, show COMPLETE button
-    const inProgressIndex = services.findIndex((s: any) => s.status === "in_progress");
+    const inProgressIndex = services.findIndex(
+      (s: any) => s.status === "in_progress"
+    );
     if (inProgressIndex >= 0) {
       return {
         label: `Complete ${services[inProgressIndex].service_name}`,
@@ -258,7 +266,8 @@ export default function BasketsPage() {
     }
   }
 
-  if (authLoading) return <div className="p-6 text-center">Loading authentication...</div>;
+  if (authLoading)
+    return <div className="p-6 text-center">Loading authentication...</div>;
 
   if (loading) return <div className="p-6 text-center">Loading orders...</div>;
 
@@ -297,8 +306,11 @@ export default function BasketsPage() {
                   {order.customers?.first_name} {order.customers?.last_name}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {countBaskets(order)} basket{countBaskets(order) !== 1 ? "s" : ""} •{" "}
-                  <span className="font-medium capitalize text-xs">{order.status.replace(/_/g, " ")}</span>
+                  {countBaskets(order)} basket
+                  {countBaskets(order) !== 1 ? "s" : ""} •{" "}
+                  <span className="font-medium capitalize text-xs">
+                    {order.status.replace(/_/g, " ")}
+                  </span>
                 </div>
               </div>
 
@@ -318,7 +330,10 @@ export default function BasketsPage() {
                             : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {order.handling.pickup.status.replace(/_/g, " ").charAt(0).toUpperCase() +
+                    {order.handling.pickup.status
+                      .replace(/_/g, " ")
+                      .charAt(0)
+                      .toUpperCase() +
                       order.handling.pickup.status.replace(/_/g, " ").slice(1)}
                   </div>
                   {order.handling.pickup.status === "pending" && (
@@ -333,7 +348,12 @@ export default function BasketsPage() {
                   {order.handling.pickup.status === "in_progress" && (
                     <button
                       onClick={() =>
-                        updateServiceStatus(order.id, null, "pickup", "complete")
+                        updateServiceStatus(
+                          order.id,
+                          null,
+                          "pickup",
+                          "complete"
+                        )
                       }
                       disabled={processingId === order.id}
                       className="px-1.5 py-0.5 bg-green-600 text-white text-xs rounded font-semibold hover:bg-green-700 disabled:bg-gray-400 shrink-0"
@@ -358,8 +378,13 @@ export default function BasketsPage() {
                               : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {order.handling.delivery.status.replace(/_/g, " ").charAt(0).toUpperCase() +
-                        order.handling.delivery.status.replace(/_/g, " ").slice(1)}
+                      {order.handling.delivery.status
+                        .replace(/_/g, " ")
+                        .charAt(0)
+                        .toUpperCase() +
+                        order.handling.delivery.status
+                          .replace(/_/g, " ")
+                          .slice(1)}
                     </div>
                     {order.handling.delivery.status === "pending" && (
                       <button
@@ -379,7 +404,12 @@ export default function BasketsPage() {
                     {order.handling.delivery.status === "in_progress" && (
                       <button
                         onClick={() =>
-                          updateServiceStatus(order.id, null, "delivery", "complete")
+                          updateServiceStatus(
+                            order.id,
+                            null,
+                            "delivery",
+                            "complete"
+                          )
                         }
                         disabled={processingId === order.id}
                         className="px-1.5 py-0.5 bg-green-600 text-white text-xs rounded font-semibold hover:bg-green-700 disabled:bg-gray-400 shrink-0"
@@ -397,7 +427,10 @@ export default function BasketsPage() {
                   const nextAction = getBasketNextAction(basket);
 
                   return (
-                    <div key={idx} className="space-y-1.5 p-2 bg-gray-50 rounded border border-gray-200">
+                    <div
+                      key={idx}
+                      className="space-y-1.5 p-2 bg-gray-50 rounded border border-gray-200"
+                    >
                       <div className="text-xs font-bold text-gray-800">
                         Basket #{basket.basket_number} • {basket.weight}kg
                       </div>
@@ -410,14 +443,23 @@ export default function BasketsPage() {
                           .sort((a: any, b: any) => {
                             const aType = (a.service_name || "").toLowerCase();
                             const bType = (b.service_name || "").toLowerCase();
-                            const sequence = ["wash", "spin", "dry", "iron", "fold"];
-                            
-                            let aIndex = -1, bIndex = -1;
+                            const sequence = [
+                              "wash",
+                              "spin",
+                              "dry",
+                              "iron",
+                              "fold",
+                            ];
+
+                            let aIndex = -1,
+                              bIndex = -1;
                             for (const svc of sequence) {
-                              if (aIndex === -1 && aType.includes(svc)) aIndex = sequence.indexOf(svc);
-                              if (bIndex === -1 && bType.includes(svc)) bIndex = sequence.indexOf(svc);
+                              if (aIndex === -1 && aType.includes(svc))
+                                aIndex = sequence.indexOf(svc);
+                              if (bIndex === -1 && bType.includes(svc))
+                                bIndex = sequence.indexOf(svc);
                             }
-                            
+
                             if (aIndex === -1) aIndex = 999;
                             if (bIndex === -1) bIndex = 999;
                             return aIndex - bIndex;
@@ -429,7 +471,11 @@ export default function BasketsPage() {
                             const isActive = service.status === "in_progress";
                             const isPending = service.status === "pending";
 
-                            const statusIcon = isDone ? "✓" : isActive ? "●" : "◯";
+                            const statusIcon = isDone
+                              ? "✓"
+                              : isActive
+                                ? "●"
+                                : "◯";
                             const statusColor = isDone
                               ? "text-green-700"
                               : isActive
@@ -448,15 +494,23 @@ export default function BasketsPage() {
                                 }`}
                               >
                                 <div className="flex-1">
-                                  <span className="font-medium">{service.service_name}</span>
+                                  <span className="font-medium">
+                                    {service.service_name}
+                                  </span>
                                   {service.is_premium && (
-                                    <span className="ml-1 text-yellow-600 font-bold">★</span>
+                                    <span className="ml-1 text-yellow-600 font-bold">
+                                      ★
+                                    </span>
                                   )}
                                   {service.duration_in_minutes && (
-                                    <span className="ml-1 text-gray-500">({service.duration_in_minutes}m)</span>
+                                    <span className="ml-1 text-gray-500">
+                                      ({service.duration_in_minutes}m)
+                                    </span>
                                   )}
                                 </div>
-                                <span className={`text-lg font-bold ml-1 ${statusColor}`}>
+                                <span
+                                  className={`text-lg font-bold ml-1 ${statusColor}`}
+                                >
                                   {statusIcon}
                                 </span>
                               </div>
@@ -467,7 +521,9 @@ export default function BasketsPage() {
                       {/* Status Summary */}
                       <div className="text-xs text-gray-600 px-1">
                         {(() => {
-                          const completed = basket.services.filter(s => s.status === "completed").length;
+                          const completed = basket.services.filter(
+                            (s) => s.status === "completed"
+                          ).length;
                           const total = basket.services.length;
                           return `${completed}/${total} complete`;
                         })()}
@@ -477,7 +533,10 @@ export default function BasketsPage() {
                       {nextAction ? (
                         <button
                           onClick={() => {
-                            if (nextAction.action === "start" || nextAction.action === "complete") {
+                            if (
+                              nextAction.action === "start" ||
+                              nextAction.action === "complete"
+                            ) {
                               updateServiceStatus(
                                 order.id,
                                 basket.basket_number,
@@ -531,7 +590,9 @@ export default function BasketsPage() {
             <p className="text-gray-700 mb-6">{confirmModal.message}</p>
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onClick={() =>
+                  setConfirmModal({ ...confirmModal, isOpen: false })
+                }
                 className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm"
               >
                 Cancel

@@ -40,7 +40,7 @@ export const buildHandlingJSON = (
       latitude: null,  // Can be set by rider later with coordinates
       longitude: null,
       notes: instructions || null,
-      status: handlingState.pickup ? 'pending' : 'skipped',
+      status: (handlingState.pickup && handlingState.pickupAddress) ? 'pending' : 'skipped',
       started_at: null,
       completed_at: null,
       completed_by: null,
@@ -51,7 +51,7 @@ export const buildHandlingJSON = (
       latitude: null,
       longitude: null,
       notes: instructions || null,
-      status: handlingState.deliver ? 'pending' : 'skipped',
+      status: (handlingState.deliver && handlingState.deliveryAddress) ? 'pending' : 'skipped',
       started_at: null,
       completed_at: null,
       completed_by: null,
@@ -166,7 +166,10 @@ export const buildBreakdownBaskets = (
   baskets: Basket[],
   services: LaundryService[]
 ): OrderBasket[] => {
-  return baskets.map((basket) => {
+  // Filter out empty baskets (weightKg === 0)
+  const nonEmptyBaskets = baskets.filter((b) => b.weightKg > 0);
+
+  return nonEmptyBaskets.map((basket) => {
     const basketServices: BasketService[] = [];
     let basketTotal = 0;
 

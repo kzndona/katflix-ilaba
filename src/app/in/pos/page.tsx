@@ -251,6 +251,7 @@ export default function POSPage() {
                 }
                 onClick={async () => {
                   await pos.saveOrder();
+                  pos.setShowConfirm(false);
                 }}
               >
                 {pos.isProcessing ? "Processing..." : "Process Payment & Save"}

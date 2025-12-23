@@ -288,7 +288,7 @@ export interface UpdateHandlingStatusResponse {
 export interface HandlingState {
   pickup: boolean;
   deliver: boolean;
-  pickupAddress: string;
+  pickupAddress: string | null;
   deliveryAddress: string;
   deliveryFee: number;
   courierRef: string;
