@@ -70,19 +70,6 @@ export default function BasketsPage() {
   const [staffId, setStaffId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    action: () => Promise<void>;
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    action: async () => {},
-  });
-
   // Get authenticated staff user
   useEffect(() => {
     async function getAuthUser() {
@@ -158,17 +145,38 @@ export default function BasketsPage() {
     );
   };
 
-  // Get the next action for a basket
-  const getBasketNextAction = (
+  // Get the next pending item in the timeline (pickup → services → delivery)
+  const getTimelineNextAction = (
+    order: Order,
     basket: any
   ): {
     label: string;
-    action: "start" | "complete" | "ready";
-    serviceIndex: number;
+    action: "start" | "complete";
+    type: "pickup" | "service" | "delivery"; // what we're acting on
+    serviceIndex?: number;
+    basketNumber?: number;
   } | null => {
+    // STEP 1: Check if pickup is pending
+    if (order.handling.pickup.status === "pending") {
+      return {
+        label: "Start Pickup",
+        action: "start",
+        type: "pickup",
+      };
+    }
+
+    if (order.handling.pickup.status === "in_progress") {
+      return {
+        label: "Complete Pickup",
+        action: "complete",
+        type: "pickup",
+      };
+    }
+
+    // STEP 2: If pickup is done (completed/skipped), check basket services
     const services = basket.services || [];
 
-    // PRIORITY 1: If any service is currently in_progress, show COMPLETE button
+    // Check for in-progress service
     const inProgressIndex = services.findIndex(
       (s: any) => s.status === "in_progress"
     );
@@ -176,54 +184,48 @@ export default function BasketsPage() {
       return {
         label: `Complete ${services[inProgressIndex].service_name}`,
         action: "complete",
+        type: "service",
         serviceIndex: inProgressIndex,
+        basketNumber: basket.basket_number,
       };
     }
 
-    // PRIORITY 2: If first pending exists and no in_progress before it, show START button
+    // Check for pending service
     const pendingIndex = services.findIndex((s: any) => s.status === "pending");
     if (pendingIndex >= 0) {
       return {
         label: `Start ${services[pendingIndex].service_name}`,
         action: "start",
+        type: "service",
         serviceIndex: pendingIndex,
+        basketNumber: basket.basket_number,
       };
     }
 
-    // PRIORITY 3: All services done
-    return {
-      label: "Done",
-      action: "ready",
-      serviceIndex: -1,
-    };
-  };
+    // STEP 3: If all services done and delivery available
+    if (
+      order.handling.delivery.address &&
+      order.handling.delivery.status === "pending"
+    ) {
+      return {
+        label: "Start Delivery",
+        action: "start",
+        type: "delivery",
+      };
+    }
 
-  // Handle pickup confirmation with multi-basket warning
-  const handlePickupConfirmation = (order: Order) => {
-    const basketCount = countBaskets(order);
-    setConfirmModal({
-      isOpen: true,
-      title: "Confirm Pickup",
-      message: `Complete pickup for ${basketCount} basket${basketCount > 1 ? "s" : ""} in this order?`,
-      action: async () => {
-        await updateServiceStatus(order.id, null, "pickup", "complete");
-        setConfirmModal({ ...confirmModal, isOpen: false });
-      },
-    });
-  };
+    if (
+      order.handling.delivery.address &&
+      order.handling.delivery.status === "in_progress"
+    ) {
+      return {
+        label: "Complete Delivery",
+        action: "complete",
+        type: "delivery",
+      };
+    }
 
-  // Handle delivery confirmation with multi-basket warning
-  const handleDeliveryConfirmation = (order: Order) => {
-    const basketCount = countBaskets(order);
-    setConfirmModal({
-      isOpen: true,
-      title: "Confirm Delivery",
-      message: `Confirm that all ${basketCount} basket${basketCount > 1 ? "s" : ""} are ready for delivery?`,
-      action: async () => {
-        await updateServiceStatus(order.id, null, "delivery", "start");
-        setConfirmModal({ ...confirmModal, isOpen: false });
-      },
-    });
+    return null;
   };
 
   // Unified API call for service/handling updates
@@ -314,117 +316,10 @@ export default function BasketsPage() {
                 </div>
               </div>
 
-              {/* Handling Services - Compact */}
-              <div className="space-y-1 mb-2 pb-2 border-b border-gray-200 text-xs">
-                {/* Pickup */}
-                <div className="flex items-center gap-1">
-                  <div className="font-semibold w-14 shrink-0">Pickup</div>
-                  <div
-                    className={`flex-1 px-1.5 py-0.5 rounded text-xs font-medium ${
-                      order.handling.pickup.status === "completed"
-                        ? "bg-green-100 text-green-800"
-                        : order.handling.pickup.status === "in_progress"
-                          ? "bg-blue-100 text-blue-800"
-                          : order.handling.pickup.status === "skipped"
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {order.handling.pickup.status
-                      .replace(/_/g, " ")
-                      .charAt(0)
-                      .toUpperCase() +
-                      order.handling.pickup.status.replace(/_/g, " ").slice(1)}
-                  </div>
-                  {order.handling.pickup.status === "pending" && (
-                    <button
-                      onClick={() => handlePickupConfirmation(order)}
-                      disabled={processingId === order.id}
-                      className="px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded font-semibold hover:bg-blue-700 disabled:bg-gray-400 shrink-0"
-                    >
-                      Go
-                    </button>
-                  )}
-                  {order.handling.pickup.status === "in_progress" && (
-                    <button
-                      onClick={() =>
-                        updateServiceStatus(
-                          order.id,
-                          null,
-                          "pickup",
-                          "complete"
-                        )
-                      }
-                      disabled={processingId === order.id}
-                      className="px-1.5 py-0.5 bg-green-600 text-white text-xs rounded font-semibold hover:bg-green-700 disabled:bg-gray-400 shrink-0"
-                    >
-                      Done
-                    </button>
-                  )}
-                </div>
-
-                {/* Delivery */}
-                {order.handling.delivery.address && (
-                  <div className="flex items-center gap-1">
-                    <div className="font-semibold w-14 shrink-0">Delivery</div>
-                    <div
-                      className={`flex-1 px-1.5 py-0.5 rounded text-xs font-medium ${
-                        order.handling.delivery.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : order.handling.delivery.status === "in_progress"
-                            ? "bg-blue-100 text-blue-800"
-                            : order.handling.delivery.status === "skipped"
-                              ? "bg-gray-100 text-gray-600"
-                              : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {order.handling.delivery.status
-                        .replace(/_/g, " ")
-                        .charAt(0)
-                        .toUpperCase() +
-                        order.handling.delivery.status
-                          .replace(/_/g, " ")
-                          .slice(1)}
-                    </div>
-                    {order.handling.delivery.status === "pending" && (
-                      <button
-                        onClick={() => handleDeliveryConfirmation(order)}
-                        disabled={
-                          !canStartDelivery(order) || processingId === order.id
-                        }
-                        className={`px-1.5 py-0.5 text-xs rounded font-semibold shrink-0 ${
-                          !canStartDelivery(order)
-                            ? "bg-yellow-300 text-yellow-900 cursor-not-allowed"
-                            : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
-                        }`}
-                      >
-                        {!canStartDelivery(order) ? "..." : "Go"}
-                      </button>
-                    )}
-                    {order.handling.delivery.status === "in_progress" && (
-                      <button
-                        onClick={() =>
-                          updateServiceStatus(
-                            order.id,
-                            null,
-                            "delivery",
-                            "complete"
-                          )
-                        }
-                        disabled={processingId === order.id}
-                        className="px-1.5 py-0.5 bg-green-600 text-white text-xs rounded font-semibold hover:bg-green-700 disabled:bg-gray-400 shrink-0"
-                      >
-                        Done
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Baskets - Expanded */}
+              {/* Baskets - Expanded with Unified Timeline */}
               <div className="space-y-2 flex-1">
                 {(order.breakdown?.baskets || []).map((basket, idx) => {
-                  const nextAction = getBasketNextAction(basket);
+                  const nextAction = getTimelineNextAction(order, basket);
 
                   return (
                     <div
@@ -435,9 +330,38 @@ export default function BasketsPage() {
                         Basket #{basket.basket_number} • {basket.weight}kg
                       </div>
 
-                      {/* Services - Detailed List */}
+                      {/* Unified Timeline - Pickup → Services → Delivery */}
                       <div className="space-y-1 bg-white p-1.5 rounded">
-                        {/* Sort services by sequence order */}
+                        {/* PICKUP - Only show if pending or in progress */}
+                        {(order.handling.pickup.status === "pending" ||
+                          order.handling.pickup.status === "in_progress") &&
+                          (() => {
+                            const isActive =
+                              order.handling.pickup.status === "in_progress";
+                            const statusIcon = isActive ? "●" : "◯";
+                            const statusColor = isActive
+                              ? "text-blue-700"
+                              : "text-gray-500";
+
+                            return (
+                              <div
+                                className={`flex items-center justify-between px-1.5 py-1 rounded text-xs ${
+                                  isActive ? "bg-blue-50" : "bg-gray-50"
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <span className="font-medium">Pickup</span>
+                                </div>
+                                <span
+                                  className={`text-lg font-bold ml-1 ${statusColor}`}
+                                >
+                                  {statusIcon}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                        {/* BASKET SERVICES - Sorted by sequence */}
                         {basket.services
                           .slice()
                           .sort((a: any, b: any) => {
@@ -468,7 +392,8 @@ export default function BasketsPage() {
                             const isDone =
                               service.status === "completed" ||
                               service.status === "skipped";
-                            const isActive = service.status === "in_progress";
+                            const isActive =
+                              service.status === "in_progress";
                             const isPending = service.status === "pending";
 
                             const statusIcon = isDone
@@ -502,11 +427,6 @@ export default function BasketsPage() {
                                       ★
                                     </span>
                                   )}
-                                  {service.duration_in_minutes && (
-                                    <span className="ml-1 text-gray-500">
-                                      ({service.duration_in_minutes}m)
-                                    </span>
-                                  )}
                                 </div>
                                 <span
                                   className={`text-lg font-bold ml-1 ${statusColor}`}
@@ -516,61 +436,79 @@ export default function BasketsPage() {
                               </div>
                             );
                           })}
+
+                        {/* DELIVERY - Only show if pending or in progress */}
+                        {(order.handling.delivery.address &&
+                          (order.handling.delivery.status === "pending" ||
+                            order.handling.delivery.status === "in_progress")) &&
+                          (() => {
+                            const isActive =
+                              order.handling.delivery.status === "in_progress";
+                            const statusIcon = isActive ? "●" : "◯";
+                            const statusColor = isActive
+                              ? "text-blue-700"
+                              : "text-gray-500";
+
+                            return (
+                              <div
+                                className={`flex items-center justify-between px-1.5 py-1 rounded text-xs ${
+                                  isActive ? "bg-blue-50" : "bg-gray-50"
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <span className="font-medium">Delivery</span>
+                                </div>
+                                <span
+                                  className={`text-lg font-bold ml-1 ${statusColor}`}
+                                >
+                                  {statusIcon}
+                                </span>
+                              </div>
+                            );
+                          })()}
                       </div>
 
-                      {/* Status Summary */}
-                      <div className="text-xs text-gray-600 px-1">
-                        {(() => {
-                          const completed = basket.services.filter(
-                            (s) => s.status === "completed"
-                          ).length;
-                          const total = basket.services.length;
-                          return `${completed}/${total} complete`;
-                        })()}
-                      </div>
-
-                      {/* Action button */}
+                      {/* Single Action Button */}
                       {nextAction ? (
                         <button
                           onClick={() => {
-                            if (
-                              nextAction.action === "start" ||
-                              nextAction.action === "complete"
-                            ) {
+                            if (nextAction.type === "pickup") {
                               updateServiceStatus(
                                 order.id,
-                                basket.basket_number,
                                 null,
+                                "pickup",
+                                nextAction.action
+                              );
+                            } else if (nextAction.type === "service") {
+                              updateServiceStatus(
+                                order.id,
+                                nextAction.basketNumber || basket.basket_number,
+                                null,
+                                nextAction.action
+                              );
+                            } else if (nextAction.type === "delivery") {
+                              updateServiceStatus(
+                                order.id,
+                                null,
+                                "delivery",
                                 nextAction.action
                               );
                             }
                           }}
-                          disabled={
-                            processingId === order.id ||
-                            (order.handling.pickup.status !== "completed" &&
-                              order.handling.pickup.status !== "skipped")
-                          }
+                          disabled={processingId === order.id}
                           className={`w-full px-3 py-2 rounded text-sm font-bold transition-colors ${
                             processingId === order.id
                               ? "bg-gray-400 text-white cursor-wait"
-                              : order.handling.pickup.status !== "completed" &&
-                                  order.handling.pickup.status !== "skipped"
-                                ? "bg-yellow-300 text-yellow-900 cursor-not-allowed border border-yellow-400"
-                                : nextAction.action === "ready"
-                                  ? "bg-green-100 text-green-800 cursor-default border border-green-300"
-                                  : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
+                              : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
                           }`}
                         >
                           {processingId === order.id
                             ? "Processing..."
-                            : order.handling.pickup.status !== "completed" &&
-                                order.handling.pickup.status !== "skipped"
-                              ? "Complete Pickup First"
-                              : nextAction.label}
+                            : nextAction.label}
                         </button>
                       ) : (
-                        <div className="text-xs text-gray-500 text-center py-2 px-2 bg-yellow-50 rounded border border-yellow-200">
-                          No pending action (check basket status above)
+                        <div className="text-xs text-gray-500 text-center py-2 px-2 bg-green-50 rounded border border-green-200">
+                          Order Complete ✓
                         </div>
                       )}
                     </div>
@@ -582,31 +520,6 @@ export default function BasketsPage() {
         </div>
       )}
 
-      {/* Confirmation Modal */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
-            <h3 className="text-lg font-bold mb-4">{confirmModal.title}</h3>
-            <p className="text-gray-700 mb-6">{confirmModal.message}</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() =>
-                  setConfirmModal({ ...confirmModal, isOpen: false })
-                }
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmModal.action}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

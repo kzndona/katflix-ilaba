@@ -527,8 +527,8 @@ export function usePOSState() {
         cashier_id: cashierId,
         status:
           computeReceipt.basketLines.length > 0 ||
-          computeReceipt.handling.pickup.status === 'pending' ||
-          computeReceipt.handling.delivery.status === 'pending'
+          computeReceipt.handling.pickup.status === "pending" ||
+          computeReceipt.handling.delivery.status === "pending"
             ? "processing"
             : "completed",
         total_amount: computeReceipt.total,
@@ -554,16 +554,12 @@ export function usePOSState() {
 
       const data = await res.json();
       if (!data.success || !data.order?.id) {
-        alert("Order saved but response invalid. Please check.");
         setIsProcessing(false);
         return null;
       }
 
       const orderId = data.order.id;
       console.log("✓ Order created:", orderId);
-      alert(
-        `Order saved successfully!\nOrder ID: ${orderId}\nTotal: ₱${computeReceipt.total.toFixed(2)}`
-      );
 
       // RESET POS
       resetPOS();
@@ -571,7 +567,6 @@ export function usePOSState() {
       return orderId;
     } catch (err) {
       console.error("saveOrder error:", err);
-      alert("Unexpected error while saving order. Check console.");
       return null;
     } finally {
       setIsProcessing(false);
