@@ -74,6 +74,7 @@ export default function Navbar() {
   const goToStaff = () => router.push("/in/accounts/staff");
   const goToCustomer = () => router.push("/in/accounts/customers");
   const goToSettings = () => router.push("/in/settings");
+  const goToAnalytics = () => router.push("/in/analytics");
   const signOut = () =>
     supabase.auth
       .signOut()
@@ -95,21 +96,21 @@ export default function Navbar() {
 
   if (loading) {
     return (
-      <nav className="bg-blue-50 shadow px-6 py-4">
-        <div className="text-gray-600">Loading...</div>
+      <nav className="bg-slate-900 border-b border-slate-700 shadow-lg px-6 py-4">
+        <div className="text-slate-400">Loading...</div>
       </nav>
     );
   }
 
   return (
-    <nav className="bg-blue-50 shadow px-6 py-4 flex justify-between items-center">
+    <nav className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-lg px-6 py-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40 m-0">
       {/* Left Navigation */}
       <div className="flex items-center space-x-6">
         {/* POS - Cashier only */}
         {canAccessPOS && (
           <button
             onClick={goToPOS}
-            className="text-gray-700 font-medium hover:text-blue-600"
+            className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
             POS
           </button>
@@ -119,7 +120,7 @@ export default function Navbar() {
         {canAccessOrders && (
           <button
             onClick={goToOrders}
-            className="text-gray-700 font-medium hover:text-blue-600"
+            className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
             Orders
           </button>
@@ -129,7 +130,7 @@ export default function Navbar() {
         {canAccessBaskets && (
           <button
             onClick={goToBaskets}
-            className="text-gray-700 font-medium hover:text-blue-600"
+            className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
             Baskets
           </button>
@@ -142,29 +143,29 @@ export default function Navbar() {
             onMouseEnter={() => setManageOpen(true)}
             onMouseLeave={() => setManageOpen(false)}
           >
-            <button className="text-gray-700 font-medium hover:text-blue-600">
+            <button className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50">
               Manage
             </button>
             <div
-              className={`absolute top-full left-0 w-40 bg-white border rounded shadow-lg z-10 flex flex-col ${
+              className={`absolute top-full left-0 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 flex flex-col ${
                 manageOpen ? "block" : "hidden"
               }`}
             >
               <button
                 onClick={goToProducts}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
               >
                 Products
               </button>
               {/* <button
                 onClick={goToMachines}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
               >
                 Machines
               </button> */}
               <button
                 onClick={goToServices}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
               >
                 Services
               </button>
@@ -179,40 +180,50 @@ export default function Navbar() {
             onMouseEnter={() => setAccountsOpen(true)}
             onMouseLeave={() => setAccountsOpen(false)}
           >
-            <button className="text-gray-700 font-medium hover:text-blue-600">
+            <button className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50">
               Accounts
             </button>
             <div
-              className={`absolute top-full left-0 w-40 bg-white border rounded shadow-lg z-10 flex flex-col ${
+              className={`absolute top-full left-0 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 flex flex-col ${
                 accountsOpen ? "block" : "hidden"
               }`}
             >
               <button
                 onClick={goToStaff}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
               >
                 Staff
               </button>
               <button
                 onClick={goToCustomer}
-                className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
               >
                 Customers
               </button>
             </div>
           </div>
         )}
+
+        {/* Analytics - Admin only */}
+        {canAccessAccounts && (
+          <button
+            onClick={goToAnalytics}
+            className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50"
+          >
+            Analytics
+          </button>
+        )}
       </div>
 
       {/* Right Navigation */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button
           onClick={goToSettings}
-          className="p-2 hover:bg-blue-100 rounded-lg transition"
+          className="p-2 hover:bg-slate-700 rounded-lg transition text-slate-300 hover:text-blue-400"
           title="Settings"
         >
           <svg
-            className="w-5 h-5 text-gray-700"
+            className="w-5 h-5"
             fill="currentColor"
             viewBox="0 0 24 24"
           >
@@ -221,7 +232,7 @@ export default function Navbar() {
         </button>
         <button
           onClick={signOut}
-          className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-white"
+          className="px-4 py-2 border border-blue-500 text-blue-400 rounded-lg hover:bg-blue-500/10 transition font-medium"
         >
           Sign Out
         </button>

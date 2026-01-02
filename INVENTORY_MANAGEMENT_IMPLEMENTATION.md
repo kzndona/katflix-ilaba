@@ -1,6 +1,7 @@
 # Inventory Management System Implementation
 
 ## Overview
+
 Complete inventory tracking system for POS orders with real-time stock validation, deduction, and automatic restoration on cancellation.
 
 ## Changes Made
@@ -48,6 +49,7 @@ Complete inventory tracking system for POS orders with real-time stock validatio
 ```
 
 **Stock Check Response (on failure):**
+
 ```json
 {
   "success": false,
@@ -148,6 +150,7 @@ Order cancelled, inventory restored ✓
 ## Database Transactions Created
 
 ### On Order Creation
+
 ```
 product_transactions record:
 {
@@ -160,6 +163,7 @@ product_transactions record:
 ```
 
 ### On Order Cancellation
+
 ```
 product_transactions record:
 {
@@ -177,10 +181,10 @@ product_transactions record:
 
 Scenario: Create order for 5 detergent, then cancel
 
-| ID | Product | Order | Type | Qty | Reason |
-|---|---------|-------|------|-----|--------|
-| 1 | detergent-id | order-1 | consume | 5 | Order {order-1}: 5x Detergent |
-| 2 | detergent-id | order-1 | add | 5 | Cancelled order {order-1}: 5x Detergent |
+| ID  | Product      | Order   | Type    | Qty | Reason                                  |
+| --- | ------------ | ------- | ------- | --- | --------------------------------------- |
+| 1   | detergent-id | order-1 | consume | 5   | Order {order-1}: 5x Detergent           |
+| 2   | detergent-id | order-1 | add     | 5   | Cancelled order {order-1}: 5x Detergent |
 
 **Result:** Quantity unchanged (5-5), but complete history maintained
 
@@ -189,17 +193,20 @@ Scenario: Create order for 5 detergent, then cancel
 ## Error Handling
 
 **Stock Validation Fails:**
+
 - Order not created
 - User sees list of items with insufficient stock
 - User can adjust and retry
 
 **Inventory Deduction Fails (partial):**
+
 - Order is still created (business requirement)
 - Warning logged to console
 - Partial deductions recorded
 - Operator can manually fix later
 
 **Cancellation Restoration Fails (partial):**
+
 - Order is still deleted
 - Warning logged to console
 - Partial restorations recorded

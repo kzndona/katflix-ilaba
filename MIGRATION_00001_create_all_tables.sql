@@ -66,16 +66,26 @@ CREATE INDEX idx_staff_roles_role_id ON staff_roles(role_id);
 CREATE INDEX idx_staff_roles_staff_id ON staff_roles(staff_id);
 
 -- Products table
-CREATE TABLE public.products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  item_name TEXT NOT NULL,
-  unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (unit_price >= 0),
-  quantity NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-  reorder_level NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (reorder_level >= 0),
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+create table public.products (
+  id uuid not null default gen_random_uuid (),
+  item_name text not null,
+  unit_price numeric(10, 2) not null default 0.00,
+  quantity numeric(10, 2) not null default 0,
+  reorder_level numeric(10, 2) not null default 0,
+  is_active boolean null default true,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  last_updated timestamp without time zone null default CURRENT_TIMESTAMP,
+  unit_cost numeric(10, 2) null default 0.00,
+  constraint products_pkey primary key (id),
+  constraint products_quantity_check check ((quantity >= (0)::numeric)),
+  constraint products_reorder_level_check check ((reorder_level >= (0)::numeric)),
+  constraint products_unit_cost_check check ((unit_cost >= (0)::numeric)),
+  constraint products_unit_price_check check ((unit_price >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_products_is_active on public.products using btree (is_active) TABLESPACE pg_default;
+create index IF not exists idx_products_item_name on public.products using btree (item_name) TABLESPACE pg_default;
+create index IF not exists idx_products_unit_cost on public.products using btree (unit_cost) TABLESPACE pg_default;
 
 CREATE INDEX idx_products_is_active ON products(is_active);
 CREATE INDEX idx_products_item_name ON products(item_name);

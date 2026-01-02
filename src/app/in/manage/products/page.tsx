@@ -269,7 +269,9 @@ export default function ProductsPage() {
       setSelectedProductId("");
     } catch (err) {
       console.error("Quantity adjustment failed:", err);
-      setErrorMsg(err instanceof Error ? err.message : "Failed to adjust quantity");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to adjust quantity"
+      );
     } finally {
       setSaving(false);
     }

@@ -138,10 +138,22 @@ export async function updateSession(request: NextRequest) {
     }
 
     // ADMIN - Can access everything, so no restrictions
+    // But protect /in/analytics for admin only
+    if (!roles.includes('admin') && request.nextUrl.pathname.startsWith('/in/analytics')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/in/orders' // or wherever appropriate home page is
+      console.log(`PROXY: Non-admin unauthorized access to analytics, redirecting`)
+      return NextResponse.redirect(url)
+    }
 
     // API-level access control
     // Only admin can access /api/staff
     if (!roles.includes('admin') && request.nextUrl.pathname.startsWith('/api/staff')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Only admin can access /api/analytics
+    if (!roles.includes('admin') && request.nextUrl.pathname.startsWith('/api/analytics')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

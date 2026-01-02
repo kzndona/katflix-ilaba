@@ -49,6 +49,7 @@ breakdown: {
             product_id, // products.id FK
             product_name,
             quantity,
+            unit_cost, // snapshot at order time
             unit_price, // snapshot at order time
             subtotal,
 
