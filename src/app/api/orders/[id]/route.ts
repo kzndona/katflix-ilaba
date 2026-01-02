@@ -7,15 +7,17 @@ interface Params {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Params }
+  { params }: { params: Promise<Params> }
 ) {
   try {
+    const { id } = await params;
+    
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const orderId = params.id;
+    const orderId = id;
 
     // Fetch order with customer details
     const { data, error } = await supabase
