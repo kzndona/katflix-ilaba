@@ -267,10 +267,7 @@ export default function ServicesPage() {
               isNewService={!editing.id}
             />
           ) : selected ? (
-            <DetailsPane 
-              service={selected}
-              onEdit={() => openEdit(selected)}
-            />
+            <DetailsPane service={selected} onEdit={() => openEdit(selected)} />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <div className="text-center">
@@ -336,7 +333,9 @@ function DetailsPane({
         )}
         {service.base_duration_minutes && (
           <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
-            <div className="text-sm text-gray-600 font-medium">Base Duration</div>
+            <div className="text-sm text-gray-600 font-medium">
+              Base Duration
+            </div>
             <div className="text-3xl font-bold text-purple-900 mt-2">
               {service.base_duration_minutes}
             </div>
@@ -348,7 +347,9 @@ function DetailsPane({
       {/* Description */}
       {service.description && (
         <div className="mb-8 bg-gray-50 rounded-lg p-6 border border-gray-200">
-          <div className="text-sm font-medium text-gray-700 mb-3">Description</div>
+          <div className="text-sm font-medium text-gray-700 mb-3">
+            Description
+          </div>
           <p className="text-gray-700 text-sm leading-relaxed">
             {service.description}
           </p>
@@ -388,7 +389,15 @@ function EditPane({
   onCancel: () => void;
   isNewService: boolean;
 }) {
-  const serviceTypes = ["wash", "spin", "dry", "iron", "fold", "pickup", "delivery"];
+  const serviceTypes = [
+    "wash",
+    "spin",
+    "dry",
+    "iron",
+    "fold",
+    "pickup",
+    "delivery",
+  ];
 
   return (
     <div className="p-8 h-full flex flex-col">
@@ -454,7 +463,10 @@ function EditPane({
               type="number"
               value={service.base_duration_minutes ?? ""}
               onChange={(e) =>
-                updateField("base_duration_minutes", e.target.value === "" ? "" : e.target.value)
+                updateField(
+                  "base_duration_minutes",
+                  e.target.value === "" ? "" : e.target.value
+                )
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -468,7 +480,10 @@ function EditPane({
               step="0.01"
               value={service.rate_per_kg ?? ""}
               onChange={(e) =>
-                updateField("rate_per_kg", e.target.value === "" ? "" : e.target.value)
+                updateField(
+                  "rate_per_kg",
+                  e.target.value === "" ? "" : e.target.value
+                )
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -483,7 +498,10 @@ function EditPane({
             onChange={(e) => updateField("is_active", e.target.checked)}
             className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
           />
-          <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="is_active"
+            className="text-sm font-medium text-gray-700"
+          >
             Active
           </label>
         </div>

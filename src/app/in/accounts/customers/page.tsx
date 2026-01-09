@@ -340,9 +340,7 @@ function DetailsPane({
             <h1 className="text-4xl font-bold text-gray-900">
               {customer.first_name} {customer.last_name}
             </h1>
-            <p className="text-gray-500 mt-2">
-              Customer ID: {customer.id}
-            </p>
+            <p className="text-gray-500 mt-2">Customer ID: {customer.id}</p>
           </div>
           <button
             onClick={onEdit}
@@ -373,7 +371,9 @@ function DetailsPane({
       {/* Loyalty Points */}
       {customer.loyalty_points !== null && customer.loyalty_points > 0 && (
         <div className="bg-linear-to-br from-yellow-50 to-amber-100 rounded-lg p-6 border border-amber-200 mb-8">
-          <div className="text-sm text-gray-600 font-medium">Loyalty Points</div>
+          <div className="text-sm text-gray-600 font-medium">
+            Loyalty Points
+          </div>
           <div className="text-3xl font-bold text-amber-900 mt-2">
             ⭐ {customer.loyalty_points}
           </div>
@@ -382,7 +382,9 @@ function DetailsPane({
 
       {/* Personal Information Grid */}
       <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Personal Information
+        </h3>
         <div className="grid grid-cols-2 gap-6">
           <DetailField label="First Name" value={customer.first_name} />
           <DetailField

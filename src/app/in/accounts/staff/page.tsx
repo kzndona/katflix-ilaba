@@ -1,12 +1,12 @@
 /**
  * Staff Management Page - Accounts Module
- * 
+ *
  * Provides a two-panel interface for managing laundry staff members including:
  * - Staff list with real-time search by name
  * - Detailed view with role badges, contact information, and personal details
  * - Create, edit, and delete staff with validation
  * - Role assignment (admin, cashier, attendant, rider, cashier_attendant)
- * 
+ *
  * Architecture Notes:
  * - LEFT PANE: Scrollable staff list with search (3-column grid = 1 col)
  * - RIGHT PANE: Details view or edit form (3-column grid = 2 cols)
@@ -346,12 +346,12 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
                 staff.role === "admin"
                   ? "bg-red-100 text-red-700"
                   : staff.role === "cashier"
-                  ? "bg-blue-100 text-blue-700"
-                  : staff.role === "attendant"
-                  ? "bg-green-100 text-green-700"
-                  : staff.role === "rider"
-                  ? "bg-purple-100 text-purple-700"
-                  : "bg-yellow-100 text-yellow-700"
+                    ? "bg-blue-100 text-blue-700"
+                    : staff.role === "attendant"
+                      ? "bg-green-100 text-green-700"
+                      : staff.role === "rider"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-yellow-100 text-yellow-700"
               }`}
             >
               {staff.role}
@@ -439,15 +439,21 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
         </div>
 
         {/* Account Status Card - Shows active/inactive state with color coding */}
-        <div className={`p-4 rounded-lg border ${
-          staff.is_active
-            ? "bg-green-50 border-green-200"
-            : "bg-red-50 border-red-200"
-        }`}>
+        <div
+          className={`p-4 rounded-lg border ${
+            staff.is_active
+              ? "bg-green-50 border-green-200"
+              : "bg-red-50 border-red-200"
+          }`}
+        >
           <div className="text-sm">
             <span className="font-medium text-gray-700">Account Status: </span>
             <span
-              className={staff.is_active ? "text-green-700 font-semibold" : "text-red-700 font-semibold"}
+              className={
+                staff.is_active
+                  ? "text-green-700 font-semibold"
+                  : "text-red-700 font-semibold"
+              }
             >
               {staff.is_active ? "✓ Active" : "✕ Inactive"}
             </span>

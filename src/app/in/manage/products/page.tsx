@@ -340,7 +340,9 @@ export default function ProductsPage() {
                         : "hover:bg-gray-50"
                     }`}
                   >
-                    <div className="font-medium text-sm">{product.item_name}</div>
+                    <div className="font-medium text-sm">
+                      {product.item_name}
+                    </div>
                     <div className="text-xs text-gray-500 mt-1">
                       ₱{product.unit_price}
                     </div>
@@ -384,7 +386,7 @@ export default function ProductsPage() {
               isNewProduct={!editing.id}
             />
           ) : selected ? (
-            <DetailsPane 
+            <DetailsPane
               product={selected}
               onEdit={() => openEdit(selected)}
               onAdjustQuantity={openQuantityModal}
@@ -404,7 +406,9 @@ export default function ProductsPage() {
       {quantityModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 w-[480px] rounded-lg shadow-lg space-y-4">
-            <div className="text-lg font-semibold text-gray-900">Adjust Product Quantity</div>
+            <div className="text-lg font-semibold text-gray-900">
+              Adjust Product Quantity
+            </div>
 
             {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
 
@@ -430,7 +434,9 @@ export default function ProductsPage() {
 
               {/* Add/Subtract Toggle */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1 text-gray-700">Action</label>
+                <label className="text-sm font-medium mb-1 text-gray-700">
+                  Action
+                </label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setAdjustmentType("add")}
@@ -457,7 +463,9 @@ export default function ProductsPage() {
 
               {/* Amount Input */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1 text-gray-700">Amount</label>
+                <label className="text-sm font-medium mb-1 text-gray-700">
+                  Amount
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -475,10 +483,14 @@ export default function ProductsPage() {
               {/* Preview */}
               {selectedProductId && quantityAdjustment && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-medium text-blue-900">Preview:</div>
+                  <div className="text-sm font-medium text-blue-900">
+                    Preview:
+                  </div>
                   <div className="text-sm text-blue-700 mt-1">
                     {(() => {
-                      const product = rows.find((r) => r.id === selectedProductId);
+                      const product = rows.find(
+                        (r) => r.id === selectedProductId
+                      );
                       if (!product) return "";
                       const current = Number(product.quantity);
                       const amount = Number(quantityAdjustment);
@@ -542,7 +554,9 @@ function DetailsPane({
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">{product.item_name}</h1>
+            <h1 className="text-4xl font-bold text-gray-900">
+              {product.item_name}
+            </h1>
             <p className="text-gray-500 mt-1">Product ID: {product.id}</p>
           </div>
           <span
@@ -582,19 +596,27 @@ function DetailsPane({
 
       {/* Stock Info */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className={`rounded-lg p-6 border-2 ${
-          isLowStock
-            ? "bg-orange-50 border-orange-300"
-            : "bg-gray-50 border-gray-200"
-        }`}>
-          <div className="text-sm text-gray-600 font-medium">Current Quantity</div>
-          <div className={`text-3xl font-bold mt-2 ${
-            isLowStock ? "text-orange-900" : "text-gray-900"
-          }`}>
+        <div
+          className={`rounded-lg p-6 border-2 ${
+            isLowStock
+              ? "bg-orange-50 border-orange-300"
+              : "bg-gray-50 border-gray-200"
+          }`}
+        >
+          <div className="text-sm text-gray-600 font-medium">
+            Current Quantity
+          </div>
+          <div
+            className={`text-3xl font-bold mt-2 ${
+              isLowStock ? "text-orange-900" : "text-gray-900"
+            }`}
+          >
             {product.quantity}
           </div>
           {isLowStock && (
-            <div className="text-xs text-orange-700 mt-2 font-medium">⚠ Below reorder level</div>
+            <div className="text-xs text-orange-700 mt-2 font-medium">
+              ⚠ Below reorder level
+            </div>
           )}
         </div>
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
@@ -737,7 +759,10 @@ function EditPane({
             onChange={(e) => updateField("is_active", e.target.checked)}
             className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
           />
-          <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="is_active"
+            className="text-sm font-medium text-gray-700"
+          >
             Active
           </label>
         </div>
