@@ -10,12 +10,18 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from("staff")
-      .select("*")
+      .select("*, staff_roles(role_id)")
       .order("last_name");
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // Transform data to include role
+    const transformedData = data.map((staff: any) => ({
+      ...staff,
+      role: staff.staff_roles?.[0]?.role_id || null,
+    }));
+
+    return NextResponse.json(transformedData);
   } catch (error) {
     console.error("Error fetching staff table:", error);
     return NextResponse.json(

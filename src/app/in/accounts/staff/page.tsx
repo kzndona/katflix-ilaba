@@ -1,8 +1,25 @@
-// app/in/accounts/staff/page.tsx
+/**
+ * Staff Management Page - Accounts Module
+ * 
+ * Provides a two-panel interface for managing laundry staff members including:
+ * - Staff list with real-time search by name
+ * - Detailed view with role badges, contact information, and personal details
+ * - Create, edit, and delete staff with validation
+ * - Role assignment (admin, cashier, attendant, rider, cashier_attendant)
+ * 
+ * Architecture Notes:
+ * - LEFT PANE: Scrollable staff list with search (3-column grid = 1 col)
+ * - RIGHT PANE: Details view or edit form (3-column grid = 2 cols)
+ * - Role data comes from staff_roles junction table (handled by API)
+ * - Uses gradient cards in DetailsPane for visual hierarchy
+ */
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 
+// Staff type definition - represents a staff member record from the database
+// The role field is populated from the staff_roles junction table by the API
 type Staff = {
   id: string;
   first_name: string;
@@ -18,23 +35,24 @@ type Staff = {
 };
 
 export default function StaffPage() {
-  const [rows, setRows] = useState<Staff[]>([]);
-  const [filteredRows, setFilteredRows] = useState<Staff[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selected, setSelected] = useState<Staff | null>(null);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editing, setEditing] = useState<Staff | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [originalStaff, setOriginalStaff] = useState<Staff | null>(null);
+  // State management for staff data and UI
+  const [rows, setRows] = useState<Staff[]>([]); // All staff records from API
+  const [filteredRows, setFilteredRows] = useState<Staff[]>([]); // Filtered by search query
+  const [searchQuery, setSearchQuery] = useState(""); // Current search text
+  const [selected, setSelected] = useState<Staff | null>(null); // Currently selected staff in list
+  const [isEditingDetails, setIsEditingDetails] = useState(false); // Toggle between view/edit mode
+  const [editing, setEditing] = useState<Staff | null>(null); // Staff data being edited
+  const [errorMsg, setErrorMsg] = useState<string | null>(null); // Error message from save/delete
+  const [successMsg, setSuccessMsg] = useState<string | null>(null); // Success message
+  const [saving, setSaving] = useState(false); // Loading state during save/delete
+  const [originalStaff, setOriginalStaff] = useState<Staff | null>(null); // Original data for change detection
 
-  // Get staff data on load
+  // Load staff from database on component mount
   useEffect(() => {
     load();
   }, []);
 
-  // Debounced search
+  // Debounced search filter - updates filtered list when search query changes (300ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.trim() === "") {
@@ -53,6 +71,7 @@ export default function StaffPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, rows]);
 
+  // Fetch all staff from API and populate both rows and filteredRows
   async function load() {
     try {
       const res = await fetch("/api/staff/getStaffTable");
@@ -65,7 +84,7 @@ export default function StaffPage() {
     }
   }
 
-  // Create new staff
+  // Initialize new staff form with default values
   function openNew() {
     const newStaff: Staff = {
       id: "",
@@ -86,13 +105,13 @@ export default function StaffPage() {
     setIsEditingDetails(true);
   }
 
-  // Select staff to view details
+  // Select a staff member from the list to view their details
   function selectStaff(staff: Staff) {
     setSelected(staff);
     setIsEditingDetails(false);
   }
 
-  // Start editing the selected staff
+  // Switch from details view to edit mode for the selected staff
   function startEdit() {
     if (!selected) return;
     setEditing({ ...selected });
@@ -100,6 +119,7 @@ export default function StaffPage() {
     setIsEditingDetails(true);
   }
 
+  // Validate and save staff to database via API (create new or update existing)
   async function save() {
     if (!editing) return;
 
@@ -176,6 +196,7 @@ export default function StaffPage() {
     }
   }
 
+  // Delete the selected staff member from the database
   async function remove() {
     if (!editing?.id) return;
 
@@ -207,7 +228,7 @@ export default function StaffPage() {
     }
   }
 
-  // Update a field in the editing staff
+  // Update a single field in the editing staff object
   function updateField(key: keyof Staff, value: any) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
@@ -215,6 +236,7 @@ export default function StaffPage() {
 
   return (
     <div className="p-6 h-screen bg-gray-50 flex flex-col">
+      {/* Two-panel layout: Left pane (staff list) = 1 column, Right pane (details/edit) = 2 columns */}
       <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
         {/* LEFT PANE - Staff List */}
         <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
@@ -306,16 +328,35 @@ export default function StaffPage() {
   );
 }
 
-// Details View Pane
+// Details View Pane - Modernized with gradient cards matching customers page design
 function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
   return (
     <div className="flex flex-col h-full">
+      {/* Header with staff name and edit button */}
       <div className="p-8 border-b border-gray-200 flex justify-between items-start">
         <div>
           <h3 className="text-4xl font-bold">
             {staff.first_name} {staff.last_name}
           </h3>
-          <p className="text-gray-500 mt-2 capitalize text-lg">{staff.role}</p>
+          {/* Role badge with background color - color based on role type */}
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-sm font-medium text-gray-600">Role:</span>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                staff.role === "admin"
+                  ? "bg-red-100 text-red-700"
+                  : staff.role === "cashier"
+                  ? "bg-blue-100 text-blue-700"
+                  : staff.role === "attendant"
+                  ? "bg-green-100 text-green-700"
+                  : staff.role === "rider"
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-yellow-100 text-yellow-700"
+              }`}
+            >
+              {staff.role}
+            </span>
+          </div>
         </div>
         <button
           onClick={onEdit}
@@ -338,15 +379,46 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-2 gap-8">
-          <div>
+      {/* Scrollable content area with organized sections and gradient cards */}
+      <div className="flex-1 overflow-y-auto p-8">
+        {/* Contact Information Section - Gradient cards for key contact fields */}
+        <div className="mb-8">
+          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
+            Contact Information
+          </h4>
+          <div className="space-y-3">
+            {/* Email Card - Blue gradient for email communication */}
+            <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+              <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
+                Email Address
+              </div>
+              <div className="text-sm text-blue-900 mt-2 text-wrap">
+                {staff.email_address || "—"}
+              </div>
+            </div>
+
+            {/* Phone Card - Green gradient for phone communication */}
+            <div className="bg-linear-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+              <div className="text-xs font-medium text-green-700 uppercase tracking-wider">
+                Phone Number
+              </div>
+              <div className="text-sm text-green-900 mt-2">
+                {staff.phone_number || "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Personal Information Section - Standard layout for basic details */}
+        <div className="mb-8">
+          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
+            Personal Information
+          </h4>
+          <div className="grid grid-cols-2 gap-4">
             <DetailField label="First Name" value={staff.first_name} />
             <DetailField label="Middle Name" value={staff.middle_name || "—"} />
             <DetailField label="Last Name" value={staff.last_name} />
             <DetailField label="Birthdate" value={staff.birthdate || "—"} />
-          </div>
-          <div>
             <DetailField
               label="Gender"
               value={
@@ -355,24 +427,29 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
                   : "—"
               }
             />
-            <DetailField
-              label="Role"
-              value={staff.role.charAt(0).toUpperCase() + staff.role.slice(1)}
-            />
-            <DetailField label="Email" value={staff.email_address || "—"} />
-            <DetailField label="Phone" value={staff.phone_number || "—"} />
           </div>
         </div>
-        <div className="mt-6">
-          <DetailField label="Address" value={staff.address || "—"} />
+
+        {/* Address Section - Full-width for address field */}
+        <div className="mb-8">
+          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
+            Address
+          </h4>
+          <DetailField label="" value={staff.address || "—"} />
         </div>
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg">
+
+        {/* Account Status Card - Shows active/inactive state with color coding */}
+        <div className={`p-4 rounded-lg border ${
+          staff.is_active
+            ? "bg-green-50 border-green-200"
+            : "bg-red-50 border-red-200"
+        }`}>
           <div className="text-sm">
-            <span className="font-medium">Status: </span>
+            <span className="font-medium text-gray-700">Account Status: </span>
             <span
-              className={staff.is_active ? "text-green-600" : "text-red-600"}
+              className={staff.is_active ? "text-green-700 font-semibold" : "text-red-700 font-semibold"}
             >
-              {staff.is_active ? "Active" : "Inactive"}
+              {staff.is_active ? "✓ Active" : "✕ Inactive"}
             </span>
           </div>
         </div>
@@ -381,7 +458,7 @@ function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
   );
 }
 
-// Details Field Component
+// Display a single read-only field in the details pane
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-5">
@@ -391,7 +468,8 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Edit Pane
+// Edit Form Component - Handles staff creation and editing with validation
+// Includes email validation, phone format validation, and change detection
 function EditPane({
   staff,
   originalStaff,
@@ -560,7 +638,7 @@ function EditPane({
   );
 }
 
-// Simple reusable input field
+// Reusable text input component for form fields
 function Field({
   label,
   value,
@@ -588,7 +666,7 @@ function Field({
   );
 }
 
-// Simple select component
+// Reusable dropdown select component for form fields
 function Select({
   label,
   value,

@@ -9,6 +9,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    let staffId: string;
     let result;
     
     if (!data.id) {
@@ -24,7 +25,6 @@ export async function POST(req: Request) {
               data: {
                 first_name: data.first_name,
                 last_name: data.last_name,
-                role: data.role,
               },
             }
           );
@@ -43,31 +43,72 @@ export async function POST(req: Request) {
         }
       }
 
-      // Now insert staff profile with auth_id
-      const { id, ...dataWithoutId } = data; // Remove id from payload for insert
+      // Now insert staff profile with auth_id (without role)
+      const { id, role, ...dataWithoutIdAndRole } = data; // Remove id and role from payload for insert
       const staffPayload = {
-        ...dataWithoutId,
+        ...dataWithoutIdAndRole,
         auth_id: authUserId || null, // Use null instead of empty string
       };
 
       result = await supabase.from("staff").insert(staffPayload).select();
+      
+      if (result.error) throw result.error;
+      staffId = result.data[0].id;
+      
+      // Now insert role into staff_roles junction table
+      if (data.role) {
+        const roleResult = await supabase.from("staff_roles").insert({
+          staff_id: staffId,
+          role_id: data.role,
+        });
+        
+        if (roleResult.error) throw roleResult.error;
+      }
     } else {
       // Update existing staff
       // Don't allow changing email (would need re-invitation)
-      const { email_address, ...dataWithoutEmail } = data;
+      const { email_address, role, ...dataWithoutEmailAndRole } = data;
       
       result = await supabase
         .from("staff")
-        .update(dataWithoutEmail)
+        .update(dataWithoutEmailAndRole)
         .eq("id", data.id)
         .select();
+        
+      if (result.error) throw result.error;
+      staffId = data.id;
+      
+      // Update role in staff_roles if provided
+      if (data.role) {
+        // Delete existing roles and insert new one
+        await supabase.from("staff_roles").delete().eq("staff_id", staffId);
+        
+        const roleResult = await supabase.from("staff_roles").insert({
+          staff_id: staffId,
+          role_id: data.role,
+        });
+        
+        if (roleResult.error) throw roleResult.error;
+      }
     }
 
-    if (result.error) throw result.error;
+    // Fetch complete staff data with role
+    const completeResult = await supabase
+      .from("staff")
+      .select("*, staff_roles(role_id)")
+      .eq("id", staffId)
+      .single();
+      
+    if (completeResult.error) throw completeResult.error;
+    
+    const staffWithRole = {
+      ...completeResult.data,
+      role: completeResult.data.staff_roles?.[0]?.role_id || null,
+    };
     
     return NextResponse.json({
       success: true,
-      data: result.data,
+      data: staffWithRole,
       message: data.id 
         ? "Staff updated successfully" 
         : "Staff created and invitation email sent",

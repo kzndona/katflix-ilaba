@@ -274,250 +274,293 @@ export default function BasketsPage() {
   if (loading) return <div className="p-6 text-center">Loading orders...</div>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Processing Orders</h1>
-        <button
-          onClick={() => load()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {errorMsg && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-          {errorMsg}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className=" mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">
+              Processing Orders
+            </h1>
+            <p className="text-gray-500 mt-2">
+              {orders.length} active order{orders.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <button
+            onClick={() => load()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            ↻ Refresh
+          </button>
         </div>
-      )}
 
-      {orders.length === 0 ? (
-        <div className="text-gray-500 text-center py-12">
-          No orders being processed
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-white rounded border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full p-3"
-            >
-              {/* Order Header */}
-              <div className="mb-2 pb-2 border-b border-gray-200">
-                <div className="font-semibold text-xs">
-                  {order.customers?.first_name} {order.customers?.last_name}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {countBaskets(order)} basket
-                  {countBaskets(order) !== 1 ? "s" : ""} •{" "}
-                  <span className="font-medium capitalize text-xs">
-                    {order.status.replace(/_/g, " ")}
-                  </span>
-                </div>
-              </div>
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="text-red-800 text-sm font-medium">{errorMsg}</div>
+          </div>
+        )}
 
-              {/* Baskets - Expanded with Unified Timeline */}
-              <div className="space-y-2 flex-1">
-                {(order.breakdown?.baskets || []).map((basket, idx) => {
-                  const nextAction = getTimelineNextAction(order, basket);
-
-                  return (
-                    <div
-                      key={idx}
-                      className="space-y-1.5 p-2 bg-gray-50 rounded border border-gray-200"
-                    >
-                      <div className="text-xs font-bold text-gray-800">
-                        Basket #{basket.basket_number} • {basket.weight}kg
+        {/* Orders Grid */}
+        {orders.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-6xl mb-4">📦</div>
+            <p className="text-gray-500 text-lg">No orders being processed</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col h-full border border-gray-100"
+              >
+                {/* Order Header */}
+                <div className="bg-linear-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 text-base">
+                        {order.customers?.first_name}{" "}
+                        {order.customers?.last_name}
                       </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {order.customers?.phone_number && (
+                          <span>{order.customers.phone_number}</span>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-2 ${
+                        order.status === "processing"
+                          ? "bg-blue-200 text-blue-900"
+                          : order.status === "for_pick-up"
+                            ? "bg-orange-200 text-orange-900"
+                            : order.status === "for_delivery"
+                              ? "bg-purple-200 text-purple-900"
+                              : "bg-gray-200 text-gray-900"
+                      }`}
+                    >
+                      {order.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-700 font-medium mt-3">
+                    {countBaskets(order)} basket
+                    {countBaskets(order) !== 1 ? "s" : ""} • ₱
+                    {order.total_amount.toFixed(2)}
+                  </div>
+                </div>
 
-                      {/* Unified Timeline - Pickup → Services → Delivery */}
-                      <div className="space-y-1 bg-white p-1.5 rounded">
-                        {/* PICKUP - Only show if pending or in progress */}
-                        {(order.handling.pickup.status === "pending" ||
-                          order.handling.pickup.status === "in_progress") &&
-                          (() => {
-                            const isActive =
-                              order.handling.pickup.status === "in_progress";
-                            const statusIcon = isActive ? "●" : "◯";
-                            const statusColor = isActive
-                              ? "text-blue-700"
-                              : "text-gray-500";
+                {/* Baskets Container */}
+                <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+                  {(order.breakdown?.baskets || []).map((basket, idx) => {
+                    const nextAction = getTimelineNextAction(order, basket);
+                    const allServicesComplete = basket.services.every(
+                      (s) => s.status === "completed" || s.status === "skipped"
+                    );
 
-                            return (
-                              <div
-                                className={`flex items-center justify-between px-1.5 py-1 rounded text-xs ${
-                                  isActive ? "bg-blue-50" : "bg-gray-50"
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-gray-50 rounded-lg border border-gray-200 p-4 hover:border-blue-300 transition"
+                      >
+                        {/* Basket Header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">
+                              Basket #{basket.basket_number}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {basket.weight}kg • ₱{basket.total.toFixed(2)}
+                            </div>
+                          </div>
+                          {allServicesComplete && (
+                            <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                              ✓ Done
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timeline */}
+                        <div className="space-y-1.5 mb-3">
+                          {/* PICKUP */}
+                          {(order.handling.pickup.status === "pending" ||
+                            order.handling.pickup.status === "in_progress") && (
+                            <div
+                              className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
+                                order.handling.pickup.status === "in_progress"
+                                  ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                  : "bg-white text-gray-700 border border-gray-200"
+                              }`}
+                            >
+                              <span
+                                className={`text-lg font-bold ${
+                                  order.handling.pickup.status === "in_progress"
+                                    ? "text-blue-600 animate-pulse"
+                                    : "text-gray-400"
                                 }`}
                               >
-                                <div className="flex-1">
-                                  <span className="font-medium">Pickup</span>
-                                </div>
-                                <span
-                                  className={`text-lg font-bold ml-1 ${statusColor}`}
+                                {order.handling.pickup.status === "in_progress"
+                                  ? "●"
+                                  : "○"}
+                              </span>
+                              <span>Pickup</span>
+                            </div>
+                          )}
+
+                          {/* SERVICES */}
+                          {basket.services
+                            .slice()
+                            .sort((a: any, b: any) => {
+                              const aType = (
+                                a.service_name || ""
+                              ).toLowerCase();
+                              const bType = (
+                                b.service_name || ""
+                              ).toLowerCase();
+                              const sequence = [
+                                "wash",
+                                "spin",
+                                "dry",
+                                "iron",
+                                "fold",
+                              ];
+
+                              let aIndex = -1,
+                                bIndex = -1;
+                              for (const svc of sequence) {
+                                if (aIndex === -1 && aType.includes(svc))
+                                  aIndex = sequence.indexOf(svc);
+                                if (bIndex === -1 && bType.includes(svc))
+                                  bIndex = sequence.indexOf(svc);
+                              }
+
+                              if (aIndex === -1) aIndex = 999;
+                              if (bIndex === -1) bIndex = 999;
+                              return aIndex - bIndex;
+                            })
+                            .map((service, sIdx) => {
+                              const isDone =
+                                service.status === "completed" ||
+                                service.status === "skipped";
+                              const isActive = service.status === "in_progress";
+
+                              return (
+                                <div
+                                  key={sIdx}
+                                  className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
+                                    isDone
+                                      ? "bg-green-100 text-green-900 border border-green-300"
+                                      : isActive
+                                        ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                        : "bg-white text-gray-700 border border-gray-200"
+                                  }`}
                                 >
-                                  {statusIcon}
-                                </span>
-                              </div>
-                            );
-                          })()}
-
-                        {/* BASKET SERVICES - Sorted by sequence */}
-                        {basket.services
-                          .slice()
-                          .sort((a: any, b: any) => {
-                            const aType = (a.service_name || "").toLowerCase();
-                            const bType = (b.service_name || "").toLowerCase();
-                            const sequence = [
-                              "wash",
-                              "spin",
-                              "dry",
-                              "iron",
-                              "fold",
-                            ];
-
-                            let aIndex = -1,
-                              bIndex = -1;
-                            for (const svc of sequence) {
-                              if (aIndex === -1 && aType.includes(svc))
-                                aIndex = sequence.indexOf(svc);
-                              if (bIndex === -1 && bType.includes(svc))
-                                bIndex = sequence.indexOf(svc);
-                            }
-
-                            if (aIndex === -1) aIndex = 999;
-                            if (bIndex === -1) bIndex = 999;
-                            return aIndex - bIndex;
-                          })
-                          .map((service, sIdx) => {
-                            const isDone =
-                              service.status === "completed" ||
-                              service.status === "skipped";
-                            const isActive = service.status === "in_progress";
-                            const isPending = service.status === "pending";
-
-                            const statusIcon = isDone
-                              ? "✓"
-                              : isActive
-                                ? "●"
-                                : "◯";
-                            const statusColor = isDone
-                              ? "text-green-700"
-                              : isActive
-                                ? "text-blue-700"
-                                : "text-gray-500";
-
-                            return (
-                              <div
-                                key={sIdx}
-                                className={`flex items-center justify-between px-1.5 py-1 rounded text-xs ${
-                                  isDone
-                                    ? "bg-green-50"
-                                    : isActive
-                                      ? "bg-blue-50"
-                                      : "bg-gray-50"
-                                }`}
-                              >
-                                <div className="flex-1">
-                                  <span className="font-medium">
+                                  <span
+                                    className={`text-lg font-bold ${
+                                      isDone
+                                        ? "text-green-600"
+                                        : isActive
+                                          ? "text-blue-600 animate-pulse"
+                                          : "text-gray-400"
+                                    }`}
+                                  >
+                                    {isDone ? "✓" : isActive ? "●" : "○"}
+                                  </span>
+                                  <span className="flex-1">
                                     {service.service_name}
                                   </span>
                                   {service.is_premium && (
-                                    <span className="ml-1 text-yellow-600 font-bold">
+                                    <span className="text-yellow-500 font-bold">
                                       ★
                                     </span>
                                   )}
                                 </div>
-                                <span
-                                  className={`text-lg font-bold ml-1 ${statusColor}`}
-                                >
-                                  {statusIcon}
-                                </span>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
 
-                        {/* DELIVERY - Only show if pending or in progress */}
-                        {order.handling.delivery.address &&
-                          (order.handling.delivery.status === "pending" ||
-                            order.handling.delivery.status === "in_progress") &&
-                          (() => {
-                            const isActive =
-                              order.handling.delivery.status === "in_progress";
-                            const statusIcon = isActive ? "●" : "◯";
-                            const statusColor = isActive
-                              ? "text-blue-700"
-                              : "text-gray-500";
-
-                            return (
+                          {/* DELIVERY */}
+                          {order.handling.delivery.address &&
+                            (order.handling.delivery.status === "pending" ||
+                              order.handling.delivery.status ===
+                                "in_progress") && (
                               <div
-                                className={`flex items-center justify-between px-1.5 py-1 rounded text-xs ${
-                                  isActive ? "bg-blue-50" : "bg-gray-50"
+                                className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
+                                  order.handling.delivery.status ===
+                                  "in_progress"
+                                    ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                    : "bg-white text-gray-700 border border-gray-200"
                                 }`}
                               >
-                                <div className="flex-1">
-                                  <span className="font-medium">Delivery</span>
-                                </div>
                                 <span
-                                  className={`text-lg font-bold ml-1 ${statusColor}`}
+                                  className={`text-lg font-bold ${
+                                    order.handling.delivery.status ===
+                                    "in_progress"
+                                      ? "text-purple-600 animate-pulse"
+                                      : "text-gray-400"
+                                  }`}
                                 >
-                                  {statusIcon}
+                                  {order.handling.delivery.status ===
+                                  "in_progress"
+                                    ? "●"
+                                    : "○"}
                                 </span>
+                                <span>Delivery</span>
                               </div>
-                            );
-                          })()}
-                      </div>
-
-                      {/* Single Action Button */}
-                      {nextAction ? (
-                        <button
-                          onClick={() => {
-                            if (nextAction.type === "pickup") {
-                              updateServiceStatus(
-                                order.id,
-                                null,
-                                "pickup",
-                                nextAction.action
-                              );
-                            } else if (nextAction.type === "service") {
-                              updateServiceStatus(
-                                order.id,
-                                nextAction.basketNumber || basket.basket_number,
-                                null,
-                                nextAction.action
-                              );
-                            } else if (nextAction.type === "delivery") {
-                              updateServiceStatus(
-                                order.id,
-                                null,
-                                "delivery",
-                                nextAction.action
-                              );
-                            }
-                          }}
-                          disabled={processingId === order.id}
-                          className={`w-full px-3 py-2 rounded text-sm font-bold transition-colors ${
-                            processingId === order.id
-                              ? "bg-gray-400 text-white cursor-wait"
-                              : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
-                          }`}
-                        >
-                          {processingId === order.id
-                            ? "Processing..."
-                            : nextAction.label}
-                        </button>
-                      ) : (
-                        <div className="text-xs text-gray-500 text-center py-2 px-2 bg-green-50 rounded border border-green-200">
-                          Basket Complete ✓
+                            )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+
+                        {/* Action Button */}
+                        {nextAction ? (
+                          <button
+                            onClick={() => {
+                              if (nextAction.type === "pickup") {
+                                updateServiceStatus(
+                                  order.id,
+                                  null,
+                                  "pickup",
+                                  nextAction.action
+                                );
+                              } else if (nextAction.type === "service") {
+                                updateServiceStatus(
+                                  order.id,
+                                  nextAction.basketNumber ||
+                                    basket.basket_number,
+                                  null,
+                                  nextAction.action
+                                );
+                              } else if (nextAction.type === "delivery") {
+                                updateServiceStatus(
+                                  order.id,
+                                  null,
+                                  "delivery",
+                                  nextAction.action
+                                );
+                              }
+                            }}
+                            disabled={processingId === order.id}
+                            className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                              processingId === order.id
+                                ? "bg-gray-300 text-gray-700 cursor-wait"
+                                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                            }`}
+                          >
+                            {processingId === order.id
+                              ? "Processing..."
+                              : nextAction.label}
+                          </button>
+                        ) : (
+                          <div className="text-xs text-green-700 text-center py-3 px-3 bg-green-50 rounded-lg border border-green-200 font-semibold">
+                            ✓ Basket Complete
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

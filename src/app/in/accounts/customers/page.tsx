@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 
+// Customer type definition - matches the customers table schema
 type Customer = {
   id: string;
   first_name: string;
@@ -18,6 +19,7 @@ type Customer = {
 };
 
 export default function CustomersPage() {
+  // State management
   const [rows, setRows] = useState<Customer[]>([]);
   const [filteredRows, setFilteredRows] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,12 +33,12 @@ export default function CustomersPage() {
     null
   );
 
-  // Get customers data on load
+  // Load customers on component mount
   useEffect(() => {
     load();
   }, []);
 
-  // Debounced search
+  // Debounced search filter - updates filtered list based on search query
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.trim() === "") {
@@ -55,6 +57,7 @@ export default function CustomersPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, rows]);
 
+  // Fetch customers from API
   async function load() {
     try {
       const res = await fetch("/api/customer/getCustomersTable");
@@ -67,7 +70,7 @@ export default function CustomersPage() {
     }
   }
 
-  // Create new customer
+  // Initialize new customer form
   function openNew() {
     const newCustomer: Customer = {
       id: "",
@@ -87,7 +90,7 @@ export default function CustomersPage() {
     setIsEditingDetails(true);
   }
 
-  // Select customer to view details
+  // Select a customer to view their details
   function selectCustomer(customer: Customer) {
     setSelected(customer);
     setIsEditingDetails(false);
@@ -101,6 +104,7 @@ export default function CustomersPage() {
     setIsEditingDetails(true);
   }
 
+  // Save customer to database via API
   async function save() {
     if (!editing) return;
 
@@ -128,7 +132,7 @@ export default function CustomersPage() {
       }
     }
 
-    // Validate phone number (PH format)
+    // Validate phone number (PH format: 09XXXXXXXXX)
     const phone = editing!.phone_number;
     const phonePattern = /^09\d{9}$/;
     if (!phonePattern.test(phone!)) {
@@ -173,6 +177,7 @@ export default function CustomersPage() {
     }
   }
 
+  // Delete customer from database
   async function remove() {
     if (!editing?.id) return;
 
@@ -215,7 +220,7 @@ export default function CustomersPage() {
     }
   }
 
-  // Update a field in the editing customer
+  // Update a single field in the editing customer object
   function updateField(key: keyof Customer, value: any) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
@@ -223,6 +228,7 @@ export default function CustomersPage() {
 
   return (
     <div className="p-6 h-screen bg-gray-50 flex flex-col">
+      {/* Two-column layout: left (list) and right (details/edit) */}
       <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
         {/* LEFT PANE - Customers List */}
         <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
@@ -317,7 +323,7 @@ export default function CustomersPage() {
   );
 }
 
-// Details View Pane
+// Details View Pane - Displays customer information in read-only format
 function DetailsPane({
   customer,
   onEdit,
@@ -326,73 +332,89 @@ function DetailsPane({
   onEdit: () => void;
 }) {
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-gray-200 flex justify-between items-start">
-        <div>
-          <h3 className="text-4xl font-bold">
-            {customer.first_name} {customer.last_name}
-          </h3>
-          <p className="text-gray-500 mt-2 text-lg">{customer.email_address}</p>
-        </div>
-        <button
-          onClick={onEdit}
-          className="p-3 hover:bg-gray-100 rounded-lg transition"
-          title="Edit"
-        >
-          <svg
-            className="w-6 h-6 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <div className="p-8 h-full flex flex-col">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">
+              {customer.first_name} {customer.last_name}
+            </h1>
+            <p className="text-gray-500 mt-2">
+              Customer ID: {customer.id}
+            </p>
+          </div>
+          <button
+            onClick={onEdit}
+            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            title="Edit Customer"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-        </button>
+            Edit
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="grid grid-cols-2 gap-8">
-          <div>
-            <DetailField label="First Name" value={customer.first_name} />
-            <DetailField
-              label="Middle Initial"
-              value={customer.middle_name || "—"}
-            />
-            <DetailField label="Last Name" value={customer.last_name} />
-            <DetailField label="Birthdate" value={customer.birthdate || "—"} />
-          </div>
-          <div>
-            <DetailField
-              label="Gender"
-              value={
-                customer.gender
-                  ? customer.gender.charAt(0).toUpperCase() +
-                    customer.gender.slice(1)
-                  : "—"
-              }
-            />
-            <DetailField label="Email" value={customer.email_address || "—"} />
-            <DetailField label="Phone" value={customer.phone_number || "—"} />
-            <DetailField
-              label="Loyalty Points"
-              value={`⭐ ${customer.loyalty_points || 0} points`}
-            />
+      {/* Contact Info Cards */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+          <div className="text-sm text-gray-600 font-medium">Email</div>
+          <div className="text-lg font-semibold text-blue-900 mt-2">
+            {customer.email_address || "—"}
           </div>
         </div>
-        <div className="mt-6">
-          <DetailField label="Address" value={customer.address || "—"} />
+        <div className="bg-linear-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+          <div className="text-sm text-gray-600 font-medium">Phone</div>
+          <div className="text-lg font-semibold text-green-900 mt-2">
+            {customer.phone_number || "—"}
+          </div>
         </div>
       </div>
+
+      {/* Loyalty Points */}
+      {customer.loyalty_points !== null && customer.loyalty_points > 0 && (
+        <div className="bg-linear-to-br from-yellow-50 to-amber-100 rounded-lg p-6 border border-amber-200 mb-8">
+          <div className="text-sm text-gray-600 font-medium">Loyalty Points</div>
+          <div className="text-3xl font-bold text-amber-900 mt-2">
+            ⭐ {customer.loyalty_points}
+          </div>
+        </div>
+      )}
+
+      {/* Personal Information Grid */}
+      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+        <div className="grid grid-cols-2 gap-6">
+          <DetailField label="First Name" value={customer.first_name} />
+          <DetailField
+            label="Middle Name"
+            value={customer.middle_name || "—"}
+          />
+          <DetailField label="Last Name" value={customer.last_name} />
+          <DetailField label="Birthdate" value={customer.birthdate || "—"} />
+          <DetailField
+            label="Gender"
+            value={
+              customer.gender
+                ? customer.gender.charAt(0).toUpperCase() +
+                  customer.gender.slice(1)
+                : "—"
+            }
+          />
+        </div>
+      </div>
+
+      {/* Address Section */}
+      {customer.address && (
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Address</h3>
+          <p className="text-gray-700 leading-relaxed">{customer.address}</p>
+        </div>
+      )}
     </div>
   );
 }
 
-// Details Field Component
+// Details Field Component - Reusable field display for read-only info
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-5">
@@ -402,7 +424,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Edit Pane
+// Edit Pane - Form for creating/editing customer information
 function EditPane({
   customer,
   originalCustomer,
@@ -426,7 +448,7 @@ function EditPane({
   onCancel: () => void;
   isNewCustomer: boolean;
 }) {
-  // Check if there are any changes
+  // Check if there are any changes from original data
   const hasChanges =
     isNewCustomer ||
     !originalCustomer ||
@@ -549,7 +571,7 @@ function EditPane({
   );
 }
 
-// Simple reusable input field
+// Simple reusable input field component for forms
 function Field({
   label,
   value,
@@ -577,7 +599,7 @@ function Field({
   );
 }
 
-// Simple select component
+// Simple select dropdown component for forms
 function Select({
   label,
   value,

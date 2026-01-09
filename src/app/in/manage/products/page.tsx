@@ -15,7 +15,10 @@ type Products = {
 
 export default function ProductsPage() {
   const [rows, setRows] = useState<Products[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [filteredRows, setFilteredRows] = useState<Products[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selected, setSelected] = useState<Products | null>(null);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editing, setEditing] = useState<Products | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -32,6 +35,23 @@ export default function ProductsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim() === "") {
+        setFilteredRows(rows);
+      } else {
+        const query = searchQuery.toLowerCase();
+        const filtered = rows.filter((product) => {
+          return product.item_name.toLowerCase().includes(query);
+        });
+        setFilteredRows(filtered);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, rows]);
 
   async function load() {
     setLoading(true);
@@ -66,6 +86,7 @@ export default function ProductsPage() {
         is_active: r.is_active ?? true,
       }));
       setRows(normalized);
+      setFilteredRows(normalized);
     } catch (err) {
       console.error("Failed to load products:", err);
       setErrorMsg("Failed to load products");
@@ -84,7 +105,8 @@ export default function ProductsPage() {
       reorder_level: "0",
       is_active: true,
     });
-    setModalOpen(true);
+    setSelected(null);
+    setIsEditingDetails(true);
     setErrorMsg(null);
   }
 
@@ -93,8 +115,14 @@ export default function ProductsPage() {
       ...row,
       unit_cost: row.unit_cost ?? "0.00",
     });
-    setModalOpen(true);
+    setSelected(row);
+    setIsEditingDetails(true);
     setErrorMsg(null);
+  }
+
+  function selectProduct(product: Products) {
+    setSelected(product);
+    setIsEditingDetails(false);
   }
 
   function updateField<K extends keyof Products>(key: K, value: Products[K]) {
@@ -182,7 +210,8 @@ export default function ProductsPage() {
         throw new Error(body.error || `Server responded ${res.status}`);
 
       await load();
-      setModalOpen(false);
+      setIsEditingDetails(false);
+      setEditing(null);
     } catch (err) {
       console.error("Save failed:", err);
       setErrorMsg("Failed to save products");
@@ -206,7 +235,8 @@ export default function ProductsPage() {
         throw new Error(body.error || `Server responded ${res.status}`);
 
       await load();
-      setModalOpen(false);
+      setIsEditingDetails(false);
+      setEditing(null);
     } catch (err) {
       console.error("Remove failed:", err);
       setErrorMsg("Failed to remove products");
@@ -278,183 +308,116 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="text-xl font-semibold">Products</div>
-        <div className="flex gap-2">
-          <button
-            onClick={openQuantityModal}
-            className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
-          >
-            Adjust Quantity
-          </button>
-          <button
-            onClick={openNew}
-            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Add New
-          </button>
-        </div>
-      </div>
+    <div className="h-screen bg-gray-50 flex flex-col">
+      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
+        {/* LEFT PANE - Products List */}
+        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
+          <div className="p-6 border-b border-gray-200 shrink-0">
+            <h2 className="text-3xl font-bold mb-4">Products</h2>
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+            />
+          </div>
 
-      {loading ? (
-        <div>Loading...</div>
-      ) : errorMsg ? (
-        <div className="text-red-600">{errorMsg}</div>
-      ) : (
-        <table className="w-full table-fixed border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 border">Item</th>
-              <th className="p-2 border">Unit Cost</th>
-              <th className="p-2 border">Unit Price</th>
-              <th className="p-2 border">Quantity</th>
-              <th className="p-2 border">Reorder Level</th>
-              <th className="p-2 border">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.id}
-                className="cursor-pointer hover:bg-gray-50"
-                onClick={() => openEdit(r)}
-              >
-                <td className="p-2 border truncate text-center">
-                  {r.item_name}
-                </td>
-                <td className="p-2 border text-right">₱{r.unit_cost}</td>
-                <td className="p-2 border text-right">₱{r.unit_price}</td>
-                <td className="p-2 border text-center">{r.quantity}</td>
-                <td className="p-2 border text-center">{r.reorder_level}</td>
-                <td className="p-2 border text-center">
-                  {r.is_active ? "✓ Active" : "✗ Inactive"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {modalOpen && editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 w-[560px] rounded shadow space-y-4">
-            <div className="text-lg font-semibold">
-              {editing.id ? "Edit Product" : "Add Product"}
-            </div>
-
-            {errorMsg && <div className="text-red-600">{errorMsg}</div>}
-
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-              <Field
-                label="Item Name"
-                value={editing.item_name}
-                onChange={(v) => updateField("item_name", v)}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Unit Cost"
-                  value={editing.unit_cost}
-                  type="number"
-                  step="0.01"
-                  onChange={(v) => updateField("unit_cost", v)}
-                />
-                <Field
-                  label="Unit Price"
-                  value={editing.unit_price}
-                  type="number"
-                  step="0.01"
-                  onChange={(v) => updateField("unit_price", v)}
-                />
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {filteredRows.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">
+                {rows.length === 0 ? "No products yet" : "No results"}
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Quantity"
-                  value={editing.quantity}
-                  type="number"
-                  step="1"
-                  onChange={(v) => {
-                    // keep only digits for whole numbers
-                    const cleaned = v.replace(/\D/g, "");
-                    updateField("quantity", cleaned === "" ? "0" : cleaned);
-                  }}
-                />
-                <Field
-                  label="Reorder Level"
-                  value={editing.reorder_level}
-                  type="number"
-                  step="1"
-                  onChange={(v) => {
-                    const cleaned = v.replace(/\D/g, "");
-                    updateField(
-                      "reorder_level",
-                      cleaned === "" ? "0" : cleaned
-                    );
-                  }}
-                />
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {filteredRows.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => selectProduct(product)}
+                    className={`p-4 cursor-pointer transition ${
+                      selected?.id === product.id
+                        ? "bg-blue-50 border-l-4 border-blue-600"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="font-medium text-sm">{product.item_name}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      ₱{product.unit_price}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Qty: {product.quantity}
+                    </div>
+                    {!product.is_active && (
+                      <div className="text-xs text-red-600 mt-1">Inactive</div>
+                    )}
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
 
-              <div className="flex items-center space-x-2">
-                <label className="text-sm">Active</label>
-                <input
-                  type="checkbox"
-                  checked={editing.is_active}
-                  onChange={(e) => updateField("is_active", e.target.checked)}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-3">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-3 py-1 border rounded"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-
-              {editing.id && (
-                <button
-                  onClick={remove}
-                  className="px-3 py-1 bg-red-600 text-white rounded"
-                  disabled={saving}
-                >
-                  Delete
-                </button>
-              )}
-
-              <button
-                onClick={save}
-                className="px-3 py-1 bg-green-600 text-white rounded"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : editing.id ? "Save" : "Add"}
-              </button>
-            </div>
+          <div className="p-6 border-t border-gray-200 shrink-0">
+            <button
+              onClick={openNew}
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
+            >
+              + Add New Product
+            </button>
           </div>
         </div>
-      )}
+
+        {/* RIGHT PANE - Details or Edit */}
+        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col min-h-0">
+          {isEditingDetails && editing ? (
+            <EditPane
+              product={editing}
+              updateField={updateField}
+              save={save}
+              remove={remove}
+              saving={saving}
+              errorMsg={errorMsg}
+              onCancel={() => {
+                setIsEditingDetails(false);
+                setEditing(null);
+                setErrorMsg(null);
+              }}
+              isNewProduct={!editing.id}
+            />
+          ) : selected ? (
+            <DetailsPane 
+              product={selected}
+              onEdit={() => openEdit(selected)}
+              onAdjustQuantity={openQuantityModal}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-400">
+              <div className="text-center">
+                <div className="text-5xl mb-3">📦</div>
+                <p>Select a product to view details</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Quantity Adjustment Modal */}
       {quantityModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 w-[480px] rounded shadow space-y-4">
-            <div className="text-lg font-semibold">Adjust Product Quantity</div>
+          <div className="bg-white p-6 w-[480px] rounded-lg shadow-lg space-y-4">
+            <div className="text-lg font-semibold text-gray-900">Adjust Product Quantity</div>
 
             {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
 
             <div className="space-y-4">
               {/* Product Dropdown */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">
+                <label className="text-sm font-medium mb-1 text-gray-700">
                   Select Product
                 </label>
                 <select
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Choose a product --</option>
                   {rows.map((product) => (
@@ -467,11 +430,11 @@ export default function ProductsPage() {
 
               {/* Add/Subtract Toggle */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Action</label>
+                <label className="text-sm font-medium mb-1 text-gray-700">Action</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setAdjustmentType("add")}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition ${
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
                       adjustmentType === "add"
                         ? "bg-green-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -481,7 +444,7 @@ export default function ProductsPage() {
                   </button>
                   <button
                     onClick={() => setAdjustmentType("subtract")}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition ${
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
                       adjustmentType === "subtract"
                         ? "bg-red-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -494,7 +457,7 @@ export default function ProductsPage() {
 
               {/* Amount Input */}
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Amount</label>
+                <label className="text-sm font-medium mb-1 text-gray-700">Amount</label>
                 <input
                   type="number"
                   min="0"
@@ -505,21 +468,17 @@ export default function ProductsPage() {
                     setQuantityAdjustment(cleaned);
                   }}
                   placeholder="Enter quantity to adjust"
-                  className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Preview */}
               {selectedProductId && quantityAdjustment && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                  <div className="text-sm font-medium text-blue-900">
-                    Preview:
-                  </div>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm font-medium text-blue-900">Preview:</div>
                   <div className="text-sm text-blue-700 mt-1">
                     {(() => {
-                      const product = rows.find(
-                        (r) => r.id === selectedProductId
-                      );
+                      const product = rows.find((r) => r.id === selectedProductId);
                       if (!product) return "";
                       const current = Number(product.quantity);
                       const amount = Number(quantityAdjustment);
@@ -527,7 +486,9 @@ export default function ProductsPage() {
                         adjustmentType === "add"
                           ? current + amount
                           : current - amount;
-                      return `${product.item_name}: ${current} ${adjustmentType === "add" ? "+" : "-"} ${amount} = ${newQty}`;
+                      return `${product.item_name}: ${current} ${
+                        adjustmentType === "add" ? "+" : "-"
+                      } ${amount} = ${newQty}`;
                     })()}
                   </div>
                 </div>
@@ -537,7 +498,7 @@ export default function ProductsPage() {
             <div className="flex justify-end space-x-3 pt-3">
               <button
                 onClick={() => setQuantityModalOpen(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
                 disabled={saving}
               >
                 Cancel
@@ -545,7 +506,7 @@ export default function ProductsPage() {
 
               <button
                 onClick={adjustQuantity}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 disabled={saving || !selectedProductId || !quantityAdjustment}
               >
                 {saving ? "Adjusting..." : "Apply"}
@@ -558,29 +519,255 @@ export default function ProductsPage() {
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  step,
+// Details Pane Component
+function DetailsPane({
+  product,
+  onEdit,
+  onAdjustQuantity,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  step?: string;
+  product: Products;
+  onEdit: () => void;
+  onAdjustQuantity: () => void;
+}) {
+  const margin = Number(product.unit_price) - Number(product.unit_cost);
+  const marginPercent =
+    Number(product.unit_price) > 0
+      ? ((margin / Number(product.unit_price)) * 100).toFixed(1)
+      : "0";
+  const isLowStock = Number(product.quantity) < Number(product.reorder_level);
+
+  return (
+    <div className="p-8 h-full flex flex-col">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">{product.item_name}</h1>
+            <p className="text-gray-500 mt-1">Product ID: {product.id}</p>
+          </div>
+          <span
+            className={`px-4 py-2 rounded-full text-sm font-semibold ${
+              product.is_active
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {product.is_active ? "✓ Active" : "✗ Inactive"}
+          </span>
+        </div>
+      </div>
+
+      {/* Pricing & Margin Info */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+          <div className="text-sm text-gray-600 font-medium">Unit Cost</div>
+          <div className="text-3xl font-bold text-blue-900 mt-2">
+            ₱{product.unit_cost}
+          </div>
+        </div>
+        <div className="bg-linear-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+          <div className="text-sm text-gray-600 font-medium">Unit Price</div>
+          <div className="text-3xl font-bold text-green-900 mt-2">
+            ₱{product.unit_price}
+          </div>
+        </div>
+        <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+          <div className="text-sm text-gray-600 font-medium">Margin</div>
+          <div className="text-3xl font-bold text-purple-900 mt-2">
+            ₱{margin.toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-600 mt-1">{marginPercent}%</div>
+        </div>
+      </div>
+
+      {/* Stock Info */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className={`rounded-lg p-6 border-2 ${
+          isLowStock
+            ? "bg-orange-50 border-orange-300"
+            : "bg-gray-50 border-gray-200"
+        }`}>
+          <div className="text-sm text-gray-600 font-medium">Current Quantity</div>
+          <div className={`text-3xl font-bold mt-2 ${
+            isLowStock ? "text-orange-900" : "text-gray-900"
+          }`}>
+            {product.quantity}
+          </div>
+          {isLowStock && (
+            <div className="text-xs text-orange-700 mt-2 font-medium">⚠ Below reorder level</div>
+          )}
+        </div>
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+          <div className="text-sm text-gray-600 font-medium">Reorder Level</div>
+          <div className="text-3xl font-bold text-gray-900 mt-2">
+            {product.reorder_level}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 mt-auto pt-6 border-t border-gray-200">
+        <button
+          onClick={onAdjustQuantity}
+          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+        >
+          Adjust Quantity
+        </button>
+        <button
+          onClick={onEdit}
+          className="flex-1 px-4 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition font-medium"
+        >
+          Edit Product
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Edit Pane Component
+function EditPane({
+  product,
+  updateField,
+  save,
+  remove,
+  saving,
+  errorMsg,
+  onCancel,
+  isNewProduct,
+}: {
+  product: Products;
+  updateField: (key: keyof Products, value: any) => void;
+  save: () => Promise<void>;
+  remove: () => Promise<void>;
+  saving: boolean;
+  errorMsg: string | null;
+  onCancel: () => void;
+  isNewProduct: boolean;
 }) {
   return (
-    <div className="flex flex-col">
-      <label className="text-sm">{label}</label>
-      <input
-        type={type}
-        step={step}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="border px-2 py-1 rounded"
-      />
+    <div className="p-8 h-full flex flex-col">
+      <h2 className="text-3xl font-bold text-gray-900 mb-6">
+        {isNewProduct ? "Add New Product" : "Edit Product"}
+      </h2>
+
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="text-red-800 text-sm font-medium">{errorMsg}</div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto space-y-5 pr-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Item Name
+          </label>
+          <input
+            type="text"
+            value={product.item_name}
+            onChange={(e) => updateField("item_name", e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Unit Cost (₱)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={product.unit_cost}
+              onChange={(e) => updateField("unit_cost", e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Unit Price (₱)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={product.unit_price}
+              onChange={(e) => updateField("unit_price", e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantity
+            </label>
+            <input
+              type="number"
+              step="1"
+              value={product.quantity}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, "");
+                updateField("quantity", cleaned === "" ? "0" : cleaned);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Reorder Level
+            </label>
+            <input
+              type="number"
+              step="1"
+              value={product.reorder_level}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, "");
+                updateField("reorder_level", cleaned === "" ? "0" : cleaned);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 pt-2">
+          <input
+            type="checkbox"
+            id="is_active"
+            checked={product.is_active}
+            onChange={(e) => updateField("is_active", e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+          />
+          <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+            Active
+          </label>
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-6 border-t border-gray-200 mt-6">
+        <button
+          onClick={onCancel}
+          className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
+          disabled={saving}
+        >
+          Cancel
+        </button>
+        {!isNewProduct && (
+          <button
+            onClick={remove}
+            className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+            disabled={saving}
+          >
+            Delete
+          </button>
+        )}
+        <button
+          onClick={save}
+          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50"
+          disabled={saving}
+        >
+          {saving ? "Saving..." : isNewProduct ? "Add Product" : "Save Changes"}
+        </button>
+      </div>
     </div>
   );
 }
