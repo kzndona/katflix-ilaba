@@ -181,19 +181,22 @@ export default function PaneCustomer({
             className={`w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 ${
               isLoadedFromDB
                 ? "bg-gray-100 cursor-not-allowed text-gray-500 border-gray-300"
-                : customer?.phone_number && !/^09\d{9}$/.test(customer.phone_number)
-                ? "border-red-300 focus:ring-red-500"
-                : "border-gray-300 focus:ring-blue-500"
+                : customer?.phone_number &&
+                    !/^09\d{9}$/.test(customer.phone_number)
+                  ? "border-red-300 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-blue-500"
             }`}
           />
-          {customer?.phone_number && !/^09\d{9}$/.test(customer.phone_number) && (
-            <p className="text-xs text-red-600 mt-1">
-              Format: 09XXXXXXXXX (11 digits total)
-            </p>
-          )}
-          {customer?.phone_number && /^09\d{9}$/.test(customer.phone_number) && (
-            <p className="text-xs text-green-600 mt-1">✓ Valid format</p>
-          )}
+          {customer?.phone_number &&
+            !/^09\d{9}$/.test(customer.phone_number) && (
+              <p className="text-xs text-red-600 mt-1">
+                Format: 09XXXXXXXXX (11 digits total)
+              </p>
+            )}
+          {customer?.phone_number &&
+            /^09\d{9}$/.test(customer.phone_number) && (
+              <p className="text-xs text-green-600 mt-1">✓ Valid format</p>
+            )}
         </div>
 
         <div>

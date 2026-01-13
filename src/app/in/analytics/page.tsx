@@ -226,9 +226,7 @@ export default function AnalyticsPage() {
       };
 
       const pdf = generateMonthlySummaryPDF(summaryData);
-      pdf.save(
-        `summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`
-      );
+      pdf.save(`summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
     } catch (err) {
       console.error("Export failed:", err);
       alert("Failed to export summary");
@@ -252,10 +250,15 @@ export default function AnalyticsPage() {
       const productsRes = await fetch(
         `/api/analytics/transactions/products?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
       );
-      if (!productsRes.ok) throw new Error("Failed to fetch product transactions");
-      const productTransactions: ProductTransaction[] = await productsRes.json();
+      if (!productsRes.ok)
+        throw new Error("Failed to fetch product transactions");
+      const productTransactions: ProductTransaction[] =
+        await productsRes.json();
 
-      const pdf = generateTransactionsPDF(orderTransactions, productTransactions);
+      const pdf = generateTransactionsPDF(
+        orderTransactions,
+        productTransactions
+      );
       pdf.save(
         `transactions_${dateRange.startDate}_to_${dateRange.endDate}.pdf`
       );
@@ -291,7 +294,9 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-6">
               {/* Date Range Inputs (Slate) */}
               <div className="flex gap-2 items-center">
-                <span className="text-slate-300 text-sm font-medium">Period:</span>
+                <span className="text-slate-300 text-sm font-medium">
+                  Period:
+                </span>
                 <input
                   type="date"
                   value={dateRange.startDate}
@@ -338,7 +343,9 @@ export default function AnalyticsPage() {
                   title="Export order and product transactions"
                 >
                   <span>📋</span>
-                  <span>{exporting ? "Exporting..." : "Export Transactions"}</span>
+                  <span>
+                    {exporting ? "Exporting..." : "Export Transactions"}
+                  </span>
                 </button>
               </div>
             </div>
