@@ -79,20 +79,6 @@ export default function PaneBaskets({
     return premiumService?.is_active ?? false;
   };
 
-  const TileButton = ({ label, subLabel, onClick, active, color }: any) => (
-    <div
-      className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
-        active
-          ? `border-${color}-500 bg-${color}-50`
-          : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
-      }`}
-      onClick={onClick}
-    >
-      <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
-      <div className="text-xs font-semibold text-gray-600 mt-2">{subLabel}</div>
-    </div>
-  );
-
   const TileWithDuration = ({
     label,
     count,
@@ -104,29 +90,55 @@ export default function PaneBaskets({
     getServicePrice,
     isPremium,
     disabled,
-  }: any) => (
-    <div
-      className={`border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 ${
-        disabled
-          ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
-          : active
-            ? `border-${color}-500 bg-${color}-50`
-            : `border-gray-300 hover:border-${color}-500 hover:bg-${color}-50`
-      }`}
-      onClick={disabled ? undefined : onClick}
-    >
-      <div className={`text-5xl text-${color}-600 font-bold`}>{label}</div>
-      <div className="text-xs font-semibold text-gray-600 mt-1">
-        {title} {isPremium && "(Premium)"}
+  }: any) => {
+    const colorMap: Record<string, { bg: string; border: string; text: string; accent: string }> = {
+      blue: { bg: "from-blue-50 to-blue-100", border: "border-blue-500", text: "text-blue-700", accent: "text-blue-600" },
+      green: { bg: "from-green-50 to-green-100", border: "border-green-500", text: "text-green-700", accent: "text-green-600" },
+      red: { bg: "from-red-50 to-red-100", border: "border-red-500", text: "text-red-700", accent: "text-red-600" },
+      orange: { bg: "from-orange-50 to-orange-100", border: "border-orange-500", text: "text-orange-700", accent: "text-orange-600" },
+      teal: { bg: "from-teal-50 to-teal-100", border: "border-teal-500", text: "text-teal-700", accent: "text-teal-600" },
+      purple: { bg: "from-purple-50 to-purple-100", border: "border-purple-500", text: "text-purple-700", accent: "text-purple-600" },
+    };
+
+    const colors = colorMap[color] || colorMap.blue;
+
+    return (
+      <div
+        className={`rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 shadow-md border-l-4 ${
+          disabled
+            ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
+            : `bg-gradient-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`
+        }`}
+        onClick={disabled ? undefined : onClick}
+      >
+        <div className={`text-2xl font-bold mb-2 ${colors.accent}`}>{label}</div>
+        <div className="text-sm font-bold text-center mb-2 text-gray-900">{title} {isPremium && "(Prem)"}</div>
+        <div className={`text-xs ${colors.text}`}>
+          {count}x • {estimateDuration(serviceType, count)}m
+        </div>
+        <div className={`text-xs ${colors.text}`}>₱{getServicePrice(serviceType, isPremium)}/kg</div>
       </div>
-      <div className="text-xs text-gray-700 font-semibold mt-1">
-        {count}x ({estimateDuration(serviceType, count)}m)
+    );
+  };
+
+  const TileButton = ({ label, subLabel, onClick, active, color }: any) => {
+    const colorMap: Record<string, { bg: string; border: string; accent: string }> = {
+      blue: { bg: "from-blue-50 to-blue-100", border: "border-blue-500", accent: "text-blue-600" },
+      green: { bg: "from-green-50 to-green-100", border: "border-green-500", accent: "text-green-600" },
+    };
+
+    const colors = colorMap[color] || colorMap.blue;
+
+    return (
+      <div
+        className={`rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 shadow-md border-l-4 bg-gradient-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`}
+        onClick={onClick}
+      >
+        <div className={`text-3xl font-bold ${colors.accent}`}>{label}</div>
+        <div className="text-xs font-semibold mt-2 text-gray-700">{subLabel}</div>
       </div>
-      <div className="text-xs text-gray-600 mt-1">
-        ₱{getServicePrice(serviceType, isPremium)}/kg
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div>
@@ -259,12 +271,12 @@ export default function PaneBaskets({
       {/* Row 3: Premium options */}
       <div className="grid grid-cols-4 gap-3 mb-3">
         <div
-          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 ${
+          className={`col-span-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 cursor-pointer shadow-md border-l-4 ${
             b.weightKg === 0 || !isPremiumServiceActive("wash")
-              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.washPremium
-                ? "border-purple-500 bg-purple-50 cursor-pointer"
-                : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
+                ? "bg-gradient-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
+                : "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("wash")) {
@@ -272,27 +284,25 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-sm font-semibold text-gray-900">
-            Premium Wash
-          </div>
-          <div className="text-xs text-gray-600 font-semibold mt-1">
+          <div className="text-xl font-bold mb-2 text-purple-600">Premium Wash</div>
+          <div className="text-xs font-semibold text-center text-purple-700">
             {b.weightKg === 0
               ? "Add weight first"
               : !isPremiumServiceActive("wash")
                 ? "Premium unavailable"
                 : b.washPremium
                   ? "✓ Selected"
-                  : "Add Premium"}
+                  : "Click to add"}
           </div>
         </div>
 
         <div
-          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 ${
+          className={`col-span-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 cursor-pointer shadow-md border-l-4 ${
             b.weightKg === 0 || !isPremiumServiceActive("dry")
-              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.dryPremium
-                ? "border-purple-500 bg-purple-50 cursor-pointer"
-                : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
+                ? "bg-gradient-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
+                : "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("dry")) {
@@ -300,15 +310,15 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-sm font-semibold text-gray-900">Premium Dry</div>
-          <div className="text-xs text-gray-600 font-semibold mt-1">
+          <div className="text-xl font-bold mb-2 text-purple-600">Premium Dry</div>
+          <div className="text-xs font-semibold text-center text-purple-700">
             {b.weightKg === 0
               ? "Add weight first"
               : !isPremiumServiceActive("dry")
                 ? "Premium unavailable"
                 : b.dryPremium
                   ? "✓ Selected"
-                  : "Add Premium"}
+                  : "Click to add"}
           </div>
         </div>
       </div>
@@ -316,12 +326,12 @@ export default function PaneBaskets({
       {/* Row 4: Iron, Fold */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         <div
-          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 ${
+          className={`col-span-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 cursor-pointer shadow-md border-l-4 ${
             b.weightKg === 0 || !isServiceActive("iron")
-              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.iron
-                ? "border-orange-500 bg-orange-50 cursor-pointer"
-                : "border-gray-300 hover:border-orange-500 hover:bg-orange-50 cursor-pointer"
+                ? "bg-gradient-to-br from-orange-100 to-orange-150 border-orange-600 hover:shadow-lg"
+                : "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("iron")) {
@@ -329,25 +339,25 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-sm font-semibold text-gray-900">Iron</div>
-          <div className="text-xs text-gray-600 font-semibold mt-1">
+          <div className="text-xl font-bold mb-2 text-orange-600">Iron</div>
+          <div className="text-xs font-semibold text-center text-orange-700">
             {b.weightKg === 0
               ? "Add weight first"
               : !isServiceActive("iron")
                 ? "Service unavailable"
                 : b.iron
-                  ? `${estimateDuration("iron", 1)}m`
+                  ? `${estimateDuration("iron", 1)}m✓`
                   : "Click to add"}
           </div>
         </div>
 
         <div
-          className={`col-span-2 border-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 ${
+          className={`col-span-2 rounded-lg flex flex-col items-center justify-center select-none transition h-40 p-3 cursor-pointer shadow-md border-l-4 ${
             b.weightKg === 0 || !isServiceActive("fold")
-              ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
+              ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.fold
-                ? "border-teal-500 bg-teal-50 cursor-pointer"
-                : "border-gray-300 hover:border-teal-500 hover:bg-teal-50 cursor-pointer"
+                ? "bg-gradient-to-br from-teal-100 to-teal-150 border-teal-600 hover:shadow-lg"
+                : "bg-gradient-to-br from-teal-50 to-teal-100 border-teal-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("fold")) {
@@ -355,14 +365,14 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-sm font-semibold text-gray-900">Fold</div>
-          <div className="text-xs text-gray-600 font-semibold mt-1">
+          <div className="text-xl font-bold mb-2 text-teal-600">Fold</div>
+          <div className="text-xs font-semibold text-center text-teal-700">
             {b.weightKg === 0
               ? "Add weight first"
               : !isServiceActive("fold")
                 ? "Service unavailable"
                 : b.fold
-                  ? `${estimateDuration("fold", 1)}m`
+                  ? `${estimateDuration("fold", 1)}m✓`
                   : "Click to add"}
           </div>
         </div>

@@ -26,39 +26,31 @@ export default function PaneProducts({
           return (
             <React.Fragment key={p.id}>
               <div
-                className={`col-span-1 p-3 border-2 border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition ${
+                className={`col-span-1 p-3 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition shadow-md ${
                   count === 0
-                    ? "opacity-40 pointer-events-none"
-                    : "hover:border-red-500 hover:bg-red-50"
+                    ? "bg-gray-100 opacity-40 pointer-events-none border border-gray-300"
+                    : "bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-lg hover:from-red-100 hover:to-red-150"
                 }`}
                 onClick={() => removeProduct(p.id)}
                 title={`Remove one ${p.item_name}`}
               >
-                <div className="w-16 h-16 bg-red-100 rounded-lg mb-2 flex items-center justify-center text-3xl text-red-600">
-                  −
+                <div className="text-2xl font-bold mb-3 text-red-600">−</div>
+                <div className="text-sm font-bold text-center mb-2 text-gray-900">
+                  {p.item_name}
                 </div>
-                <div className="text-sm text-center font-medium text-gray-900">
-                  Remove
-                </div>
-                <div className="text-xs text-gray-600 mt-1 font-semibold">
-                  ({count})
-                </div>
+                <div className="text-xs font-semibold text-red-700">({count})</div>
               </div>
 
               <div
-                className="col-span-1 p-3 border-2 border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none hover:border-green-500 hover:bg-green-50 transition"
+                className="col-span-1 p-3 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition shadow-md bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-lg hover:from-green-100 hover:to-green-150"
                 onClick={() => addProduct(p.id)}
                 title={`Add one ${p.item_name}`}
               >
-                <div className="w-16 h-16 bg-green-100 rounded-lg mb-2 flex items-center justify-center text-3xl text-green-600">
-                  +
-                </div>
-                <div className="text-sm text-center font-medium text-gray-900">
+                <div className="text-2xl font-bold mb-3 text-green-600">+</div>
+                <div className="text-sm font-bold text-center mb-2 text-gray-900">
                   {p.item_name}
                 </div>
-                <div className="text-xs text-gray-600 mt-1 font-semibold">
-                  ₱{p.unit_price}
-                </div>
+                <div className="text-xs font-semibold text-green-700">₱{p.unit_price}</div>
               </div>
             </React.Fragment>
           );
