@@ -3,6 +3,7 @@ export type Product = {
   item_name: string;
   unit_price: number;
   unit_cost?: number; // Cost at time of order snapshot
+  image_url?: string; // Product image URL
 };
 
 export type Customer = {

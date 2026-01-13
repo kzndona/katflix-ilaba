@@ -76,6 +76,8 @@ create table public.products (
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
   last_updated timestamp without time zone null default CURRENT_TIMESTAMP,
   unit_cost numeric(10, 2) null default 0.00,
+  image_url text null,
+  image_alt_text text null,
   constraint products_pkey primary key (id),
   constraint products_quantity_check check ((quantity >= (0)::numeric)),
   constraint products_reorder_level_check check ((reorder_level >= (0)::numeric)),
@@ -86,6 +88,7 @@ create table public.products (
 create index IF not exists idx_products_is_active on public.products using btree (is_active) TABLESPACE pg_default;
 create index IF not exists idx_products_item_name on public.products using btree (item_name) TABLESPACE pg_default;
 create index IF not exists idx_products_unit_cost on public.products using btree (unit_cost) TABLESPACE pg_default;
+create index IF not exists idx_products_image_url on public.products using btree (image_url) TABLESPACE pg_default;
 
 CREATE INDEX idx_products_is_active ON products(is_active);
 CREATE INDEX idx_products_item_name ON products(item_name);

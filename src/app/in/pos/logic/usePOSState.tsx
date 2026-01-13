@@ -144,7 +144,7 @@ export function usePOSState() {
 
       const { data, error } = await supabase
         .from("products")
-        .select("id, item_name, unit_price, unit_cost")
+        .select("id, item_name, unit_price, unit_cost, image_url")
         .eq("is_active", true)
         .order("item_name", { ascending: true });
 

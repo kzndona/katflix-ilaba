@@ -140,7 +140,7 @@ export default function PaneBaskets({
         className={`rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 shadow-md border-l-4 ${
           disabled
             ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
-            : `bg-gradient-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`
+            : `bg-linear-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`
         }`}
         onClick={disabled ? undefined : onClick}
       >
@@ -181,7 +181,7 @@ export default function PaneBaskets({
 
     return (
       <div
-        className={`rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 shadow-md border-l-4 bg-gradient-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`}
+        className={`rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition h-40 p-3 shadow-md border-l-4 bg-linear-to-br ${colors.bg} ${colors.border} hover:shadow-lg hover:to-${color}-150`}
         onClick={onClick}
       >
         <div className={`text-3xl font-bold ${colors.accent}`}>{label}</div>
@@ -327,8 +327,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isPremiumServiceActive("wash")
               ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.washPremium
-                ? "bg-gradient-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
-                : "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
+                ? "bg-linear-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
+                : "bg-linear-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("wash")) {
@@ -355,8 +355,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isPremiumServiceActive("dry")
               ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.dryPremium
-                ? "bg-gradient-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
-                : "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
+                ? "bg-linear-to-br from-purple-100 to-purple-150 border-purple-600 hover:shadow-lg"
+                : "bg-linear-to-br from-purple-50 to-purple-100 border-purple-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("dry")) {
@@ -386,8 +386,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isServiceActive("iron")
               ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.iron
-                ? "bg-gradient-to-br from-orange-100 to-orange-150 border-orange-600 hover:shadow-lg"
-                : "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-500 hover:shadow-lg"
+                ? "bg-linear-to-br from-orange-100 to-orange-150 border-orange-600 hover:shadow-lg"
+                : "bg-linear-to-br from-orange-50 to-orange-100 border-orange-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("iron")) {
@@ -412,8 +412,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isServiceActive("fold")
               ? "bg-gray-100 border-gray-400 cursor-not-allowed opacity-40"
               : b.fold
-                ? "bg-gradient-to-br from-teal-100 to-teal-150 border-teal-600 hover:shadow-lg"
-                : "bg-gradient-to-br from-teal-50 to-teal-100 border-teal-500 hover:shadow-lg"
+                ? "bg-linear-to-br from-teal-100 to-teal-150 border-teal-600 hover:shadow-lg"
+                : "bg-linear-to-br from-teal-50 to-teal-100 border-teal-500 hover:shadow-lg"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("fold")) {

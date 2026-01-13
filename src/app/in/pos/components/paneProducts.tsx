@@ -29,12 +29,19 @@ export default function PaneProducts({
                 className={`col-span-1 p-3 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition shadow-md ${
                   count === 0
                     ? "bg-gray-100 opacity-40 pointer-events-none border border-gray-300"
-                    : "bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-lg hover:from-red-100 hover:to-red-150"
+                    : "bg-linear-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-lg hover:from-red-100 hover:to-red-150"
                 }`}
                 onClick={() => removeProduct(p.id)}
                 title={`Remove one ${p.item_name}`}
               >
                 <div className="text-2xl font-bold mb-3 text-red-600">−</div>
+                {p.image_url && (
+                  <img
+                    src={p.image_url}
+                    alt={p.item_name}
+                    className="w-20 h-20 object-cover rounded mb-2"
+                  />
+                )}
                 <div className="text-sm font-bold text-center mb-2 text-gray-900">
                   {p.item_name}
                 </div>
@@ -44,11 +51,18 @@ export default function PaneProducts({
               </div>
 
               <div
-                className="col-span-1 p-3 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition shadow-md bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-lg hover:from-green-100 hover:to-green-150"
+                className="col-span-1 p-3 rounded-lg flex flex-col items-center justify-center cursor-pointer select-none transition shadow-md bg-linear-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-lg hover:from-green-100 hover:to-green-150"
                 onClick={() => addProduct(p.id)}
                 title={`Add one ${p.item_name}`}
               >
                 <div className="text-2xl font-bold mb-3 text-green-600">+</div>
+                {p.image_url && (
+                  <img
+                    src={p.image_url}
+                    alt={p.item_name}
+                    className="w-20 h-20 object-cover rounded mb-2"
+                  />
+                )}
                 <div className="text-sm font-bold text-center mb-2 text-gray-900">
                   {p.item_name}
                 </div>

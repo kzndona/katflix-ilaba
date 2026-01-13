@@ -11,6 +11,7 @@ type Products = {
   quantity: string; // form value as string (whole number)
   reorder_level: string; // form value as string (whole number)
   is_active: boolean;
+  image_url?: string; // Product image URL
 };
 
 export default function ProductsPage() {
@@ -84,6 +85,7 @@ export default function ProductsPage() {
             ? String(Math.trunc(Number(r.reorder_level)))
             : "0",
         is_active: r.is_active ?? true,
+        image_url: r.image_url ?? undefined,
       }));
       setRows(normalized);
       setFilteredRows(normalized);
@@ -104,6 +106,7 @@ export default function ProductsPage() {
       quantity: "0",
       reorder_level: "0",
       is_active: true,
+      image_url: undefined,
     });
     setSelected(null);
     setIsEditingDetails(true);
@@ -340,6 +343,13 @@ export default function ProductsPage() {
                         : "hover:bg-gray-50"
                     }`}
                   >
+                    {product.image_url && (
+                      <img
+                        src={product.image_url}
+                        alt={product.item_name}
+                        className="w-full h-24 object-cover rounded mb-2"
+                      />
+                    )}
                     <div className="font-medium text-sm">
                       {product.item_name}
                     </div>
@@ -553,7 +563,14 @@ function DetailsPane({
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
-          <div>
+          <div className="flex-1">
+            {product.image_url && (
+              <img
+                src={product.image_url}
+                alt={product.item_name}
+                className="w-32 h-32 object-cover rounded-lg mb-4 border border-gray-300"
+              />
+            )}
             <h1 className="text-4xl font-bold text-gray-900">
               {product.item_name}
             </h1>
@@ -691,6 +708,8 @@ function EditPane({
           />
         </div>
 
+        <ImageUploadField product={product} onImageUpdate={() => {}} saving={false} />
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -793,6 +812,188 @@ function EditPane({
           {saving ? "Saving..." : isNewProduct ? "Add Product" : "Save Changes"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Image Upload Component
+function ImageUploadField({
+  product,
+  onImageUpdate,
+  saving,
+}: {
+  product: Products;
+  onImageUpdate: () => void;
+  saving: boolean;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError("File size must be under 2MB");
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("productId", product.id);
+
+      const res = await fetch("/api/manage/products/uploadImage", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      if (!product.image_url) {
+        // If first upload, reload to get new image
+        onImageUpdate();
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadError(
+        err instanceof Error ? err.message : "Upload failed"
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!product.image_url) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const res = await fetch("/api/manage/products/deleteImage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          imageUrl: product.image_url,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Delete failed");
+      }
+
+      // Clear the image_url after successful deletion
+      product.image_url = undefined;
+      onImageUpdate();
+    } catch (err) {
+      console.error("Delete error:", err);
+      setUploadError(
+        err instanceof Error ? err.message : "Delete failed"
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleUpload(files[0]);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-gray-700">
+        Product Image
+      </label>
+
+      {product.image_url && (
+        <div className="relative w-full">
+          <img
+            src={product.image_url}
+            alt={product.item_name}
+            className="w-full h-32 object-cover rounded-lg border border-gray-300"
+          />
+          <button
+            onClick={handleDelete}
+            disabled={uploading || saving}
+            className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <div
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
+          dragActive
+            ? "border-blue-500 bg-blue-50"
+            : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+        }`}
+      >
+        <input
+          type="file"
+          id="image-upload"
+          accept="image/*"
+          onChange={(e) => {
+            if (e.target.files?.[0]) {
+              handleUpload(e.target.files[0]);
+            }
+          }}
+          disabled={uploading || saving}
+          className="hidden"
+        />
+        <label htmlFor="image-upload" className="cursor-pointer block">
+          <div className="text-3xl mb-2">🖼️</div>
+          <div className="text-sm font-medium text-gray-700">
+            Drag image here or click to upload
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Max 2MB • JPG, PNG, etc.
+          </div>
+        </label>
+      </div>
+
+      {uploadError && (
+        <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+          {uploadError}
+        </div>
+      )}
+
+      {uploading && (
+        <div className="text-blue-600 text-sm">Uploading...</div>
+      )}
     </div>
   );
 }
