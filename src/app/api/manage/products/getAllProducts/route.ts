@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
 
-  console.log("GET products called");
+  console.log("GET all products called (including inactive)");
 
   try {
     const supabase = createClient(
@@ -13,8 +13,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*")
-      .eq("is_active", true);
+      .select("*");
 
     if (error) throw error;
 

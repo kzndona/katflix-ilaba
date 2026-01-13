@@ -173,7 +173,8 @@ export default function POSPage() {
                           />
                         </div>
                         {pos.payment.amountPaid !== undefined &&
-                          pos.payment.amountPaid >= 0 && (
+                          pos.payment.amountPaid >= 0 &&
+                          pos.payment.amountPaid - pos.computeReceipt.total >= 0 && (
                             <div className="flex justify-between text-gray-700">
                               <span>Change:</span>
                               <span className="font-medium">

@@ -97,8 +97,7 @@ export function usePOSState() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("services")
-        .select("*")
-        .eq("is_active", true);
+        .select("*");
 
       if (error) {
         console.error("Service load error:", error);
@@ -148,6 +147,7 @@ export function usePOSState() {
       const { data, error } = await supabase
         .from("products")
         .select("id, item_name, unit_price, unit_cost")
+        .eq("is_active", true)
         .order("item_name", { ascending: true });
 
       if (error) {

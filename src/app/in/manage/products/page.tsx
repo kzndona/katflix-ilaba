@@ -57,7 +57,7 @@ export default function ProductsPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/manage/products/getProducts");
+      const res = await fetch("/api/manage/products/getAllProducts");
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Server responded ${res.status}`);
