@@ -708,7 +708,11 @@ function EditPane({
           />
         </div>
 
-        <ImageUploadField product={product} onImageUpdate={() => {}} saving={false} />
+        <ImageUploadField
+          product={product}
+          onImageUpdate={() => {}}
+          saving={false}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -866,9 +870,7 @@ function ImageUploadField({
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setUploadError(
-        err instanceof Error ? err.message : "Upload failed"
-      );
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -900,9 +902,7 @@ function ImageUploadField({
       onImageUpdate();
     } catch (err) {
       console.error("Delete error:", err);
-      setUploadError(
-        err instanceof Error ? err.message : "Delete failed"
-      );
+      setUploadError(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setUploading(false);
     }
@@ -991,9 +991,7 @@ function ImageUploadField({
         </div>
       )}
 
-      {uploading && (
-        <div className="text-blue-600 text-sm">Uploading...</div>
-      )}
+      {uploading && <div className="text-blue-600 text-sm">Uploading...</div>}
     </div>
   );
 }
