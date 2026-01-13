@@ -61,13 +61,21 @@ export default function PaneBaskets({
 
   // Check if a service is active
   const isServiceActive = (serviceType: string): boolean => {
-    const service = services.find((s) => s.service_type === serviceType && !s.name.toLowerCase().includes("premium"));
+    const service = services.find(
+      (s) =>
+        s.service_type === serviceType &&
+        !s.name.toLowerCase().includes("premium")
+    );
     return service?.is_active ?? false;
   };
 
   // Check if premium version of a service is active
   const isPremiumServiceActive = (serviceType: string): boolean => {
-    const premiumService = services.find((s) => s.service_type === serviceType && s.name.toLowerCase().includes("premium"));
+    const premiumService = services.find(
+      (s) =>
+        s.service_type === serviceType &&
+        s.name.toLowerCase().includes("premium")
+    );
     return premiumService?.is_active ?? false;
   };
 
@@ -190,7 +198,11 @@ export default function PaneBaskets({
           color="blue"
           getServicePrice={getServicePrice}
           isPremium={b.washPremium}
-          disabled={b.weightKg === 0 || (!b.washPremium && !isServiceActive("wash")) || (b.washPremium && !isPremiumServiceActive("wash"))}
+          disabled={
+            b.weightKg === 0 ||
+            (!b.washPremium && !isServiceActive("wash")) ||
+            (b.washPremium && !isPremiumServiceActive("wash"))
+          }
         />
         <TileWithDuration
           label="+"
@@ -202,7 +214,11 @@ export default function PaneBaskets({
           color="green"
           getServicePrice={getServicePrice}
           isPremium={b.washPremium}
-          disabled={b.weightKg === 0 || (!b.washPremium && !isServiceActive("wash")) || (b.washPremium && !isPremiumServiceActive("wash"))}
+          disabled={
+            b.weightKg === 0 ||
+            (!b.washPremium && !isServiceActive("wash")) ||
+            (b.washPremium && !isPremiumServiceActive("wash"))
+          }
         />
         <TileWithDuration
           label="−"
@@ -216,7 +232,11 @@ export default function PaneBaskets({
           color="blue"
           getServicePrice={getServicePrice}
           isPremium={b.dryPremium}
-          disabled={b.weightKg === 0 || (!b.dryPremium && !isServiceActive("dry")) || (b.dryPremium && !isPremiumServiceActive("dry"))}
+          disabled={
+            b.weightKg === 0 ||
+            (!b.dryPremium && !isServiceActive("dry")) ||
+            (b.dryPremium && !isPremiumServiceActive("dry"))
+          }
         />
         <TileWithDuration
           label="+"
@@ -228,7 +248,11 @@ export default function PaneBaskets({
           color="green"
           getServicePrice={getServicePrice}
           isPremium={b.dryPremium}
-          disabled={b.weightKg === 0 || (!b.dryPremium && !isServiceActive("dry")) || (b.dryPremium && !isPremiumServiceActive("dry"))}
+          disabled={
+            b.weightKg === 0 ||
+            (!b.dryPremium && !isServiceActive("dry")) ||
+            (b.dryPremium && !isPremiumServiceActive("dry"))
+          }
         />
       </div>
 
@@ -239,8 +263,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isPremiumServiceActive("wash")
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.washPremium
-              ? "border-purple-500 bg-purple-50 cursor-pointer"
-              : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
+                ? "border-purple-500 bg-purple-50 cursor-pointer"
+                : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("wash")) {
@@ -255,10 +279,10 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : !isPremiumServiceActive("wash")
-              ? "Premium unavailable"
-              : b.washPremium
-              ? "✓ Selected"
-              : "Add Premium"}
+                ? "Premium unavailable"
+                : b.washPremium
+                  ? "✓ Selected"
+                  : "Add Premium"}
           </div>
         </div>
 
@@ -267,8 +291,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isPremiumServiceActive("dry")
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.dryPremium
-              ? "border-purple-500 bg-purple-50 cursor-pointer"
-              : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
+                ? "border-purple-500 bg-purple-50 cursor-pointer"
+                : "border-gray-300 hover:border-purple-500 hover:bg-purple-50 cursor-pointer"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isPremiumServiceActive("dry")) {
@@ -281,10 +305,10 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : !isPremiumServiceActive("dry")
-              ? "Premium unavailable"
-              : b.dryPremium
-              ? "✓ Selected"
-              : "Add Premium"}
+                ? "Premium unavailable"
+                : b.dryPremium
+                  ? "✓ Selected"
+                  : "Add Premium"}
           </div>
         </div>
       </div>
@@ -296,8 +320,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isServiceActive("iron")
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.iron
-              ? "border-orange-500 bg-orange-50 cursor-pointer"
-              : "border-gray-300 hover:border-orange-500 hover:bg-orange-50 cursor-pointer"
+                ? "border-orange-500 bg-orange-50 cursor-pointer"
+                : "border-gray-300 hover:border-orange-500 hover:bg-orange-50 cursor-pointer"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("iron")) {
@@ -310,10 +334,10 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : !isServiceActive("iron")
-              ? "Service unavailable"
-              : b.iron
-              ? `${estimateDuration("iron", 1)}m`
-              : "Click to add"}
+                ? "Service unavailable"
+                : b.iron
+                  ? `${estimateDuration("iron", 1)}m`
+                  : "Click to add"}
           </div>
         </div>
 
@@ -322,8 +346,8 @@ export default function PaneBaskets({
             b.weightKg === 0 || !isServiceActive("fold")
               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-50"
               : b.fold
-              ? "border-teal-500 bg-teal-50 cursor-pointer"
-              : "border-gray-300 hover:border-teal-500 hover:bg-teal-50 cursor-pointer"
+                ? "border-teal-500 bg-teal-50 cursor-pointer"
+                : "border-gray-300 hover:border-teal-500 hover:bg-teal-50 cursor-pointer"
           }`}
           onClick={() => {
             if (b.weightKg !== 0 && isServiceActive("fold")) {
@@ -336,10 +360,10 @@ export default function PaneBaskets({
             {b.weightKg === 0
               ? "Add weight first"
               : !isServiceActive("fold")
-              ? "Service unavailable"
-              : b.fold
-              ? `${estimateDuration("fold", 1)}m`
-              : "Click to add"}
+                ? "Service unavailable"
+                : b.fold
+                  ? `${estimateDuration("fold", 1)}m`
+                  : "Click to add"}
           </div>
         </div>
       </div>

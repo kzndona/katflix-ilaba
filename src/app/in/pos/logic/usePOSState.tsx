@@ -95,9 +95,7 @@ export function usePOSState() {
   React.useEffect(() => {
     const loadServices = async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("services")
-        .select("*");
+      const { data, error } = await supabase.from("services").select("*");
 
       if (error) {
         console.error("Service load error:", error);
