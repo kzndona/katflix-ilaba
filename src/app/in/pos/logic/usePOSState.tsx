@@ -22,6 +22,7 @@ import {
   addAuditLogEntry,
   updateServiceStatusInBreakdown,
 } from "./orderHelpers";
+import { generateCompactReceipt } from "./receiptGenerator";
 import { createClient } from "@/src/app/utils/supabase/client";
 
 /**
@@ -572,6 +573,59 @@ export function usePOSState() {
 
       const orderId = data.order.id;
       console.log("✓ Order created:", orderId);
+
+      // GENERATE RECEIPT
+      try {
+        const compactReceipt = generateCompactReceipt(
+          orderId,
+          new Date(),
+          customer,
+          computeReceipt.productLines,
+          computeReceipt.basketLines,
+          computeReceipt.handling,
+          payment,
+          {
+            productSubtotal: computeReceipt.productSubtotal,
+            basketSubtotal: computeReceipt.basketSubtotal,
+            serviceFee: computeReceipt.serviceFee,
+            handlingFee: computeReceipt.handlingFee,
+            taxIncluded: computeReceipt.taxIncluded,
+            total: computeReceipt.total,
+          }
+        );
+
+        const receiptRes = await fetch("/api/receipts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            receipt: compactReceipt,
+            orderId,
+          }),
+        });
+
+        if (receiptRes.ok) {
+          const receiptData = await receiptRes.json();
+          console.log("✓ Receipt generated:", receiptData.filename);
+
+          // Auto-download receipt
+          const link = document.createElement("a");
+          link.href = receiptData.downloadUrl;
+          link.download = receiptData.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // TODO: Enable auto-print when thermal printer is connected
+          // setTimeout(() => {
+          //   window.print();
+          // }, 500);
+        } else {
+          console.error("Failed to generate receipt:", receiptRes.statusText);
+        }
+      } catch (receiptErr) {
+        console.error("Receipt generation error:", receiptErr);
+        // Don't block order completion if receipt generation fails
+      }
 
       // RESET POS
       resetPOS();
