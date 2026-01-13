@@ -91,13 +91,46 @@ export default function PaneBaskets({
     isPremium,
     disabled,
   }: any) => {
-    const colorMap: Record<string, { bg: string; border: string; text: string; accent: string }> = {
-      blue: { bg: "from-blue-50 to-blue-100", border: "border-blue-500", text: "text-blue-700", accent: "text-blue-600" },
-      green: { bg: "from-green-50 to-green-100", border: "border-green-500", text: "text-green-700", accent: "text-green-600" },
-      red: { bg: "from-red-50 to-red-100", border: "border-red-500", text: "text-red-700", accent: "text-red-600" },
-      orange: { bg: "from-orange-50 to-orange-100", border: "border-orange-500", text: "text-orange-700", accent: "text-orange-600" },
-      teal: { bg: "from-teal-50 to-teal-100", border: "border-teal-500", text: "text-teal-700", accent: "text-teal-600" },
-      purple: { bg: "from-purple-50 to-purple-100", border: "border-purple-500", text: "text-purple-700", accent: "text-purple-600" },
+    const colorMap: Record<
+      string,
+      { bg: string; border: string; text: string; accent: string }
+    > = {
+      blue: {
+        bg: "from-blue-50 to-blue-100",
+        border: "border-blue-500",
+        text: "text-blue-700",
+        accent: "text-blue-600",
+      },
+      green: {
+        bg: "from-green-50 to-green-100",
+        border: "border-green-500",
+        text: "text-green-700",
+        accent: "text-green-600",
+      },
+      red: {
+        bg: "from-red-50 to-red-100",
+        border: "border-red-500",
+        text: "text-red-700",
+        accent: "text-red-600",
+      },
+      orange: {
+        bg: "from-orange-50 to-orange-100",
+        border: "border-orange-500",
+        text: "text-orange-700",
+        accent: "text-orange-600",
+      },
+      teal: {
+        bg: "from-teal-50 to-teal-100",
+        border: "border-teal-500",
+        text: "text-teal-700",
+        accent: "text-teal-600",
+      },
+      purple: {
+        bg: "from-purple-50 to-purple-100",
+        border: "border-purple-500",
+        text: "text-purple-700",
+        accent: "text-purple-600",
+      },
     };
 
     const colors = colorMap[color] || colorMap.blue;
@@ -111,20 +144,37 @@ export default function PaneBaskets({
         }`}
         onClick={disabled ? undefined : onClick}
       >
-        <div className={`text-2xl font-bold mb-2 ${colors.accent}`}>{label}</div>
-        <div className="text-sm font-bold text-center mb-2 text-gray-900">{title} {isPremium && "(Prem)"}</div>
+        <div className={`text-2xl font-bold mb-2 ${colors.accent}`}>
+          {label}
+        </div>
+        <div className="text-sm font-bold text-center mb-2 text-gray-900">
+          {title} {isPremium && "(Prem)"}
+        </div>
         <div className={`text-xs ${colors.text}`}>
           {count}x • {estimateDuration(serviceType, count)}m
         </div>
-        <div className={`text-xs ${colors.text}`}>₱{getServicePrice(serviceType, isPremium)}/kg</div>
+        <div className={`text-xs ${colors.text}`}>
+          ₱{getServicePrice(serviceType, isPremium)}/kg
+        </div>
       </div>
     );
   };
 
   const TileButton = ({ label, subLabel, onClick, active, color }: any) => {
-    const colorMap: Record<string, { bg: string; border: string; accent: string }> = {
-      blue: { bg: "from-blue-50 to-blue-100", border: "border-blue-500", accent: "text-blue-600" },
-      green: { bg: "from-green-50 to-green-100", border: "border-green-500", accent: "text-green-600" },
+    const colorMap: Record<
+      string,
+      { bg: string; border: string; accent: string }
+    > = {
+      blue: {
+        bg: "from-blue-50 to-blue-100",
+        border: "border-blue-500",
+        accent: "text-blue-600",
+      },
+      green: {
+        bg: "from-green-50 to-green-100",
+        border: "border-green-500",
+        accent: "text-green-600",
+      },
     };
 
     const colors = colorMap[color] || colorMap.blue;
@@ -135,7 +185,9 @@ export default function PaneBaskets({
         onClick={onClick}
       >
         <div className={`text-3xl font-bold ${colors.accent}`}>{label}</div>
-        <div className="text-xs font-semibold mt-2 text-gray-700">{subLabel}</div>
+        <div className="text-xs font-semibold mt-2 text-gray-700">
+          {subLabel}
+        </div>
       </div>
     );
   };
@@ -284,7 +336,9 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-xl font-bold mb-2 text-purple-600">Premium Wash</div>
+          <div className="text-xl font-bold mb-2 text-purple-600">
+            Premium Wash
+          </div>
           <div className="text-xs font-semibold text-center text-purple-700">
             {b.weightKg === 0
               ? "Add weight first"
@@ -310,7 +364,9 @@ export default function PaneBaskets({
             }
           }}
         >
-          <div className="text-xl font-bold mb-2 text-purple-600">Premium Dry</div>
+          <div className="text-xl font-bold mb-2 text-purple-600">
+            Premium Dry
+          </div>
           <div className="text-xs font-semibold text-center text-purple-700">
             {b.weightKg === 0
               ? "Add weight first"

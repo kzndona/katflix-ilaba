@@ -38,7 +38,9 @@ export default function PaneProducts({
                 <div className="text-sm font-bold text-center mb-2 text-gray-900">
                   {p.item_name}
                 </div>
-                <div className="text-xs font-semibold text-red-700">({count})</div>
+                <div className="text-xs font-semibold text-red-700">
+                  ({count})
+                </div>
               </div>
 
               <div
@@ -50,7 +52,9 @@ export default function PaneProducts({
                 <div className="text-sm font-bold text-center mb-2 text-gray-900">
                   {p.item_name}
                 </div>
-                <div className="text-xs font-semibold text-green-700">₱{p.unit_price}</div>
+                <div className="text-xs font-semibold text-green-700">
+                  ₱{p.unit_price}
+                </div>
               </div>
             </React.Fragment>
           );
