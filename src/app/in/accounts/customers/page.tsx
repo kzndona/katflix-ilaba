@@ -516,7 +516,7 @@ function EditPane({
             value={customer.email_address ?? ""}
             onChange={(v) => updateField("email_address", v)}
           />
-          <Field
+          <PhoneField
             label="Phone"
             value={customer.phone_number ?? ""}
             onChange={(v) => updateField("phone_number", v)}
@@ -569,6 +569,52 @@ function EditPane({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Philippine phone number field component with validation
+function PhoneField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const isValid = value === "" || /^09\d{9}$/.test(value);
+
+  return (
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <input
+        type="tel"
+        value={value}
+        onChange={(e) => {
+          // Only allow digits
+          const digits = e.target.value.replace(/\D/g, "");
+          // Limit to 11 digits for Philippine format
+          if (digits.length <= 11) {
+            onChange(digits);
+          }
+        }}
+        maxLength={11}
+        disabled={disabled}
+        placeholder="09XXXXXXXXX"
+        className={`border px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500 ${
+          value && !isValid
+            ? "border-red-300 focus:ring-red-500"
+            : "border-gray-300 focus:ring-blue-500"
+        }`}
+      />
+      {value && !isValid && (
+        <p className="text-xs text-red-600 mt-1">
+          Format: 09XXXXXXXXX (11 digits)
+        </p>
+      )}
     </div>
   );
 }

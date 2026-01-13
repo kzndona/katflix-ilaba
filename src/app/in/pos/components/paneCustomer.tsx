@@ -162,22 +162,38 @@ export default function PaneCustomer({
 
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Phone Number *
+            Phone Number * (09XXXXXXXXX)
           </label>
           <input
+            type="tel"
             value={customer?.phone_number ?? ""}
             onChange={(e) => {
-              const value = e.target.value.replace(/[^\d\s\-\+\(\)]/g, "");
-              setCustomer({ ...customer, phone_number: value } as Customer);
+              // Only allow digits
+              const digits = e.target.value.replace(/\D/g, "");
+              // Limit to 11 digits for Philippine format
+              if (digits.length <= 11) {
+                setCustomer({ ...customer, phone_number: digits } as Customer);
+              }
             }}
             disabled={isLoadedFromDB}
-            placeholder="Required"
-            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            maxLength={11}
+            placeholder="09XXXXXXXXX"
+            className={`w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 ${
               isLoadedFromDB
-                ? "bg-gray-100 cursor-not-allowed text-gray-500"
-                : ""
+                ? "bg-gray-100 cursor-not-allowed text-gray-500 border-gray-300"
+                : customer?.phone_number && !/^09\d{9}$/.test(customer.phone_number)
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
             }`}
           />
+          {customer?.phone_number && !/^09\d{9}$/.test(customer.phone_number) && (
+            <p className="text-xs text-red-600 mt-1">
+              Format: 09XXXXXXXXX (11 digits total)
+            </p>
+          )}
+          {customer?.phone_number && /^09\d{9}$/.test(customer.phone_number) && (
+            <p className="text-xs text-green-600 mt-1">✓ Valid format</p>
+          )}
         </div>
 
         <div>

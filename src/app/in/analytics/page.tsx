@@ -16,6 +16,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import {
+  generateMonthlySummaryPDF,
+  generateTransactionsPDF,
+  type ExportSummaryData,
+  type OrderTransaction,
+  type ProductTransaction,
+} from "../../utils/exportUtils";
 
 type RevenueData = {
   date: string;
@@ -88,6 +95,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productsPage, setProductsPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   // Fetch all analytics data
   useEffect(() => {
@@ -191,6 +199,74 @@ export default function AnalyticsPage() {
     productsPage * productsPerPage
   );
 
+  // Export Monthly Summary
+  async function exportMonthlySummary() {
+    if (!revenueData || !ordersData || !customersData) {
+      alert("Data not yet loaded");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const totalRevenue = revenueData.dailyRevenue.reduce(
+        (sum, day) => sum + day.revenue,
+        0
+      );
+
+      const summaryData: ExportSummaryData = {
+        dateRange: { start: dateRange.startDate, end: dateRange.endDate },
+        totalRevenue,
+        totalOrders: ordersData.totalOrders,
+        avgOrderValue: ordersData.avgOrderValue,
+        newCustomers: customersData.newCustomers,
+        returningCustomers: customersData.returningCustomers,
+        fulfillmentBreakdown: ordersData.fulfillmentBreakdown,
+        topProducts: revenueData.productRevenue.slice(0, 5),
+        topServices: revenueData.serviceRevenue.slice(0, 5),
+      };
+
+      const pdf = generateMonthlySummaryPDF(summaryData);
+      pdf.save(
+        `summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`
+      );
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to export summary");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // Export Transactions
+  async function exportTransactions() {
+    setExporting(true);
+    try {
+      // Fetch order transactions
+      const ordersRes = await fetch(
+        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+      );
+      if (!ordersRes.ok) throw new Error("Failed to fetch order transactions");
+      const orderTransactions: OrderTransaction[] = await ordersRes.json();
+
+      // Fetch product transactions
+      const productsRes = await fetch(
+        `/api/analytics/transactions/products?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+      );
+      if (!productsRes.ok) throw new Error("Failed to fetch product transactions");
+      const productTransactions: ProductTransaction[] = await productsRes.json();
+
+      const pdf = generateTransactionsPDF(orderTransactions, productTransactions);
+      pdf.save(
+        `transactions_${dateRange.startDate}_to_${dateRange.endDate}.pdf`
+      );
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to export transactions");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-900 relative m-0 p-0">
       {/* Background subtle gradient effect - Apple M1 style */}
@@ -203,7 +279,7 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm sticky top-18 z-20">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-8">
             <div>
               <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 Sales & Analytics
@@ -212,14 +288,10 @@ export default function AnalyticsPage() {
                 Historical data and performance metrics
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition text-sm font-medium">
-                📊 Export Summary
-              </button>
-              <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition text-sm font-medium">
-                📋 Export Transactions
-              </button>
-              <div className="flex gap-2">
+            <div className="flex items-center gap-6">
+              {/* Date Range Inputs (Slate) */}
+              <div className="flex gap-2 items-center">
+                <span className="text-slate-300 text-sm font-medium">Period:</span>
                 <input
                   type="date"
                   value={dateRange.startDate}
@@ -229,8 +301,9 @@ export default function AnalyticsPage() {
                       startDate: e.target.value,
                     })
                   }
-                  className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
                 />
+                <span className="text-slate-400">to</span>
                 <input
                   type="date"
                   value={dateRange.endDate}
@@ -240,8 +313,33 @@ export default function AnalyticsPage() {
                       endDate: e.target.value,
                     })
                   }
-                  className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
                 />
+              </div>
+
+              {/* Export Buttons */}
+              <div className="flex gap-3">
+                {/* Export Summary (Blue) */}
+                <button
+                  onClick={exportMonthlySummary}
+                  disabled={exporting}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition text-sm font-medium shadow-md hover:shadow-lg"
+                  title="Export summary report with all metrics"
+                >
+                  <span>📊</span>
+                  <span>{exporting ? "Exporting..." : "Export Summary"}</span>
+                </button>
+
+                {/* Export Transactions (Green) */}
+                <button
+                  onClick={exportTransactions}
+                  disabled={exporting}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-500 disabled:opacity-50 text-white rounded-lg transition text-sm font-medium shadow-md hover:shadow-lg"
+                  title="Export order and product transactions"
+                >
+                  <span>📋</span>
+                  <span>{exporting ? "Exporting..." : "Export Transactions"}</span>
+                </button>
               </div>
             </div>
           </div>
