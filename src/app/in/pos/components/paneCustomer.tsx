@@ -179,8 +179,7 @@ export default function PaneCustomer({
             maxLength={11}
             placeholder="09XXXXXXXXX"
             className={`w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 ${
-              customer?.phone_number &&
-              !/^09\d{9}$/.test(customer.phone_number)
+              customer?.phone_number && !/^09\d{9}$/.test(customer.phone_number)
                 ? "border-red-300 focus:ring-red-500"
                 : "border-gray-300 focus:ring-blue-500"
             }`}
