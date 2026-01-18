@@ -74,8 +74,13 @@ export function usePOSState() {
     Record<string, number>
   >({});
   const [activePane, setActivePane] = React.useState<
-    "customer" | "handling" | "products" | "basket"
+    "customer" | "products" | "handling"
   >("customer");
+
+  // Navigation between panes
+  const goToPane = (pane: "customer" | "products" | "handling") => {
+    setActivePane(pane);
+  };
 
   // Handling (pickup/delivery)
   const [handling, setHandling] = React.useState<HandlingState>({
@@ -536,42 +541,42 @@ export function usePOSState() {
         handling: computeReceipt.handling,
       };
 
-      // CALL new API endpoint
-      const res = await fetch("/api/orders", {
+      // CALL transactional API endpoint to update customer + create order
+      const res = await fetch("/api/orders/transactional-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
+        body: JSON.stringify({
+          customer: {
+            id: customer.id,
+            phone_number: customer.phone_number,
+            email_address: customer.email_address,
+          },
+          orderPayload,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        // Handle stock validation errors specifically
-        if (res.status === 400 && data.insufficientItems) {
-          const itemsList = data.insufficientItems
-            .map(
-              (item: any) =>
-                `- ${item.productName}: need ${item.requested}, have ${item.available}`
-            )
-            .join("\n");
+        console.error("Transactional order creation failed:", data);
+        if (data.partialSuccess) {
           alert(
-            `Insufficient stock for:\n\n${itemsList}\n\nPlease adjust quantities and try again.`
+            "Customer details were saved, but the order could not be created. Please try again."
           );
         } else {
-          console.error("Failed to create order:", data.error);
           alert(data.error || "Failed to save order. Please try again.");
         }
         setIsProcessing(false);
         return null;
       }
 
-      if (!data.success || !data.order?.id) {
+      if (!data.success || !data.orderId) {
         alert("Order created but with unexpected response format.");
         setIsProcessing(false);
         return null;
       }
 
-      const orderId = data.order.id;
+      const orderId = data.orderId;
       console.log("✓ Order created:", orderId);
 
       // GENERATE RECEIPT
@@ -667,6 +672,7 @@ export function usePOSState() {
     setCustomerQuery,
     customerSuggestions,
     setCustomerSuggestions,
+    goToPane,
     baskets,
     setBaskets,
     activeBasketIndex,

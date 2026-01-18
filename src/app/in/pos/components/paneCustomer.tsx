@@ -175,16 +175,14 @@ export default function PaneCustomer({
                 setCustomer({ ...customer, phone_number: digits } as Customer);
               }
             }}
-            disabled={isLoadedFromDB}
+            disabled={false}
             maxLength={11}
             placeholder="09XXXXXXXXX"
             className={`w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 ${
-              isLoadedFromDB
-                ? "bg-gray-100 cursor-not-allowed text-gray-500 border-gray-300"
-                : customer?.phone_number &&
-                    !/^09\d{9}$/.test(customer.phone_number)
-                  ? "border-red-300 focus:ring-red-500"
-                  : "border-gray-300 focus:ring-blue-500"
+              customer?.phone_number &&
+              !/^09\d{9}$/.test(customer.phone_number)
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
             }`}
           />
           {customer?.phone_number &&
@@ -206,19 +204,15 @@ export default function PaneCustomer({
           <input
             type="email"
             value={customer?.email_address ?? ""}
-            onChange={(e) =>
+            onChange={(e) => {
               setCustomer({
                 ...customer,
                 email_address: e.target.value,
-              } as Customer)
-            }
-            disabled={isLoadedFromDB}
+              } as Customer);
+            }}
+            disabled={false}
             placeholder="Optional"
-            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isLoadedFromDB
-                ? "bg-gray-100 cursor-not-allowed text-gray-500"
-                : ""
-            }`}
+            className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500`}
           />
         </div>
 

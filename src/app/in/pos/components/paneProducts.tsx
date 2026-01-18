@@ -8,6 +8,7 @@ type Props = {
   orderProductCounts: Record<string, number>;
   addProduct: (id: string) => void;
   removeProduct: (id: string) => void;
+  onNext: () => void;
 };
 
 export default function PaneProducts({
@@ -15,6 +16,7 @@ export default function PaneProducts({
   orderProductCounts,
   addProduct,
   removeProduct,
+  onNext,
 }: Props) {
   return (
     <div>
@@ -97,6 +99,15 @@ export default function PaneProducts({
           </div>
         </div>
       )}
+
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={onNext}
+          className="px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-base"
+        >
+          Next →
+        </button>
+      </div>
     </div>
   );
 }

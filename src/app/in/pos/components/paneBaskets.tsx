@@ -10,6 +10,7 @@ type Props = {
   deleteActiveBasket: (index: number) => void;
   createNewBasket: () => void;
   services: LaundryService[];
+  onNext: () => void;
 };
 
 export default function PaneBaskets({
@@ -19,6 +20,7 @@ export default function PaneBaskets({
   deleteActiveBasket,
   createNewBasket,
   services,
+  onNext,
 }: Props) {
   const b = baskets[activeBasketIndex];
 
@@ -445,6 +447,15 @@ export default function PaneBaskets({
           rows={3}
           placeholder="Add any special instructions for this basket..."
         />
+      </div>
+
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={onNext}
+          className="px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-base"
+        >
+          Next →
+        </button>
       </div>
     </div>
   );

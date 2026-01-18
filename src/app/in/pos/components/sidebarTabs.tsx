@@ -28,7 +28,8 @@ export default function SidebarTabs({
     customer?.first_name && customer?.last_name && customer?.phone_number;
   return (
     <aside className="bg-white border-r border-gray-200 p-4 flex flex-col h-full rounded-lg">
-      <div className="space-y-2">
+      {/* Customer Tab */}
+      <div className="space-y-2 mb-3">
         <button
           onClick={() => setActivePane("customer")}
           className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
@@ -38,6 +39,70 @@ export default function SidebarTabs({
           }`}
         >
           Customer
+        </button>
+      </div>
+
+      {/* Baskets List Section (Expandable) */}
+      <div className="flex flex-col mb-3">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Baskets
+        </div>
+
+        <div className="flex-2 overflow-y-auto pr-2 space-y-2 mb-3">
+          {baskets.map((b, i) => (
+            <button
+              key={b.id}
+              onClick={() => setActiveBasketIndex(i)}
+              className={`w-full text-left px-3 py-2 rounded-lg flex justify-between items-center text-sm transition ${
+                activeBasketIndex === i
+                  ? "bg-blue-100 border border-blue-300"
+                  : "hover:bg-gray-100"
+              }`}
+            >
+              <div>
+                <div className="font-medium text-gray-900">{b.name}</div>
+                <div className="text-xs text-gray-500">
+                  {b.weightKg.toFixed(1)} kg • W{b.washCount} • D{b.dryCount}
+                </div>
+              </div>
+              <div className="text-xs text-gray-400">#{b.originalIndex}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={addBasket}
+            className="flex-1 py-3 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white font-bold text-sm hover:from-green-700 hover:to-green-800 transition shadow-md hover:shadow-lg"
+          >
+            + Add
+          </button>
+          {baskets.length > 1 && (
+            <button
+              onClick={() => deleteBasket(activeBasketIndex)}
+              className="flex-1 py-3 rounded-lg bg-linear-to-r from-red-600 to-red-700 text-white font-bold text-sm hover:from-red-700 hover:to-red-800 transition shadow-md hover:shadow-lg"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Products and Pickup & Delivery Tabs */}
+      <div className="space-y-2">
+        <button
+          onClick={() => isCustomerValid && setActivePane("products")}
+          disabled={!isCustomerValid}
+          className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
+            activePane === "products"
+              ? "bg-blue-600 text-white"
+              : isCustomerValid
+                ? "hover:bg-gray-100 text-gray-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+          title={!isCustomerValid ? "Select a customer first" : ""}
+        >
+          Products
         </button>
 
         <button
@@ -54,71 +119,6 @@ export default function SidebarTabs({
         >
           Pickup & Delivery
         </button>
-
-        <button
-          onClick={() => isCustomerValid && setActivePane("products")}
-          disabled={!isCustomerValid}
-          className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
-            activePane === "products"
-              ? "bg-blue-600 text-white"
-              : isCustomerValid
-                ? "hover:bg-gray-100 text-gray-700"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-          }`}
-          title={!isCustomerValid ? "Select a customer first" : ""}
-        >
-          Products
-        </button>
-      </div>
-
-      <hr className="my-4 border-gray-200" />
-
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-          Baskets
-        </div>
-
-        <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-          {baskets.map((b, i) => (
-            <button
-              key={b.id}
-              onClick={() => {
-                setActivePane("basket");
-                setActiveBasketIndex(i);
-              }}
-              className={`w-full text-left px-3 py-2 rounded-lg flex justify-between items-center text-sm transition ${
-                activePane === "basket" && activeBasketIndex === i
-                  ? "bg-blue-100 border border-blue-300"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              <div>
-                <div className="font-medium text-gray-900">{b.name}</div>
-                <div className="text-xs text-gray-500">
-                  {b.weightKg.toFixed(1)} kg • W{b.washCount} • D{b.dryCount}
-                </div>
-              </div>
-              <div className="text-xs text-gray-400">#{b.originalIndex}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={addBasket}
-            className="flex-1 py-4 rounded-lg bg-linear-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 transition shadow-md hover:shadow-lg"
-          >
-            + Add
-          </button>
-          {baskets.length > 1 && (
-            <button
-              onClick={() => deleteBasket(activeBasketIndex)}
-              className="flex-1 py-4 rounded-lg bg-linear-to-r from-red-600 to-red-700 text-white font-bold text-base hover:from-red-700 hover:to-red-800 transition shadow-md hover:shadow-lg"
-            >
-              Delete
-            </button>
-          )}
-        </div>
       </div>
     </aside>
   );
