@@ -68,6 +68,12 @@ breakdown: {
             weight, // weight of laundry
             basket_notes, // string | null
 
+            // BASKET APPROVAL (Mobile App Orders Only)
+            approval_status: "pending" | "approved" | "rejected" | null, // null for web POS orders
+            approved_at: timestamp | null,  // when cashier approved this basket
+            approved_by: UUID FK (staff.id) | null,  // which cashier approved
+            rejection_reason: string | null,  // if rejected, why?
+
             services: [
                 {
                     id, // line item UUID (same question as in items)
@@ -200,3 +206,40 @@ cancellation: {
 
 // Together: products.quantity tracks current stock, product_transactions tracks history,
 // and breakdown.audit_log tracks all order-level changes for compliance and debugging
+
+// BASKET APPROVAL WORKFLOW (Mobile App Orders Only)
+
+// 1. Order Creation
+// - Mobile app creates order with status="pending"
+// - All baskets have approval_status="pending"
+// - Inventory is NOT deducted yet
+// - Customer receives push notification: "Order Received"
+
+// 2. Cashier Approval
+// - Cashier approves order via /api/orders/{orderId}/approve
+// - GROUP APPROVAL: Approving one basket marks ALL baskets in the order as approved
+// - All baskets updated with:
+//   - approval_status: "approved"
+//   - approved_at: timestamp
+//   - approved_by: cashier_id
+// - Inventory is deducted for all products in the order
+// - Order status changes to "processing"
+// - Payment status changes to "successful"
+// - Customer receives push notification: "Order Approved!"
+// - Audit log entry: action="order_approved", changed_by=cashier_id
+
+// 3. Cashier Rejection (Optional)
+// - Cashier can reject order if items unavailable
+// - All baskets updated with:
+//   - approval_status: "rejected"
+//   - rejection_reason: string
+// - Inventory NOT deducted (never was deducted)
+// - Order status changes to "cancelled"
+// - Payment status changes to "failed"
+// - Customer receives push notification: "Order Could Not Be Approved"
+// - Audit log entry: action="order_rejected"
+
+// NOTE: Web POS orders skip this approval workflow
+// - Web POS orders have status="processing" immediately
+// - Baskets have approval_status=null (not applicable)
+// - Inventory is deducted at order creation time
