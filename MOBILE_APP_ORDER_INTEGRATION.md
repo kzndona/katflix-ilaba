@@ -1,9 +1,11 @@
 # Mobile App Booking Module - Order Integration Guide
 
 ## Overview
+
 This document provides the mobile app coding agent with all necessary information to implement the order creation process for the booking module. The mobile app uses the same backend APIs as the web-based POS system, but with pre-authenticated customers (no customer selection needed).
 
 **Key Mobile App Workflow**:
+
 - Customer creates order and pays via GCash (upload screenshot)
 - Order created with status `pending` (awaiting cashier approval)
 - `cashier_id` is NULL initially
@@ -18,6 +20,7 @@ This document provides the mobile app coding agent with all necessary informatio
 ## Architecture Overview
 
 ### Order Flow
+
 ```
 1. [Mobile App] Prepare Order Data
    ↓
@@ -53,17 +56,20 @@ This document provides the mobile app coding agent with all necessary informatio
 ## Key Differences from Web POS
 
 ### Customer Selection
+
 - **Web POS**: User can search and select customer or create new one at order time
 - **Mobile App**: Customer is already authenticated (pre-logged in), use `customer_id` from auth context
 - **Mobile App**: Update customer contact info only if changed
 
 ### Payment & Approval
+
 - **Web POS**: Immediate payment in-store, cashier_id set on creation
 - **Mobile App**: GCash payment first (screenshot uploaded), order created with `pending` status
 - **Mobile App**: `cashier_id` is NULL initially, set by cashier during approval
 - **Mobile App**: Stock deduction happens **after** cashier approval, not on creation
 
 ### Order Source
+
 - **Web POS**: `source: "store"`
 - **Mobile App**: `source: "app"`
 
@@ -72,28 +78,30 @@ This document provides the mobile app coding agent with all necessary informatio
 ## Data Structures
 
 ### Order JSON Fields Overview
+
 All orders follow this structure (saved in `orders` table):
 
 ```typescript
 {
-  id: string;                           // UUID (auto-generated)
-  source: "store" | "app";              // "app" for mobile
-  customer_id: string;                  // UUID of authenticated user
-  cashier_id: string | null;            // NULL for pending orders, set on approval
-  status: OrderStatus;                  // Fulfillment workflow status
-  total_amount: number;                 // Final price
-  order_note: string | null;            // Optional notes
-  breakdown: BreakdownJSON;             // Items, baskets, services, fees
-  handling: HandlingJSON;               // Pickup/delivery logistics
+  id: string; // UUID (auto-generated)
+  source: "store" | "app"; // "app" for mobile
+  customer_id: string; // UUID of authenticated user
+  cashier_id: string | null; // NULL for pending orders, set on approval
+  status: OrderStatus; // Fulfillment workflow status
+  total_amount: number; // Final price
+  order_note: string | null; // Optional notes
+  breakdown: BreakdownJSON; // Items, baskets, services, fees
+  handling: HandlingJSON; // Pickup/delivery logistics
   cancellation: null | CancellationJSON; // If cancelled
-  created_at: string;                   // ISO timestamp
-  approved_at: string | null;           // Set by cashier on approval
-  completed_at: string | null;          // When all tasks done
-  cancelled_at: string | null;          // If cancelled
+  created_at: string; // ISO timestamp
+  approved_at: string | null; // Set by cashier on approval
+  completed_at: string | null; // When all tasks done
+  cancelled_at: string | null; // If cancelled
 }
 ```
 
 ### Order Status Values
+
 ```
 "pending"         - Mobile order awaiting cashier approval (payment screenshot uploaded)
 "processing"      - Approved by cashier, being worked on (stock deducted)
@@ -124,7 +132,7 @@ breakdown: {
       }
     }
   ],
-  
+
   baskets: [                  // Laundry baskets with services
     {
       basket_number: number;  // 1, 2, 3... (original index)
@@ -208,7 +216,7 @@ handling: {
     completed_by: string | null;    // Staff ID
     duration_in_minutes: number | null;
   },
-  
+
   delivery: {
     address: string | null;         // Delivery location
     latitude: number | null;
@@ -230,29 +238,32 @@ handling: {
 ### GCash Payment Flow
 
 **Step 1: Customer Initiates Payment**
+
 - Show GCash payment amount (order total)
 - Customer pays via GCash mobile app
 - Customer returns to booking app
 
 **Step 2: Upload Payment Screenshot**
+
 ```typescript
 // User uploads screenshot of GCash transaction confirmation
 const screenshotFile: File; // From file picker
 const formData = new FormData();
-formData.append('screenshot', screenshotFile);
-formData.append('orderId', orderId); // Placeholder - can be temp ID
+formData.append("screenshot", screenshotFile);
+formData.append("orderId", orderId); // Placeholder - can be temp ID
 
 // For now, store locally or in state
 // TODO: Create /api/gcash-receipts endpoint when bucket is ready
 const gcashReceiptPlaceholder = {
-  screenshot_url: null,      // Will be set when bucket is available
-  transaction_id: null,      // Optional: if user enters manually
-  verified: false            // Set by cashier during approval
+  screenshot_url: null, // Will be set when bucket is available
+  transaction_id: null, // Optional: if user enters manually
+  verified: false, // Set by cashier during approval
 };
 ```
 
 **Step 2b: GCash Receipt Storage (TODO)**
 When storage bucket becomes available:
+
 - Create `/api/gcash-receipts` endpoint to upload screenshots
 - Return `screenshot_url` to be saved in `breakdown.payment.gcash_receipt.screenshot_url`
 - Cashier can verify receipt during order approval
@@ -264,9 +275,11 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ## API Endpoints
 
 ### 1. Create Order (Main Endpoint)
+
 **Endpoint**: `POST /api/orders/transactional-create`
 
 **Request Body**:
+
 ```typescript
 {
   customer: {
@@ -288,6 +301,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **Response** (Success):
+
 ```typescript
 {
   success: true,
@@ -309,6 +323,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **Response** (Error - Insufficient Stock):
+
 ```typescript
 {
   success: false,
@@ -325,9 +340,11 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 ### 2. Approve Order (Cashier - Manage Orders Webapp)
+
 **Endpoint**: `POST /api/orders/{orderId}/approve`
 
 **Request Body**:
+
 ```typescript
 {
   cashier_id: string;           // Staff ID of approver
@@ -337,6 +354,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **Backend Logic**:
+
 1. Validate order status is "pending" and source is "app"
 2. Update order:
    - status → "processing"
@@ -351,6 +369,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 5. Trigger push notification to customer: "Order approved and processing"
 
 **Response**:
+
 ```typescript
 {
   success: true,
@@ -362,14 +381,17 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **Error Handling**:
+
 - If already approved: `error: "Order already approved"`
 - If cancelled: `error: "Order is cancelled"`
 - If stock insufficient: `error: "Insufficient stock"` + `insufficientItems: [...]`
 
 ### 3. Generate Receipt
+
 **Endpoint**: `POST /api/receipts`
 
 **Request Body**:
+
 ```typescript
 {
   receipt: CompactReceipt,   // See structure below
@@ -378,6 +400,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **CompactReceipt Structure**:
+
 ```typescript
 {
   orderNumber: string;       // First 8 chars of order ID (uppercase)
@@ -405,6 +428,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **ReceiptItem Structure**:
+
 ```typescript
 {
   type: "product" | "service";
@@ -417,6 +441,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ```
 
 **Response**:
+
 ```typescript
 {
   success: true,
@@ -431,6 +456,7 @@ For now, use placeholder structure in breakdown. **Do NOT require screenshot upl
 ## Implementation Steps
 
 ### Step 1: Collect GCash Payment
+
 ```typescript
 // 1. Show order total
 const orderTotal = calculateTotal(breakdown);
@@ -455,21 +481,26 @@ const gcashPaymentProof = {
 ```
 
 ### Step 1b: Get Authenticated User
+
 ```typescript
 const supabase = createClient();
-const { data: { user } } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 
 const customerId = user.id; // Customer ID = auth user ID
 // Note: DO NOT get staff ID - this is customer app, not staff
 ```
 
 ### Step 2: Prepare Products for Breakdown
+
 When user selects products (e.g., supplies):
+
 ```typescript
 // Store product selections as: { productId: quantity }
 const orderProductCounts: Record<string, number> = {
-  "prod-123": 2,  // 2 units of product with ID "prod-123"
-  "prod-456": 1
+  "prod-123": 2, // 2 units of product with ID "prod-123"
+  "prod-456": 1,
 };
 
 // Fetch full product details for breakdown
@@ -480,28 +511,31 @@ const { data: products } = await supabase
 ```
 
 ### Step 3: Prepare Baskets for Breakdown
+
 Each basket contains weight and services:
+
 ```typescript
 interface Basket {
   id: string;
-  name: string;              // "Basket 1", "Basket 2"
-  originalIndex: number;     // 1, 2, 3... (for basket_number)
+  name: string; // "Basket 1", "Basket 2"
+  originalIndex: number; // 1, 2, 3... (for basket_number)
   weightKg: number;
-  washCount: number;         // How many times wash? (0, 1, 2...)
+  washCount: number; // How many times wash? (0, 1, 2...)
   dryCount: number;
   spinCount: number;
   iron: boolean;
   fold: boolean;
-  washPremium: boolean;      // Premium variant?
+  washPremium: boolean; // Premium variant?
   dryPremium: boolean;
   notes: string;
 }
 
 // Baskets with 0 weight are filtered out
-const activeBaskets = baskets.filter(b => b.weightKg > 0);
+const activeBaskets = baskets.filter((b) => b.weightKg > 0);
 ```
 
 ### Step 4: Fetch Services & Service Rates
+
 ```typescript
 const { data: services } = await supabase
   .from("services")
@@ -522,11 +556,11 @@ function buildBreakdownJSON(
   products: Product[],
   services: Service[],
   handling: HandlingState,
-  gcashScreenshotUrl: string | null = null
+  gcashScreenshotUrl: string | null = null,
 ): BreakdownJSON {
   // 1. Build items array from products
   const items = Object.entries(orderProductCounts).map(([pid, qty]) => {
-    const product = products.find(p => p.id === pid)!;
+    const product = products.find((p) => p.id === pid)!;
     return {
       id: crypto.randomUUID(),
       product_id: pid,
@@ -535,13 +569,13 @@ function buildBreakdownJSON(
       unit_price: product.unit_price,
       unit_cost: product.unit_cost ?? 0,
       subtotal: product.unit_price * qty,
-      discount: { amount: 0, reason: null }
+      discount: { amount: 0, reason: null },
     };
   });
 
   // 2. Build baskets array with services
   const basketsArray = baskets
-    .filter(b => b.weightKg > 0)
+    .filter((b) => b.weightKg > 0)
     .map((basket, idx) => {
       const basketServices = [];
       let basketTotal = 0;
@@ -562,7 +596,7 @@ function buildBreakdownJSON(
           started_at: null,
           completed_at: null,
           completed_by: null,
-          duration_in_minutes: svc.base_duration_minutes * basket.washCount
+          duration_in_minutes: svc.base_duration_minutes * basket.washCount,
         });
         basketTotal += subtotal;
       }
@@ -573,7 +607,7 @@ function buildBreakdownJSON(
         weight: basket.weightKg,
         basket_notes: basket.notes || null,
         services: basketServices,
-        total: basketTotal
+        total: basketTotal,
       };
     });
 
@@ -582,8 +616,9 @@ function buildBreakdownJSON(
   const basketSubtotal = basketsArray.reduce((s, b) => s + b.total, 0);
   const serviceFee = basketsArray.length > 0 ? 40 : 0; // PHP 40 per order
   const handlingFee = handling.deliver ? 50 : 0; // Fixed ₱50 for delivery
-  
-  const subtotalBeforeTax = productSubtotal + basketSubtotal + serviceFee + handlingFee;
+
+  const subtotalBeforeTax =
+    productSubtotal + basketSubtotal + serviceFee + handlingFee;
   const taxRate = 0.12; // 12% VAT
   const taxIncluded = subtotalBeforeTax * (taxRate / (1 + taxRate));
   const total = subtotalBeforeTax;
@@ -595,7 +630,7 @@ function buildBreakdownJSON(
       id: crypto.randomUUID(),
       type: "service_fee",
       description: "Service Fee",
-      amount: serviceFee
+      amount: serviceFee,
     });
   }
   if (handlingFee > 0) {
@@ -603,31 +638,33 @@ function buildBreakdownJSON(
       id: crypto.randomUUID(),
       type: "handling_fee",
       description: "Delivery Fee",
-      amount: handlingFee
+      amount: handlingFee,
     });
   }
 
   // 5. Build payment object
   const payment = {
     method: "gcash",
-    payment_status: "pending",  // Will be set to "successful" when cashier approves
+    payment_status: "pending", // Will be set to "successful" when cashier approves
     amount_paid: total,
     change_amount: 0,
-    completed_at: null,  // Will be set when payment verified
+    completed_at: null, // Will be set when payment verified
     gcash_receipt: {
-      screenshot_url: gcashScreenshotUrl || null,  // Placeholder for now
+      screenshot_url: gcashScreenshotUrl || null, // Placeholder for now
       transaction_id: null,
-      verified: false  // Will be set by cashier
-    }
+      verified: false, // Will be set by cashier
+    },
   };
 
   // 6. Build audit log
-  const auditLog = [{
-    timestamp: new Date().toISOString(),
-    changed_by: null,  // No staff member yet (awaiting approval)
-    action: "Order created via mobile app - pending cashier approval",
-    details: { source: "app", payment_method: "gcash" }
-  }];
+  const auditLog = [
+    {
+      timestamp: new Date().toISOString(),
+      changed_by: null, // No staff member yet (awaiting approval)
+      action: "Order created via mobile app - pending cashier approval",
+      details: { source: "app", payment_method: "gcash" },
+    },
+  ];
 
   return {
     items,
@@ -640,10 +677,10 @@ function buildBreakdownJSON(
       handling_fee: handlingFee,
       tax_rate: taxRate,
       tax_included: taxIncluded,
-      total
+      total,
     },
     payment,
-    audit_log: auditLog
+    audit_log: auditLog,
   };
 }
 ```
@@ -651,44 +688,45 @@ function buildBreakdownJSON(
 ### Step 6: Build Handling JSON
 
 ```typescript
-function buildHandlingJSON(
-  handling: {
-    pickup: boolean;
-    pickupAddress: string | null;
-    deliver: boolean;
-    deliveryAddress: string;
-    instructions: string;
-  }
-): HandlingJSON {
+function buildHandlingJSON(handling: {
+  pickup: boolean;
+  pickupAddress: string | null;
+  deliver: boolean;
+  deliveryAddress: string;
+  instructions: string;
+}): HandlingJSON {
   return {
     pickup: {
       address: handling.pickup ? handling.pickupAddress : null,
-      latitude: null,     // Can be set by rider later with GPS
+      latitude: null, // Can be set by rider later with GPS
       longitude: null,
       notes: handling.instructions || null,
-      status: (handling.pickup && handling.pickupAddress) ? "pending" : "skipped",
+      status: handling.pickup && handling.pickupAddress ? "pending" : "skipped",
       started_at: null,
       completed_at: null,
       completed_by: null,
-      duration_in_minutes: null
+      duration_in_minutes: null,
     },
     delivery: {
       address: handling.deliver ? handling.deliveryAddress : null,
-      latitude: null,     // Can be set by rider later with GPS
+      latitude: null, // Can be set by rider later with GPS
       longitude: null,
       notes: handling.instructions || null,
-      status: (handling.deliver && handling.deliveryAddress) ? "pending" : "skipped",
+      status:
+        handling.deliver && handling.deliveryAddress ? "pending" : "skipped",
       started_at: null,
       completed_at: null,
       completed_by: null,
-      duration_in_minutes: null
-    }
+      duration_in_minutes: null,
+    },
   };
 }
 ```
 
 ### Step 7: Note on Stock Validation
+
 **IMPORTANT**: For mobile app orders:
+
 - Stock is **NOT** validated before order creation
 - Order is created with status "pending" regardless of stock levels
 - Stock validation and deduction happens **only after** cashier approves
@@ -703,18 +741,18 @@ async function createOrder(
   breakdown: BreakdownJSON,
   handling: HandlingJSON,
   customer: { id: string; phone_number: string; email_address: string },
-  totalAmount: number
+  totalAmount: number,
 ) {
   // NOTE: Mobile app orders start with status="pending" and cashier_id=null
   const orderPayloadForMobile = {
     source: "app",
     customer_id: customer.id,
-    cashier_id: null,      // Will be set by cashier during approval
-    status: "pending",     // Mobile orders start as pending (awaiting approval)
+    cashier_id: null, // Will be set by cashier during approval
+    status: "pending", // Mobile orders start as pending (awaiting approval)
     total_amount: totalAmount,
     order_note: null,
     breakdown,
-    handling
+    handling,
   };
 
   const response = await fetch("/api/orders/transactional-create", {
@@ -723,7 +761,7 @@ async function createOrder(
     body: JSON.stringify({
       customer,
       orderPayload: orderPayloadForMobile,
-    })
+    }),
   });
 
   const data = await response.json();
@@ -741,6 +779,7 @@ async function createOrder(
 ```
 
 ### Step 9: Send Initial Push Notification
+
 ```typescript
 // Notify customer that order was received
 try {
@@ -750,8 +789,8 @@ try {
     data: {
       orderId,
       action: "open_order_details",
-      status: "pending"
-    }
+      status: "pending",
+    },
   });
 } catch (err) {
   console.warn("Failed to send push notification:", err);
@@ -760,6 +799,7 @@ try {
 ```
 
 ### Step 10: Generate Receipt & Send Email
+
 ```typescript
 // Generate compact receipt
 const compactReceipt = generateCompactReceipt(
@@ -770,7 +810,7 @@ const compactReceipt = generateCompactReceipt(
   basketLines,
   handling,
   { method: "gcash" },
-  totals
+  totals,
 );
 
 // Display receipt on screen
@@ -793,8 +833,8 @@ if (receiptRes.ok) {
         email: customer.email_address,
         orderId,
         receipt: compactReceipt,
-        status: "pending_approval"  // Let customer know it's awaiting approval
-      })
+        status: "pending_approval", // Let customer know it's awaiting approval
+      }),
     });
   } catch (emailErr) {
     console.warn("Email sending failed:", emailErr);
@@ -810,20 +850,23 @@ if (receiptRes.ok) {
 ### Mobile App Stock Flow
 
 **On Order Creation**:
+
 - Stock is **NOT** validated or deducted
 - Order is created with status `"pending"`
 - This allows orders even if stock is temporarily unavailable
 
 **On Cashier Approval**:
+
 1. Backend validates that all products have sufficient stock
 2. If insufficient: Approval fails with `insufficientItems` error
-3. If sufficient: 
+3. If sufficient:
    - Deducts quantities from each product
    - Logs transaction records in `product_transactions` table
    - Updates order status to `"processing"`
    - Updates audit log
 
 **Why This Approach?**
+
 - Customers can always submit orders (no "out of stock" blocking)
 - Cashier decides whether to accept or reject based on current availability
 - Provides flexibility for manual stock adjustments or special approvals
@@ -835,18 +878,21 @@ if (receiptRes.ok) {
 ### Notification Events
 
 **Event 1: Order Received**
+
 - Triggered: Immediately after order creation
 - Status: `pending`
 - Message: "Order Received - Your booking has been submitted. Awaiting cashier approval."
 - Data: `{ orderId, action: "open_order_details", status: "pending" }`
 
 **Event 2: Order Approved**
+
 - Triggered: When cashier approves the order
 - Status: `processing`
 - Message: "Order Approved! Your laundry is now being processed."
 - Data: `{ orderId, action: "open_order_details", status: "processing" }`
 
 **Event 3: Order Approval Failed**
+
 - Triggered: When cashier approval fails (e.g., insufficient stock)
 - Status: `failed`
 - Message: "Order Could Not Be Approved - [Reason]. Please contact support."
@@ -860,7 +906,7 @@ async function sendOrderReceivedNotification(orderId: string) {
   await notificationService.send({
     title: "Order Received",
     body: "Your booking has been submitted. Awaiting cashier approval.",
-    data: { orderId, status: "pending", action: "open_order_details" }
+    data: { orderId, status: "pending", action: "open_order_details" },
   });
 }
 
@@ -869,19 +915,19 @@ async function sendOrderApprovedNotification(orderId: string) {
   await notificationService.send({
     title: "Order Approved!",
     body: "Your laundry is now being processed.",
-    data: { orderId, status: "processing", action: "open_order_details" }
+    data: { orderId, status: "processing", action: "open_order_details" },
   });
 }
 
 // Triggered by backend if approval fails
 async function sendOrderApprovalFailedNotification(
   orderId: string,
-  reason: string
+  reason: string,
 ) {
   await notificationService.send({
     title: "Order Could Not Be Approved",
     body: `${reason}. Please contact support.`,
-    data: { orderId, status: "failed", action: "open_order_details" }
+    data: { orderId, status: "failed", action: "open_order_details" },
   });
 }
 ```
@@ -892,20 +938,21 @@ async function sendOrderApprovalFailedNotification(
 
 ### Common Errors
 
-| Scenario | Error Response | Recommended UI Action |
-|----------|---|---|
-| Missing customer ID | `error: "Customer ID is required"` | Show error, redirect to login |
-| Missing breakdown/handling | `error: "Missing required fields"` | Check form completeness |
-| GCash payment not confirmed | (Custom validation) | Require user to confirm payment before proceeding |
-| Server error on creation | `error: "Internal server error"` | Retry, or escalate to support |
+| Scenario                       | Error Response                                            | Recommended UI Action                              |
+| ------------------------------ | --------------------------------------------------------- | -------------------------------------------------- |
+| Missing customer ID            | `error: "Customer ID is required"`                        | Show error, redirect to login                      |
+| Missing breakdown/handling     | `error: "Missing required fields"`                        | Check form completeness                            |
+| GCash payment not confirmed    | (Custom validation)                                       | Require user to confirm payment before proceeding  |
+| Server error on creation       | `error: "Internal server error"`                          | Retry, or escalate to support                      |
 | Cashier approval fails (stock) | `error: "Insufficient stock"`, `insufficientItems: [...]` | Push notification sent; customer sees order status |
-| Receipt generation failed | Order is created successfully; receipt fails gracefully | Show order ID, can regenerate receipt later |
+| Receipt generation failed      | Order is created successfully; receipt fails gracefully   | Show order ID, can regenerate receipt later        |
 
 ---
 
 ## Testing Checklist
 
 ### Mobile App Order Creation
+
 - [ ] GCash payment flow (screenshot placeholder showing in UI)
 - [ ] Order creation with status "pending" and cashier_id = null
 - [ ] Push notification sent immediately after order creation
@@ -915,6 +962,7 @@ async function sendOrderApprovalFailedNotification(
 - [ ] Stock is NOT deducted on order creation
 
 ### Cashier Approval Flow
+
 - [ ] Cashier can view pending orders in manage orders webapp
 - [ ] Cashier can verify GCash receipt (placeholder for now)
 - [ ] Cashier can approve order (status changes to "processing")
@@ -924,12 +972,14 @@ async function sendOrderApprovalFailedNotification(
 - [ ] Order status accessible to customer in mobile app
 
 ### Error Handling
+
 - [ ] Stock validation rejects approval if insufficient inventory
 - [ ] Push notification sent to customer if approval fails
 - [ ] Error message shows which items are unavailable
 - [ ] Cashier can reject order if issues found
 
 ### Features
+
 - [ ] Order creation works with products only (no baskets)
 - [ ] Order creation works with baskets only (no products)
 - [ ] Order creation works with both products and baskets
@@ -942,6 +992,7 @@ async function sendOrderApprovalFailedNotification(
 ## Implementation Checklist Before Handing to Mobile Agent
 
 ### Backend Endpoints Needed
+
 - [x] `POST /api/orders/transactional-create` - Already exists (verify status="pending" support)
 - [x] `POST /api/orders/{orderId}/approve` - **CREATED** - Cashier approval endpoint
 - [x] `POST /api/orders/{orderId}/reject` - **CREATED** - Cashier rejection endpoint
@@ -949,12 +1000,14 @@ async function sendOrderApprovalFailedNotification(
 - [ ] Push notification system - **Implement** - Send notifications from backend
 
 ### Manage Orders Webapp Changes
+
 - [ ] Add filter for "pending" orders (mobile app orders awaiting approval)
 - [ ] Show GCash receipt verification UI
 - [ ] Add approve/reject buttons for pending orders
 - [ ] Call new approve endpoint with cashier_id
 
 ### Mobile App Implementation
+
 - [ ] GCash payment UI (link to GCash app)
 - [ ] Screenshot placeholder display (don't upload yet)
 - [ ] Display order with "Status: Pending Approval"
@@ -968,9 +1021,11 @@ async function sendOrderApprovalFailedNotification(
 ## TODO Items - High Priority
 
 ### 1. `/api/orders/{orderId}/approve` Endpoint ✅ CREATED
+
 **Location**: `src/app/api/orders/[id]/approve/route.ts`
 
 **Functionality** (All Implemented):
+
 - [x] Accept POST with `{ cashier_id, gcash_verified, notes? }`
 - [x] Validate order is pending and source is "app"
 - [x] Mark ALL baskets as approved (group approval - one basket = all approved)
@@ -983,14 +1038,17 @@ async function sendOrderApprovalFailedNotification(
 - [ ] Send push notification to customer: "Order Approved!"
 
 **Key Behavior**:
+
 - Group basket approval: When approving, ALL baskets in order marked as approved with same timestamp and cashier_id
 - Stock deduction: Only happens if approval succeeds; fails if insufficient inventory
 - Error handling: Returns detailed error if stock unavailable
 
 ### 2. `/api/orders/{orderId}/reject` Endpoint ✅ CREATED
+
 **Location**: `src/app/api/orders/[id]/reject/route.ts`
 
 **Functionality** (All Implemented):
+
 - [x] Accept POST with `{ cashier_id, reason, notes? }`
 - [x] Validate order is pending and source is "app"
 - [x] Mark ALL baskets as rejected (group rejection)
@@ -1001,14 +1059,17 @@ async function sendOrderApprovalFailedNotification(
 - [ ] Send push notification to customer: "Order Could Not Be Approved"
 
 **Key Behavior**:
+
 - Group rejection: When rejecting, ALL baskets marked rejected with same reason
 - No stock deduction: Inventory never touched (order was pending, not processing)
 - Audit trail: Complete details logged for customer service
 
 ### 3. Create `/api/email/send-receipt` Endpoint
+
 **Location**: `src/app/api/email/send-receipt/route.ts`
 
 **Functionality**:
+
 - Accept POST with `{ email, orderId, receipt, status }`
 - Format receipt as HTML email template
 - Send via email service (SendGrid, AWS SES, etc.)
@@ -1016,12 +1077,14 @@ async function sendOrderApprovalFailedNotification(
 - Return success/error response
 
 ### 4. Implement Push Notification System
+
 - Backend: Integrate Firebase Cloud Messaging (FCM) or similar
 - Mobile app: Register device token on login
 - Backend: Send notifications when order is created and approved
 - Mobile app: Listen for and display notifications with deep links
 
 ### 5. Create GCash Receipt Storage (Post-MVP)
+
 - Set up Supabase Storage bucket for screenshots
 - Create `/api/gcash-receipts` endpoint
 - Mobile app uploads screenshot when bucket ready
@@ -1032,6 +1095,7 @@ async function sendOrderApprovalFailedNotification(
 ## File References from Web POS
 
 ### Core Logic Files
+
 1. [src/app/in/pos/logic/orderHelpers.ts](src/app/in/pos/logic/orderHelpers.ts) - Helper functions
 2. [src/app/in/pos/logic/receiptGenerator.ts](src/app/in/pos/logic/receiptGenerator.ts) - Receipt formatting
 3. [src/app/in/pos/logic/orderTypes.ts](src/app/in/pos/logic/orderTypes.ts) - Type definitions
