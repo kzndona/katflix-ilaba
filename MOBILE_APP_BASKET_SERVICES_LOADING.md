@@ -20,6 +20,7 @@ Order
 ### Phase 1: Order Creation (What User Sees)
 
 When creating an order, the mobile app needs access to:
+
 1. **Products list** - Available detergents, fabric softeners, etc.
 2. **Services list** - Available services (wash, dry, fold) with pricing
 3. **Service definitions** - What services exist and their rate types
@@ -29,6 +30,7 @@ When creating an order, the mobile app needs access to:
 ### Phase 2: Order Submission (Send to Backend)
 
 The mobile app creates baskets locally with:
+
 - Basket weight
 - Selected services (with multiplier/quantity)
 - Selected products
@@ -39,6 +41,7 @@ Then calls `POST /api/orders/transactional-create` with the complete order break
 ### Phase 3: Order Confirmation (After Backend Returns)
 
 Backend returns the created order with:
+
 - Order ID
 - Status: "pending"
 - Complete breakdown with items, baskets, services, fees
@@ -50,12 +53,14 @@ Backend returns the created order with:
 ### Phase 4: Waiting for Approval
 
 App polls or listens for:
+
 - Push notification when cashier approves
 - Or periodic check: `GET /api/orders/{orderId}` (if no push notifications yet)
 
 ### Phase 5: After Approval
 
 Order status changes to "processing" and display:
+
 - All baskets with approval_status: "approved"
 - Receipt ready to email
 - Order in workflow
@@ -65,11 +70,13 @@ Order status changes to "processing" and display:
 ## Required API Endpoints
 
 ### 1. Get Order Details (with Full Breakdown)
+
 ```
 GET /api/orders/{orderId}
 ```
 
 **Response**: Complete order object including:
+
 - All baskets with services
 - All items
 - Payment info
@@ -77,11 +84,13 @@ GET /api/orders/{orderId}
 - Audit log
 
 **Used When**:
+
 - Loading existing order for viewing
 - Refreshing order status
 - Fallback when push notifications unavailable
 
 **Response Example**:
+
 ```json
 {
   "id": "order-uuid-123",
@@ -90,7 +99,7 @@ GET /api/orders/{orderId}
   "customer_id": "customer-uuid",
   "cashier_id": "staff-uuid",
   "approved_at": "2026-01-19T10:30:00Z",
-  "total_amount": 1250.50,
+  "total_amount": 1250.5,
   "breakdown": {
     "items": [
       {
@@ -98,9 +107,9 @@ GET /api/orders/{orderId}
         "product_id": "prod-detergent-001",
         "product_name": "Laundry Detergent",
         "quantity": 2,
-        "unit_cost": 50.00,
-        "unit_price": 75.00,
-        "subtotal": 150.00,
+        "unit_cost": 50.0,
+        "unit_price": 75.0,
+        "subtotal": 150.0,
         "discount": null
       }
     ],
@@ -120,8 +129,8 @@ GET /api/orders/{orderId}
             "service_name": "Washing Service",
             "is_premium": false,
             "multiplier": 1,
-            "rate_per_kg": 20.00,
-            "subtotal": 110.00,
+            "rate_per_kg": 20.0,
+            "subtotal": 110.0,
             "status": "pending",
             "started_at": null,
             "completed_at": null,
@@ -134,8 +143,8 @@ GET /api/orders/{orderId}
             "service_name": "Drying Service",
             "is_premium": true,
             "multiplier": 1,
-            "rate_per_kg": 25.00,
-            "subtotal": 137.50,
+            "rate_per_kg": 25.0,
+            "subtotal": 137.5,
             "status": "pending",
             "started_at": null,
             "completed_at": null,
@@ -143,7 +152,7 @@ GET /api/orders/{orderId}
             "duration_in_minutes": null
           }
         ],
-        "total": 247.50
+        "total": 247.5
       },
       {
         "basket_number": 2,
@@ -160,8 +169,8 @@ GET /api/orders/{orderId}
             "service_name": "Washing Service",
             "is_premium": false,
             "multiplier": 1,
-            "rate_per_kg": 20.00,
-            "subtotal": 64.00,
+            "rate_per_kg": 20.0,
+            "subtotal": 64.0,
             "status": "pending",
             "started_at": null,
             "completed_at": null,
@@ -169,7 +178,7 @@ GET /api/orders/{orderId}
             "duration_in_minutes": null
           }
         ],
-        "total": 64.00
+        "total": 64.0
       }
     ],
     "fees": [
@@ -177,13 +186,13 @@ GET /api/orders/{orderId}
         "id": "fee-001",
         "type": "handling_fee",
         "description": "Delivery Fee",
-        "amount": 50.00
+        "amount": 50.0
       }
     ],
     "summary": {
-      "subtotal_products": 150.00,
-      "subtotal_services": 311.50,
-      "handling": 50.00,
+      "subtotal_products": 150.0,
+      "subtotal_services": 311.5,
+      "handling": 50.0,
       "service_fee": null,
       "discounts": 0,
       "vat_rate": 12,
@@ -228,11 +237,13 @@ GET /api/orders/{orderId}
 ```
 
 ### 2. Get Basket Status (Quick Check)
+
 ```
 GET /api/orders/{orderId}/baskets
 ```
 
 **Response**: Lightweight basket array with status info only
+
 ```json
 [
   {
@@ -241,7 +252,7 @@ GET /api/orders/{orderId}/baskets
     "approval_status": "approved",
     "services_count": 2,
     "completed_services": 0,
-    "total_subtotal": 247.50
+    "total_subtotal": 247.5
   },
   {
     "basket_number": 2,
@@ -249,12 +260,13 @@ GET /api/orders/{orderId}/baskets
     "approval_status": "approved",
     "services_count": 1,
     "completed_services": 0,
-    "total_subtotal": 64.00
+    "total_subtotal": 64.0
   }
 ]
 ```
 
 **Used When**:
+
 - Quick status check (less data transfer)
 - Polling for progress updates
 - Showing basket summary list
@@ -266,14 +278,16 @@ GET /api/orders/{orderId}/baskets
 ### Order Creation Screen
 
 **Data Needed**:
+
 - Services list (all available services)
 - Products list (available add-on products)
 
 **Loading Strategy**:
+
 ```typescript
 // On app startup or first load
-const services = await fetchServices();  // One-time fetch, cache locally
-const products = await fetchProducts();  // One-time fetch, cache locally
+const services = await fetchServices(); // One-time fetch, cache locally
+const products = await fetchProducts(); // One-time fetch, cache locally
 
 // Store in local state/Redux/Zustand
 ```
@@ -283,24 +297,28 @@ const products = await fetchProducts();  // One-time fetch, cache locally
 ### Order Review Screen (Before Submission)
 
 **Data Already Available**:
+
 - User's inputs (baskets, services, products selected)
 - Service details from cache
 
 **Display Logic**:
+
 ```typescript
 // For each basket
-breakdown.baskets.forEach(basket => {
+breakdown.baskets.forEach((basket) => {
   // Basket weight
   // For each service in basket
-  basket.services.forEach(service => {
+  basket.services.forEach((service) => {
     // Get service details from cached services list
-    const serviceDetails = cachedServices.find(s => s.id === service.service_id);
+    const serviceDetails = cachedServices.find(
+      (s) => s.id === service.service_id,
+    );
     // Display: service_name, rate_per_kg, multiplier, subtotal
   });
 });
 
 // For items (standalone products)
-breakdown.items.forEach(item => {
+breakdown.items.forEach((item) => {
   // Display: product_name, quantity, unit_price, subtotal
 });
 ```
@@ -308,21 +326,23 @@ breakdown.items.forEach(item => {
 ### Order Confirmation Screen (After Submission)
 
 **Data Received From Backend** (in POST response):
+
 - Created order object with all breakdown data
 - Status: "pending"
 - Created_at timestamp
 
 **Display Logic**:
+
 ```typescript
 const order = response.order;
 
 // Show baskets with services
-order.breakdown.baskets.forEach(basket => {
+order.breakdown.baskets.forEach((basket) => {
   console.log(`Basket ${basket.basket_number}:`);
   console.log(`  Weight: ${basket.weight}kg`);
   console.log(`  Status: ${basket.approval_status}`);
-  
-  basket.services.forEach(service => {
+
+  basket.services.forEach((service) => {
     console.log(`  - ${service.service_name}`);
     console.log(`    Rate: ₱${service.rate_per_kg}/kg`);
     console.log(`    Subtotal: ₱${service.subtotal}`);
@@ -330,7 +350,7 @@ order.breakdown.baskets.forEach(basket => {
 });
 
 // Show standalone items
-order.breakdown.items.forEach(item => {
+order.breakdown.items.forEach((item) => {
   console.log(`${item.product_name}: ${item.quantity}x ₱${item.unit_price}`);
 });
 
@@ -341,14 +361,16 @@ console.log(`Total: ₱${order.breakdown.summary.grand_total}`);
 ### Order Status Screen (Waiting for Approval)
 
 **Data Needed**:
+
 - Current order details
 - Update frequency
 
 **Loading Strategy**:
+
 ```typescript
 // Option 1: Push notifications (preferred)
 setupPushNotificationListener((notification) => {
-  if (notification.type === 'order_approved') {
+  if (notification.type === "order_approved") {
     // Refresh order details
     const updatedOrder = await fetchOrder(orderId);
     displayApprovedOrder(updatedOrder);
@@ -358,7 +380,7 @@ setupPushNotificationListener((notification) => {
 // Option 2: Polling (fallback)
 const pollInterval = setInterval(async () => {
   const updatedOrder = await fetchOrder(orderId);
-  if (updatedOrder.status !== 'pending') {
+  if (updatedOrder.status !== "pending") {
     clearInterval(pollInterval);
     displayApprovedOrder(updatedOrder);
   }
@@ -368,11 +390,13 @@ const pollInterval = setInterval(async () => {
 ### Order Processing Screen (After Approval)
 
 **Data Displayed**:
+
 - All baskets with `approval_status: "approved"`
 - All services with `status: "pending"`
 - Receipt summary
 
 **Loading Strategy**:
+
 ```typescript
 const order = await fetchOrder(orderId);
 
@@ -381,12 +405,12 @@ console.log(`Approved at: ${order.approved_at}`);
 console.log(`Approved by: ${order.cashier_id}`);
 
 // Show baskets
-order.breakdown.baskets.forEach(basket => {
+order.breakdown.baskets.forEach((basket) => {
   console.log(`Basket ${basket.basket_number} - ${basket.approval_status}`);
   console.log(`  Approved: ${basket.approved_at}`);
-  
+
   // Show services with current status
-  basket.services.forEach(service => {
+  basket.services.forEach((service) => {
     console.log(`  - ${service.service_name}: ${service.status}`);
     if (service.completed_at) {
       console.log(`    Completed: ${service.completed_at}`);
@@ -414,9 +438,10 @@ When order state changes, backend sends push notification:
 ```
 
 **Mobile App Action**:
+
 ```typescript
 messaging.onMessage((message) => {
-  if (message.data.type === 'order_status_changed') {
+  if (message.data.type === "order_status_changed") {
     // Refresh order details
     const order = await fetchOrder(message.data.orderId);
     updateOrderDisplay(order);
@@ -436,14 +461,14 @@ function startPolling(orderId) {
   pollInterval = setInterval(async () => {
     try {
       const order = await fetchOrder(orderId);
-      
-      if (order.status !== 'pending') {
+
+      if (order.status !== "pending") {
         // Approval received!
         clearInterval(pollInterval);
         displayApprovedOrder(order);
       }
     } catch (error) {
-      console.error('Polling failed:', error);
+      console.error("Polling failed:", error);
     }
   }, 5000);
 }
@@ -462,13 +487,14 @@ function stopPolling() {
 ### What to Cache Locally
 
 **On App Startup**:
+
 ```typescript
 // Fetch once, cache for session
 const services = await fetchServices();
-localStorage.setItem('services', JSON.stringify(services));
+localStorage.setItem("services", JSON.stringify(services));
 
 const products = await fetchProducts();
-localStorage.setItem('products', JSON.stringify(products));
+localStorage.setItem("products", JSON.stringify(products));
 ```
 
 **Why**: Services and products rarely change, no need to refetch constantly.
@@ -568,14 +594,14 @@ export function OrderDetailsScreen({ orderId }: { orderId: string }) {
     <div>
       <h1>Order #{orderId.slice(0, 8)}</h1>
       <p>Status: {order.status}</p>
-      
+
       <h2>Baskets</h2>
       {order.breakdown.baskets.map(basket => (
         <div key={basket.basket_number}>
           <h3>Basket {basket.basket_number}</h3>
           <p>Weight: {basket.weight}kg</p>
           <p>Status: {basket.approval_status}</p>
-          
+
           <h4>Services</h4>
           <ul>
             {basket.services.map(service => (
@@ -604,7 +630,7 @@ export function OrderDetailsScreen({ orderId }: { orderId: string }) {
 ```dart
 class BasketDetailsWidget extends StatefulWidget {
   final String orderId;
-  
+
   @override
   State<BasketDetailsWidget> createState() => _BasketDetailsWidgetState();
 }
@@ -642,13 +668,13 @@ class _BasketDetailsWidgetState extends State<BasketDetailsWidget> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return CircularProgressIndicator();
         }
-        
+
         if (!snapshot.hasData) {
           return Text('Order not found');
         }
 
         final order = snapshot.data!;
-        
+
         return ListView(
           children: [
             Text('Order #${order.id}'),
@@ -704,7 +730,9 @@ async function fetchOrderWithRetry(orderId: string, maxRetries = 3) {
     } catch (error) {
       if (i === maxRetries - 1) throw error;
       // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000 * Math.pow(2, i)),
+      );
     }
   }
 }
@@ -718,9 +746,9 @@ try {
   displayOrder(order);
 } catch (error) {
   if (error.status === 404) {
-    showError('Order not found. Please check the order ID.');
+    showError("Order not found. Please check the order ID.");
   } else {
-    showError('Failed to load order. Please try again.');
+    showError("Failed to load order. Please try again.");
   }
 }
 ```
@@ -730,13 +758,13 @@ try {
 ```typescript
 // Listen for rejection in push notification
 messaging.onMessage((message) => {
-  if (message.data.type === 'order_rejected') {
+  if (message.data.type === "order_rejected") {
     showAlert({
-      title: 'Order Rejected',
+      title: "Order Rejected",
       message: message.data.reason,
       action: () => {
         // Show retry or cancel options
-      }
+      },
     });
   }
 });
