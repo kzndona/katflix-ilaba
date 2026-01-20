@@ -3,6 +3,7 @@
 ## Single Unified Endpoint
 
 **Everything goes through:**
+
 ```
 POST /api/orders/transactional-create
 ```
@@ -35,6 +36,7 @@ POST /api/orders/transactional-create
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -89,6 +91,7 @@ POST /api/orders/transactional-create
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -168,7 +171,7 @@ POST /api/orders/transactional-create
 ✅ **POS Priority**: Uses existing POS format  
 ✅ **Mobile Compatibility**: Mobile app just sends arrays, conversion handled internally  
 ✅ **Maintainability**: All logic in one place  
-✅ **Future-proof**: Easy to add more formats if needed  
+✅ **Future-proof**: Easy to add more formats if needed
 
 ---
 
@@ -186,8 +189,9 @@ All errors return this format:
 ```
 
 **Common errors:**
+
 - `400`: Missing customer_id or invalid format
-- `404`: Customer not found  
+- `404`: Customer not found
 - `500`: Database error, inventory issue, etc.
 
 ---
@@ -195,6 +199,7 @@ All errors return this format:
 ## Deprecation Notice
 
 **OLD ENDPOINTS** (do not use):
+
 - ❌ `/api/pos/newOrder` - deprecated, use `/api/orders/transactional-create` instead
 
 ---
@@ -210,5 +215,3 @@ All errors return this format:
 - [ ] POST to `/api/orders/transactional-create`
 - [ ] Check response for `success: true` and `orderId`
 - [ ] Handle errors with `error` field
-
-

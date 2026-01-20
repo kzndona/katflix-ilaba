@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     
     const { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling } = body;
 
-    if (!customer_id || !cashier_id || !breakdown || !handling) {
+    if (!customer_id || !breakdown || !handling) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: customer_id, cashier_id, breakdown, handling' },
+        { success: false, error: 'Missing required fields: customer_id, breakdown, handling' },
         { status: 400 }
       );
     }
@@ -53,18 +53,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify cashier exists
-    const { data: staffData, error: staffError } = await supabase
-      .from('staff')
-      .select('id')
-      .eq('id', cashier_id)
-      .single();
+    // Verify cashier exists (only if provided)
+    if (cashier_id) {
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('id', cashier_id)
+        .single();
 
-    if (staffError || !staffData) {
-      return NextResponse.json(
-        { success: false, error: 'Staff/cashier not found' },
-        { status: 404 }
-      );
+      if (staffError || !staffData) {
+        return NextResponse.json(
+          { success: false, error: 'Staff/cashier not found' },
+          { status: 404 }
+        );
+      }
     }
 
     // Create order with JSONB
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
         {
           source: source || 'store',
           customer_id,
-          cashier_id,
+          cashier_id: cashier_id || null,
           status: finalStatus,
           total_amount,
           order_note: order_note || null,

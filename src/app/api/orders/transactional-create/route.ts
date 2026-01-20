@@ -52,15 +52,16 @@ export async function POST(req: NextRequest) {
     // ========== VALIDATE POS FORMAT ==========
     // Expected: { customer: {...}, orderPayload: {...} }
     
-    const isPOSFormat = body.customer && body.orderPayload;
+    const isPOSFormat = body.customer && body.orderPayload && (body.orderPayload.breakdown || body.orderPayload.handling);
 
     if (!isPOSFormat) {
-      console.error("❌ Invalid format - expected POS format with customer and orderPayload");
+      console.error("❌ Invalid format - expected POS format with customer and orderPayload containing breakdown/handling");
       return NextResponse.json(
         { 
           success: false, 
-          error: "Invalid payload format. Expected POS format: { customer: {...}, orderPayload: {...} }",
-          receivedKeys: Object.keys(body)
+          error: "Invalid payload format. Expected POS format: { customer: {...}, orderPayload: {...breakdown, handling...} }",
+          receivedKeys: Object.keys(body),
+          payloadKeys: body.orderPayload ? Object.keys(body.orderPayload) : null
         },
         { status: 400 }
       );

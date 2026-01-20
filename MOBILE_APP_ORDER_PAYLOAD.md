@@ -1,6 +1,7 @@
 # Mobile App Order Creation Payload
 
 ## Endpoint
+
 ```
 POST /api/pos/newOrder
 ```
@@ -10,6 +11,7 @@ POST /api/pos/newOrder
 ## Product-Only Order (Auto-completes)
 
 **Use Case**: Customer buying retail items only (no laundry services)
+
 - Auto status: `"completed"`
 - No baskets needed
 
@@ -48,6 +50,7 @@ POST /api/pos/newOrder
 ## Laundry Service Order (Processing)
 
 **Use Case**: Customer sending clothes for laundry with optional services
+
 - Auto status: `"processing"` (requires service completion)
 - Baskets required
 
@@ -86,6 +89,7 @@ POST /api/pos/newOrder
 ## Mixed Order (Products + Laundry)
 
 **Use Case**: Customer buying products AND sending laundry
+
 - Total: sum of products + baskets + shippingFee
 - Auto status: `"processing"` (laundry services need completion)
 
@@ -187,63 +191,69 @@ POST /api/pos/newOrder
 ## Field Reference
 
 ### Root Level
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `customerId` | UUID string | ✅ Yes | Customer ID in the system |
-| `total` | number | ✅ Yes | Total amount (sum of all subtotals + shipping) |
-| `source` | "pos" \| "mobile" | ❌ No | Defaults to "mobile" |
-| `baskets` | array | ✅ Yes | Empty array for product-only, or array of basket objects |
-| `products` | array | ✅ Yes | Empty array if no products, or array of product objects |
-| `payments` | array | ❌ No | Array of payment objects |
-| `pickupAddress` | string | ❌ No | Delivery pickup address |
-| `deliveryAddress` | string | ❌ No | Delivery address |
-| `shippingFee` | number | ❌ No | Shipping cost (defaults to 0) |
+
+| Field             | Type              | Required | Description                                              |
+| ----------------- | ----------------- | -------- | -------------------------------------------------------- |
+| `customerId`      | UUID string       | ✅ Yes   | Customer ID in the system                                |
+| `total`           | number            | ✅ Yes   | Total amount (sum of all subtotals + shipping)           |
+| `source`          | "pos" \| "mobile" | ❌ No    | Defaults to "mobile"                                     |
+| `baskets`         | array             | ✅ Yes   | Empty array for product-only, or array of basket objects |
+| `products`        | array             | ✅ Yes   | Empty array if no products, or array of product objects  |
+| `payments`        | array             | ❌ No    | Array of payment objects                                 |
+| `pickupAddress`   | string            | ❌ No    | Delivery pickup address                                  |
+| `deliveryAddress` | string            | ❌ No    | Delivery address                                         |
+| `shippingFee`     | number            | ❌ No    | Shipping cost (defaults to 0)                            |
 
 ### Basket Object
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `weight` | number | ❌ No | Weight in kg |
-| `notes` | string | ❌ No | Special handling notes |
-| `subtotal` | number | ✅ Yes | Sum of all services in this basket |
-| `services` | array | ❌ No | Array of service objects |
+
+| Field      | Type   | Required | Description                        |
+| ---------- | ------ | -------- | ---------------------------------- |
+| `weight`   | number | ❌ No    | Weight in kg                       |
+| `notes`    | string | ❌ No    | Special handling notes             |
+| `subtotal` | number | ✅ Yes   | Sum of all services in this basket |
+| `services` | array  | ❌ No    | Array of service objects           |
 
 ### Service Object
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `service_id` | UUID string | ✅ Yes | Service ID (wash, dry-clean, etc.) |
-| `rate` | number | ✅ Yes | Service rate/price per unit |
-| `subtotal` | number | ✅ Yes | Service total cost |
+
+| Field        | Type        | Required | Description                        |
+| ------------ | ----------- | -------- | ---------------------------------- |
+| `service_id` | UUID string | ✅ Yes   | Service ID (wash, dry-clean, etc.) |
+| `rate`       | number      | ✅ Yes   | Service rate/price per unit        |
+| `subtotal`   | number      | ✅ Yes   | Service total cost                 |
 
 ### Product Object
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `product_id` | UUID string | ✅ Yes | Product ID |
-| `quantity` | number | ✅ Yes | Quantity ordered |
-| `unit_price` | number | ✅ Yes | Price per unit |
-| `subtotal` | number | ✅ Yes | quantity × unit_price |
+
+| Field        | Type        | Required | Description           |
+| ------------ | ----------- | -------- | --------------------- |
+| `product_id` | UUID string | ✅ Yes   | Product ID            |
+| `quantity`   | number      | ✅ Yes   | Quantity ordered      |
+| `unit_price` | number      | ✅ Yes   | Price per unit        |
+| `subtotal`   | number      | ✅ Yes   | quantity × unit_price |
 
 ### Payment Object
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `amount` | number | ✅ Yes | Payment amount |
-| `method` | string | ✅ Yes | Payment method (e.g., "gcash") |
-| `reference` | string | ❌ No | Payment reference (screenshot ID, transaction ID) |
+
+| Field       | Type   | Required | Description                                       |
+| ----------- | ------ | -------- | ------------------------------------------------- |
+| `amount`    | number | ✅ Yes   | Payment amount                                    |
+| `method`    | string | ✅ Yes   | Payment method (e.g., "gcash")                    |
+| `reference` | string | ❌ No    | Payment reference (screenshot ID, transaction ID) |
 
 ---
 
 ## Order Status Logic
 
-| Condition | Auto Status | Notes |
-|-----------|-------------|-------|
-| `baskets.length === 0` | `"completed"` | Product-only orders auto-complete |
-| `baskets.length > 0` | `"processing"` | Laundry orders stay in processing until services complete |
-| `pickupAddress` exists | `"pick-up"` | Overrides processing if baskets exist |
+| Condition              | Auto Status    | Notes                                                     |
+| ---------------------- | -------------- | --------------------------------------------------------- |
+| `baskets.length === 0` | `"completed"`  | Product-only orders auto-complete                         |
+| `baskets.length > 0`   | `"processing"` | Laundry orders stay in processing until services complete |
+| `pickupAddress` exists | `"pick-up"`    | Overrides processing if baskets exist                     |
 
 ---
 
 ## Response
 
 ### Success (200)
+
 ```json
 {
   "success": true,
@@ -252,6 +262,7 @@ POST /api/pos/newOrder
 ```
 
 ### Error (500)
+
 ```json
 {
   "success": false,
@@ -275,12 +286,12 @@ POST /api/pos/newOrder
 
 ## Common Errors
 
-| Error | Solution |
-|-------|----------|
-| "Insufficient stock for X" | Check available inventory, reduce quantity |
-| "Order insertion failed" | Verify customerId exists and is valid UUID |
-| "Basket insertion failed" | Ensure all baskets have subtotal and services array |
-| "Failed to insert order_products" | Check product_id exists in database |
+| Error                             | Solution                                            |
+| --------------------------------- | --------------------------------------------------- |
+| "Insufficient stock for X"        | Check available inventory, reduce quantity          |
+| "Order insertion failed"          | Verify customerId exists and is valid UUID          |
+| "Basket insertion failed"         | Ensure all baskets have subtotal and services array |
+| "Failed to insert order_products" | Check product_id exists in database                 |
 
 ---
 
