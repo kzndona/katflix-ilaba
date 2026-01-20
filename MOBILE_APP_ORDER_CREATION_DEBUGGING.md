@@ -39,6 +39,7 @@
 **What it means**: The `customer` object is missing or doesn't have an `id` field
 
 **Debug info returned**:
+
 ```json
 {
   "debug": {
@@ -50,11 +51,13 @@
 ```
 
 **How to fix**:
+
 1. Ensure customer is selected/created in your app before submitting order
 2. Check that customer object has `id` field (UUID format)
 3. Verify customer exists in database
 
 **Mobile app code**:
+
 ```typescript
 if (!customer?.id) {
   showError("Please select or create a customer first");
@@ -82,15 +85,17 @@ const response = await fetch("/api/orders/transactional-create", {
 **What it means**: The `orderPayload` object is missing from the request
 
 **Debug info returned**:
+
 ```json
 {
   "debug": {
-    "receivedBodyKeys": ["customer"]  // Shows what was received
+    "receivedBodyKeys": ["customer"] // Shows what was received
   }
 }
 ```
 
 **How to fix**:
+
 - Always send both `customer` and `orderPayload` in the request body
 
 ```typescript
@@ -115,6 +120,7 @@ await fetch("/api/orders/transactional-create", {
 **What it means**: Customer exists but couldn't be updated with new phone/email
 
 **Debug info returned**:
+
 ```json
 {
   "errorCode": "PGRST123",
@@ -124,6 +130,7 @@ await fetch("/api/orders/transactional-create", {
 ```
 
 **How to fix**:
+
 1. Check that customer ID is a valid UUID format
 2. Verify customer exists in database
 3. Check Supabase connection permissions
@@ -144,6 +151,7 @@ customer: {
 **What it means**: Order payload is invalid or stock is insufficient
 
 **Debug info returned**:
+
 ```json
 {
   "error": "Insufficient stock for one or more items",
@@ -164,6 +172,7 @@ customer: {
 ```
 
 **Common causes**:
+
 1. **Insufficient stock** - Check available inventory before allowing order
 2. **Missing required fields** - breakdown, handling, customer_id, cashier_id
 3. **Invalid data format** - breakdown.items or baskets structure incorrect
@@ -196,16 +205,18 @@ if (!orderPayload.cashier_id) {
 const checkStockResponse = await fetch("/api/orders/validate-stock", {
   method: "POST",
   body: JSON.stringify({
-    items: orderPayload.breakdown.items.map(item => ({
+    items: orderPayload.breakdown.items.map((item) => ({
       product_id: item.product_id,
-      quantity: item.quantity
-    }))
-  })
+      quantity: item.quantity,
+    })),
+  }),
 });
 
 if (!checkStockResponse.ok) {
   const { insufficientItems } = await checkStockResponse.json();
-  showError(`Insufficient stock: ${insufficientItems.map(i => i.productName).join(", ")}`);
+  showError(
+    `Insufficient stock: ${insufficientItems.map((i) => i.productName).join(", ")}`,
+  );
   return;
 }
 ```
@@ -217,6 +228,7 @@ if (!checkStockResponse.ok) {
 **What it means**: Order was created but response doesn't have expected structure
 
 **Debug info returned**:
+
 ```json
 {
   "debugInfo": {
@@ -228,6 +240,7 @@ if (!checkStockResponse.ok) {
 ```
 
 **How to fix**:
+
 - This is a backend issue - contact backend team
 - Check server logs for what /api/orders endpoint is returning
 
@@ -238,6 +251,7 @@ if (!checkStockResponse.ok) {
 **What it means**: Unexpected error occurred (network, JSON parsing, etc.)
 
 **Debug info returned**:
+
 ```json
 {
   "details": "error message",
@@ -246,6 +260,7 @@ if (!checkStockResponse.ok) {
 ```
 
 **How to fix**:
+
 1. Check server logs for the full stack trace
 2. Ensure valid JSON in request body
 3. Check network connectivity
@@ -309,6 +324,7 @@ When mobile app order creation fails:
 ## Logging Output
 
 ### Successful Flow
+
 ```
 📥 Transactional create request: { hasCustomer: true, hasOrderPayload: true, customerId: "abc-123", source: "app", ... }
 📝 Updating customer details: { customerId: "abc-123", hasPhoneNumber: true, hasEmail: true }
@@ -318,6 +334,7 @@ When mobile app order creation fails:
 ```
 
 ### Failure Examples
+
 ```
 ❌ Customer validation failed: { customer: null, keys: "null" }
 ❌ Order payload missing: { body: { ... } }
@@ -341,7 +358,7 @@ async function createOrder() {
     const orderPayload = {
       source: "app",
       customer_id: customer.id,
-      cashier_id: managerId,  // Manager approving order
+      cashier_id: managerId, // Manager approving order
       status: "pending",
       total_amount: calculateTotal(),
       breakdown: buildBreakdown(),
@@ -381,7 +398,7 @@ async function createOrder() {
       // Show user-friendly error
       if (data.insufficientItems) {
         showError(
-          `Insufficient stock: ${data.insufficientItems.map(i => i.productName).join(", ")}`
+          `Insufficient stock: ${data.insufficientItems.map((i) => i.productName).join(", ")}`,
         );
       } else if (data.error === "Customer ID is required") {
         showError("Please select a customer first");
@@ -401,7 +418,6 @@ async function createOrder() {
     console.log("✅ Order created:", data.orderId);
     showSuccess("Order created successfully!");
     navigateTo(`/order/${data.orderId}`);
-
   } catch (err) {
     console.error("❌ Error:", err);
     showError(err instanceof Error ? err.message : "Unknown error");
@@ -416,11 +432,13 @@ async function createOrder() {
 To debug issues, check Vercel/server logs for:
 
 1. **Incoming request validation**:
+
    ```
    📥 Transactional create request: { ... }
    ```
 
 2. **Customer update status**:
+
    ```
    📝 Updating customer details: { ... }
    ✅ Customer updated successfully

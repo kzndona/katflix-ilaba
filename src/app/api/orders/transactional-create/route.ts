@@ -1,16 +1,44 @@
 /**
  * POST /api/orders/transactional-create
  * 
- * Updates customer details and creates an order in a single logical transaction.
- * If customer update fails, the order creation is not attempted.
- * If order creation fails after customer update, the customer update has already been persisted
- * (this is acceptable as customer details are being edited in POS).
+ * POS ORDER CREATION ENDPOINT
  * 
- * Request body:
+ * This endpoint:
+ * 1. Updates customer phone/email (if provided)
+ * 2. Creates order with JSONB breakdown and handling
+ * 
+ * ============================================================================
+ * REQUEST FORMAT (POS ONLY)
+ * ============================================================================
  * {
- *   customer: { id, phone_number, email_address },
- *   orderPayload: { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling }
+ *   "customer": {
+ *     "id": "customer-uuid",
+ *     "phone_number": "+639123456789",
+ *     "email_address": "customer@example.com"
+ *   },
+ *   "orderPayload": {
+ *     "source": "store",
+ *     "customer_id": "customer-uuid",
+ *     "cashier_id": "staff-uuid",
+ *     "status": "processing",
+ *     "total_amount": 500,
+ *     "breakdown": { ...JSONB breakdown object... },
+ *     "handling": { ...JSONB handling object... },
+ *     "order_note": "Special instructions"
+ *   }
  * }
+ * 
+ * ============================================================================
+ * RESPONSE (Success)
+ * ============================================================================
+ * { "success": true, "orderId": "order-uuid", "order": {...} }
+ * 
+ * ============================================================================
+ * ERROR RESPONSES
+ * ============================================================================
+ * 400: Missing customer_id or orderPayload
+ * 404: Customer or staff not found
+ * 500: Database or processing error
  */
 
 import { createClient } from "@/src/app/utils/supabase/server";
@@ -19,36 +47,41 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    let { customer, orderPayload } = body;
+    let customer, orderPayload;
 
-    console.log("📥 Transactional create request:", { customer, orderPayload: orderPayload ? "present" : "missing", bodyKeys: Object.keys(body) });
+    // ========== VALIDATE POS FORMAT ==========
+    // Expected: { customer: {...}, orderPayload: {...} }
+    
+    const isPOSFormat = body.customer && body.orderPayload;
 
-    // Support both formats:
-    // Format 1: { customer: { id, phone_number, email_address }, orderPayload: {...} }
-    // Format 2: { customer_id: "...", phone_number: "...", email_address: "...", ...orderPayload }
-    if (!customer && body.customer_id) {
-      customer = {
-        id: body.customer_id,
-        phone_number: body.phone_number,
-        email_address: body.email_address,
-      };
-      orderPayload = body;
-    }
-
-    if (!customer?.id) {
-      console.error("❌ Customer validation failed:", { customer, keys: customer ? Object.keys(customer) : "null" });
+    if (!isPOSFormat) {
+      console.error("❌ Invalid format - expected POS format with customer and orderPayload");
       return NextResponse.json(
         { 
           success: false, 
-          error: "Customer ID is required", 
+          error: "Invalid payload format. Expected POS format: { customer: {...}, orderPayload: {...} }",
+          receivedKeys: Object.keys(body)
+        },
+        { status: 400 }
+      );
+    }
+
+    // ========== EXTRACT POS FORMAT ==========
+    customer = body.customer;
+    orderPayload = body.orderPayload;
+    
+    console.log("📥 POS Format order received");
+
+    // ========== VALIDATE CUSTOMER ==========
+    if (!customer?.id) {
+      console.error("❌ Customer ID missing");
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Customer ID is required",
           debug: {
             customerReceived: !!customer,
             customerKeys: customer ? Object.keys(customer) : null,
-            customerId: customer?.id,
-            supportedFormats: [
-              "{ customer: { id, phone_number, email_address }, orderPayload: {...} }",
-              "{ customer_id: ..., phone_number: ..., email_address: ..., ...orderPayload }"
-            ]
           }
         },
         { status: 400 }
@@ -56,12 +89,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!orderPayload) {
-      console.error("❌ Order payload missing:", { body });
+      console.error("❌ Order payload missing");
       return NextResponse.json(
         { 
           success: false, 
-          error: "Order payload is required",
-          debug: { receivedBodyKeys: Object.keys(body) }
+          error: "Order payload is required"
         },
         { status: 400 }
       );
@@ -69,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient();
 
-    // Step 1: Update customer details (only if phone_number or email_address provided)
+    // ========== UPDATE CUSTOMER DETAILS ==========
     const updateData: any = {};
     if (customer.phone_number) updateData.phone_number = customer.phone_number;
     if (customer.email_address) updateData.email_address = customer.email_address;
@@ -81,44 +113,54 @@ export async function POST(req: NextRequest) {
         .eq("id", customer.id);
 
       if (customerUpdateError) {
-        console.error("❌ Customer update failed:", { code: customerUpdateError.code, message: customerUpdateError.message });
+        console.error("❌ Customer update failed:", customerUpdateError.message);
         return NextResponse.json(
           {
             success: false,
             error: "Failed to update customer details",
-            errorCode: customerUpdateError.code,
             errorMessage: customerUpdateError.message,
-            customerId: customer.id,
           },
           { status: 500 }
         );
       }
+      console.log("✓ Customer details updated");
     }
 
-    // Step 2: Create order via the standard orders endpoint
-    // This delegates stock validation and inventory deduction to the existing endpoint
-    const orderRes = await fetch(
-      new URL("/api/orders", req.url).toString(),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      }
-    );
+    // ========== CREATE ORDER ==========
+    // Call /api/orders which handles POS format
+    console.log("📦 Calling /api/orders endpoint...");
+    
+    // Get the origin from request headers - construct properly
+    const protocol = req.headers.get('x-forwarded-proto') || 'http';
+    const host = req.headers.get('host') || 'localhost:3000';
+    const origin = `${protocol}://${host}`;
+    
+    console.log(`Using origin for internal fetch: ${origin}`);
+    
+    const orderRes = await fetch(`${origin}/api/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
+    });
 
     const orderData = await orderRes.json();
+    console.log("📥 /api/orders response:", { 
+      status: orderRes.status, 
+      ok: orderRes.ok,
+      responseKeys: Object.keys(orderData),
+      hasSuccess: orderData?.success,
+      hasOrderId: orderData?.orderId,
+      orderId: orderData?.orderId
+    });
 
     if (!orderRes.ok) {
-      // Customer was already updated, but order creation failed
       console.error("❌ Order creation failed:", { status: orderRes.status, error: orderData.error });
       return NextResponse.json(
         {
           success: false,
           error: orderData.error || "Failed to create order",
-          insufficientItems: orderData.insufficientItems,
-          partialSuccess: true, // Customer was updated
           debugInfo: {
-            endpointCalled: "/api/orders",
+            endpoint: "/api/orders",
             statusCode: orderRes.status,
             responseKeys: orderData ? Object.keys(orderData) : null,
           }
@@ -127,22 +169,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!orderData.success || !orderData.order?.id) {
+    if (!orderData.success || !orderData.orderId) {
+      console.error("❌ Unexpected order response format:", { 
+        success: orderData?.success, 
+        orderId: orderData?.orderId,
+        allKeys: Object.keys(orderData)
+      });
       return NextResponse.json(
         {
           success: false,
           error: "Order creation returned unexpected format",
-          partialSuccess: true, // Customer was updated
         },
         { status: 500 }
       );
     }
 
+    console.log("✓ Order created successfully:", orderData.orderId);
     return NextResponse.json({
       success: true,
-      orderId: orderData.order.id,
+      orderId: orderData.orderId,
       order: orderData.order,
     });
+
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("❌ Transactional order creation error:", errorMsg);
@@ -151,7 +199,6 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "Internal server error during order creation",
         details: errorMsg,
-        errorType: err instanceof Error ? err.constructor.name : typeof err,
       },
       { status: 500 }
     );

@@ -74,11 +74,11 @@ export function usePOSState() {
     Record<string, number>
   >({});
   const [activePane, setActivePane] = React.useState<
-    "customer" | "products" | "handling"
+    "customer" | "products" | "handling" | "basket"
   >("customer");
 
   // Navigation between panes
-  const goToPane = (pane: "customer" | "products" | "handling") => {
+  const goToPane = (pane: "customer" | "products" | "handling" | "basket") => {
     setActivePane(pane);
   };
 

@@ -79,6 +79,18 @@ export default function POSPage() {
             />
           )}
 
+          {pos.activePane === "basket" && (
+            <PaneBaskets
+              baskets={pos.baskets}
+              activeBasketIndex={pos.activeBasketIndex}
+              updateActiveBasket={pos.updateActiveBasket}
+              services={pos.services}
+              deleteActiveBasket={pos.deleteBasket}
+              createNewBasket={createNewBasket}
+              onNext={() => pos.goToPane("handling")}
+            />
+          )}
+
           {pos.activePane === "products" && (
             <PaneProducts
               products={pos.products}
