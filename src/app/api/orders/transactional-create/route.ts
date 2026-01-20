@@ -18,42 +18,81 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { customer, orderPayload } = await req.json();
+    const body = await req.json();
+    let { customer, orderPayload } = body;
+
+    console.log("📥 Transactional create request:", { customer, orderPayload: orderPayload ? "present" : "missing", bodyKeys: Object.keys(body) });
+
+    // Support both formats:
+    // Format 1: { customer: { id, phone_number, email_address }, orderPayload: {...} }
+    // Format 2: { customer_id: "...", phone_number: "...", email_address: "...", ...orderPayload }
+    if (!customer && body.customer_id) {
+      customer = {
+        id: body.customer_id,
+        phone_number: body.phone_number,
+        email_address: body.email_address,
+      };
+      orderPayload = body;
+    }
 
     if (!customer?.id) {
+      console.error("❌ Customer validation failed:", { customer, keys: customer ? Object.keys(customer) : "null" });
       return NextResponse.json(
-        { success: false, error: "Customer ID is required" },
+        { 
+          success: false, 
+          error: "Customer ID is required", 
+          debug: {
+            customerReceived: !!customer,
+            customerKeys: customer ? Object.keys(customer) : null,
+            customerId: customer?.id,
+            supportedFormats: [
+              "{ customer: { id, phone_number, email_address }, orderPayload: {...} }",
+              "{ customer_id: ..., phone_number: ..., email_address: ..., ...orderPayload }"
+            ]
+          }
+        },
         { status: 400 }
       );
     }
 
     if (!orderPayload) {
+      console.error("❌ Order payload missing:", { body });
       return NextResponse.json(
-        { success: false, error: "Order payload is required" },
+        { 
+          success: false, 
+          error: "Order payload is required",
+          debug: { receivedBodyKeys: Object.keys(body) }
+        },
         { status: 400 }
       );
     }
 
     const supabase = await createClient();
 
-    // Step 1: Update customer details
-    const { error: customerUpdateError } = await supabase
-      .from("customers")
-      .update({
-        phone_number: customer.phone_number,
-        email_address: customer.email_address,
-      })
-      .eq("id", customer.id);
+    // Step 1: Update customer details (only if phone_number or email_address provided)
+    const updateData: any = {};
+    if (customer.phone_number) updateData.phone_number = customer.phone_number;
+    if (customer.email_address) updateData.email_address = customer.email_address;
 
-    if (customerUpdateError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Failed to update customer details",
-          details: customerUpdateError.message,
-        },
-        { status: 500 }
-      );
+    if (Object.keys(updateData).length > 0) {
+      const { error: customerUpdateError } = await supabase
+        .from("customers")
+        .update(updateData)
+        .eq("id", customer.id);
+
+      if (customerUpdateError) {
+        console.error("❌ Customer update failed:", { code: customerUpdateError.code, message: customerUpdateError.message });
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Failed to update customer details",
+            errorCode: customerUpdateError.code,
+            errorMessage: customerUpdateError.message,
+            customerId: customer.id,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Step 2: Create order via the standard orders endpoint
@@ -71,12 +110,18 @@ export async function POST(req: NextRequest) {
 
     if (!orderRes.ok) {
       // Customer was already updated, but order creation failed
+      console.error("❌ Order creation failed:", { status: orderRes.status, error: orderData.error });
       return NextResponse.json(
         {
           success: false,
           error: orderData.error || "Failed to create order",
           insufficientItems: orderData.insufficientItems,
           partialSuccess: true, // Customer was updated
+          debugInfo: {
+            endpointCalled: "/api/orders",
+            statusCode: orderRes.status,
+            responseKeys: orderData ? Object.keys(orderData) : null,
+          }
         },
         { status: orderRes.status }
       );
@@ -99,12 +144,14 @@ export async function POST(req: NextRequest) {
       order: orderData.order,
     });
   } catch (err) {
-    console.error("Transactional order creation error:", err);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("❌ Transactional order creation error:", errorMsg);
     return NextResponse.json(
       {
         success: false,
-        error: "Internal server error",
-        details: err instanceof Error ? err.message : "Unknown error",
+        error: "Internal server error during order creation",
+        details: errorMsg,
+        errorType: err instanceof Error ? err.constructor.name : typeof err,
       },
       { status: 500 }
     );

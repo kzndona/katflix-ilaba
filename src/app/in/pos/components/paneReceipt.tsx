@@ -199,7 +199,7 @@ export default function PaneReceipt({
                       {computeReceipt.basketLines.reduce(
                         (sum: number, b: any) =>
                           sum + b.estimatedDurationMinutes,
-                        0
+                        0,
                       )}{" "}
                       min
                     </span>
@@ -262,7 +262,7 @@ export default function PaneReceipt({
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">
-            VAT ({(PRICING.taxRate * 100).toFixed(0)}%)
+            {(PRICING.taxRate * 100).toFixed(0)}% VAT (incl.)
           </span>
           <span className="font-semibold text-gray-900">
             ₱{computeReceipt.taxIncluded.toFixed(2)}
