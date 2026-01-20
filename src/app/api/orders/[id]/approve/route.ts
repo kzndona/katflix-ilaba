@@ -31,10 +31,10 @@ import { deductInventory, type InventoryDeductionResult } from "@/src/app/api/or
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const orderId = params.id;
+    const { id: orderId } = await params;
     const { cashier_id, gcash_verified, notes } = await req.json();
 
     // Validate required fields
