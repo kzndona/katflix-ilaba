@@ -52,7 +52,10 @@ export default function SidebarTabs({
           {baskets.map((b, i) => (
             <button
               key={b.id}
-              onClick={() => setActiveBasketIndex(i)}
+              onClick={() => {
+                setActiveBasketIndex(i);
+                setActivePane("basket");
+              }}
               className={`w-full text-left px-3 py-2 rounded-lg flex justify-between items-center text-sm transition ${
                 activeBasketIndex === i
                   ? "bg-blue-100 border border-blue-300"
