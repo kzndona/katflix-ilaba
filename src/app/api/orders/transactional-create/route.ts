@@ -44,6 +44,7 @@
 
 import { createClient } from "@/src/app/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { validateStockAvailability, deductInventory } from "@/src/app/api/orders/inventoryHelpers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -111,6 +112,31 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
+
+    // ========== VALIDATE & DEDUCT INVENTORY ==========
+    // Extract product items from breakdown for inventory management
+    const productItems = orderPayload.breakdown?.items || [];
+    
+    if (productItems.length > 0) {
+      console.log("🔍 Validating product inventory...");
+      
+      // Validate stock availability
+      const stockCheck = await validateStockAvailability(supabase, productItems);
+      
+      if (!stockCheck.available) {
+        console.error("❌ Insufficient stock for products:", stockCheck.insufficientItems);
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Insufficient stock for one or more products",
+            insufficientItems: stockCheck.insufficientItems,
+          },
+          { status: 400 }
+        );
+      }
+      
+      console.log("✓ Stock validated successfully");
+    }
 
     // ========== UPDATE CUSTOMER DETAILS ==========
     const updateData: any = {};
@@ -196,6 +222,22 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("✓ Order created successfully:", orderData.orderId);
+    
+    // ========== DEDUCT INVENTORY ==========
+    // Now that order exists, deduct inventory for all products
+    if (productItems.length > 0) {
+      console.log("📦 Deducting inventory for products...");
+      
+      const deductionResult = await deductInventory(supabase, orderData.orderId, productItems);
+      
+      if (!deductionResult.success) {
+        console.error("⚠️ Inventory deduction failed for some products:", deductionResult.failedProducts);
+        // Log the error but don't fail the order creation - inventory helpers handles partial failures
+        // The order exists but inventory deduction had issues
+      } else {
+        console.log("✓ Inventory deducted successfully:", deductionResult.deductedProducts.map(p => `${p.productName}(${p.quantity})`).join(", "));
+      }
+    }
     
     // ========== HANDLE LOYALTY DISCOUNT ==========
     // Deduct loyalty points if any were used (no hard cap on max points)

@@ -143,11 +143,20 @@ export async function POST(
       failedProducts: [],
     };
 
-    if (breakdown.items && breakdown.items.length > 0) {
+    // Extract product items - support both old format (breakdown.items) and new format (breakdown.breakdown.items)
+    let productItems = [];
+    if (breakdown.items && Array.isArray(breakdown.items)) {
+      productItems = breakdown.items;
+    } else if (breakdown.breakdown?.items && Array.isArray(breakdown.breakdown.items)) {
+      productItems = breakdown.breakdown.items;
+    }
+
+    if (productItems.length > 0) {
+      console.log("🔍 Deducting inventory for approved order...", productItems);
       stockDeductionResult = await deductInventory(
         supabase,
         orderId,
-        breakdown.items.map((item: any) => ({
+        productItems.map((item: any) => ({
           product_id: item.product_id,
           product_name: item.product_name,
           quantity: item.quantity,
@@ -156,6 +165,7 @@ export async function POST(
 
       if (!stockDeductionResult.success) {
         // Stock deduction failed - return error without updating order
+        console.error("❌ Stock deduction failed:", stockDeductionResult.failedProducts);
         return NextResponse.json(
           {
             success: false,
@@ -166,6 +176,7 @@ export async function POST(
           { status: 400 }
         );
       }
+      console.log("✓ Inventory deducted for approved order");
     }
 
     // Step 6: Update order status and breakdown

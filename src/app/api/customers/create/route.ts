@@ -79,16 +79,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const customer = data[0];
+    let invitationSent = false;
+
+    // Send invitation email if email was provided
+    if (email) {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(
+          email,
+          {
+            data: {
+              first_name,
+              last_name,
+            },
+          }
+        );
+
+        if (authError) {
+          console.error('Auth invite error:', authError);
+          // Continue with customer creation - invitation is non-critical
+        } else if (authData?.user?.id) {
+          // Update customer with auth_id
+          const { error: updateErr } = await supabase
+            .from('customers')
+            .update({ auth_id: authData.user.id })
+            .eq('id', customer.id);
+
+          if (!updateErr) {
+            invitationSent = true;
+            console.log('✓ Invitation sent to', email);
+          }
+        }
+      } catch (inviteErr) {
+        console.error('Failed to send invitation:', inviteErr);
+        // Don't fail the customer creation if invitation fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       customer: {
-        id: data[0].id,
-        first_name: data[0].first_name,
-        last_name: data[0].last_name,
-        phone_number: data[0].phone_number,
-        email_address: data[0].email_address,
-        created_at: data[0].created_at,
+        id: customer.id,
+        first_name: customer.first_name,
+        last_name: customer.last_name,
+        phone_number: customer.phone_number,
+        email_address: customer.email_address,
+        created_at: customer.created_at,
       },
+      invitationSent,
+      message: invitationSent 
+        ? 'Customer created and invitation email sent'
+        : 'Customer created successfully',
     });
   } catch (err) {
     console.error('POST /api/customers/create error:', err);
