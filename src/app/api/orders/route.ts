@@ -10,11 +10,12 @@ import { NextRequest, NextResponse } from 'next/server';
  * {
  *   "source": "store",
  *   "customer_id": "uuid",
- *   "cashier_id": "uuid",
+ *   "cashier_id": "uuid" (or null for mobile),
  *   "status": "processing",
  *   "total_amount": 500,
  *   "breakdown": { ...JSONB... },
- *   "handling": { ...JSONB... }
+ *   "handling": { ...JSONB... },
+ *   "gcash_receipt_url": "https://..." (optional)
  * }
  */
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     // ========== VALIDATE POS FORMAT ==========
     // Must have breakdown + handling (JSONB)
     
-    const { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling } = body;
+    const { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling, gcash_receipt_url } = body;
 
     if (!customer_id || !breakdown || !handling) {
       return NextResponse.json(
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
           order_note: order_note || null,
           breakdown: breakdown,
           handling: handling,
+          gcash_receipt_url: gcash_receipt_url || null,
           cancellation: null,
           completed_at: finalStatus === 'completed' ? new Date().toISOString() : null,
           created_at: new Date().toISOString(),
@@ -119,10 +121,10 @@ export async function POST(req: NextRequest) {
         order_note: order.order_note,
         breakdown: order.breakdown,
         handling: order.handling,
+        gcash_receipt_url: order.gcash_receipt_url,
         created_at: order.created_at,
       },
     });
-
   } catch (err: any) {
     console.error("Orders API error:", err);
     return NextResponse.json(

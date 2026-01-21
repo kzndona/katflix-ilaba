@@ -19,12 +19,13 @@
  *   "orderPayload": {
  *     "source": "store",
  *     "customer_id": "customer-uuid",
- *     "cashier_id": "staff-uuid",
+ *     "cashier_id": "staff-uuid" (or null for mobile),
  *     "status": "processing",
  *     "total_amount": 500,
  *     "breakdown": { ...JSONB breakdown object... },
  *     "handling": { ...JSONB handling object... },
- *     "order_note": "Special instructions"
+ *     "order_note": "Special instructions",
+ *     "gcash_receipt_url": "https://bucket-url/path/to/receipt.jpg" (optional)
  *   }
  * }
  * 
