@@ -248,45 +248,127 @@ export async function POST(req: NextRequest) {
         
         const resend = new Resend(process.env.RESEND_API_KEY);
         
-        // Generate plaintext receipt from order data
+        // Build receipt text from order data
+        const orderId = orderData.orderId;
+        const orderNumber = orderId.substring(0, 8).toUpperCase();
+        const timestamp = new Date().toLocaleString("en-PH", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+        
+        const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Valued Customer';
+        const customerPhone = customer.phone_number ? `Phone: ${customer.phone_number}` : '';
+        
+        // Get cashier name if available
+        let cashierName = '';
+        if (orderPayload.cashier_id) {
+          const { data: cashierData } = await supabase
+            .from('staff')
+            .select('first_name, last_name')
+            .eq('id', orderPayload.cashier_id)
+            .single();
+          
+          if (cashierData) {
+            cashierName = `${cashierData.first_name || ''} ${cashierData.last_name || ''}`.trim();
+          }
+        }
+        
+        // Build items list from breakdown
+        const items = orderPayload.breakdown?.items || [];
+        const baskets = orderPayload.breakdown?.baskets || [];
+        
+        // Format products
+        const itemsText = items.map((item: any) => {
+          return `${item.product_name} x${item.quantity}\n  Price:                        ₱${item.subtotal.toFixed(2)}`;
+        }).join('\n\n');
+        
+        // Format baskets with services
+        const basketsText = baskets.map((basket: any) => {
+          const serviceNames = basket.services?.map((s: any) => s.service_name).join(' + ') || 'Services';
+          const details = `Basket ${basket.basket_number} • ${basket.weight}kg`;
+          return `${serviceNames} x1\n  ${details}\n  Price:                         ₱${basket.total.toFixed(2)}`;
+        }).join('\n\n');
+        
+        // Combine items and baskets
+        const allItemsText = [itemsText, basketsText].filter(t => t.trim()).join('\n\n');
+        
+        // Build totals from summary or calculate
+        const summary = orderPayload.breakdown?.summary || {};
+        const subtotal = summary.subtotal_products || 0 + (summary.subtotal_services || 0);
+        const serviceFee = summary.service_fee || 0;
+        const handlingFee = summary.handling_fee || 0;
+        const tax = summary.vat_amount || 0;
+        const total = orderPayload.total_amount;
+        
+        // Payment details
+        const paymentMethod = orderPayload.breakdown?.payment?.method?.toUpperCase() || 'GCASH';
+        const amountPaid = orderPayload.breakdown?.payment?.amount_paid || total;
+        const change = orderPayload.breakdown?.payment?.change || 0;
+        const gcashRef = orderPayload.breakdown?.payment?.reference_number || null;
+        
         const receiptText = `
-Order Number: ${orderData.orderId.substring(0, 8).toUpperCase()}
-Date: ${new Date().toLocaleString()}
-Customer: ${customer.first_name || ''} ${customer.last_name || ''}
+========================================
+                KATFLIX
+            Laundry Services
+========================================
 
-Items:
-${orderPayload.breakdown?.items?.map((item: any) => 
-  `  • ${item.name} x${item.quantity} - ₱${item.total?.toFixed(2) || '0.00'}`
-).join('\n') || 'No items'}
+ORDER: ${orderNumber}
+${timestamp}
+Customer: ${customerName}
+${customerPhone}
+${cashierName ? `Cashier: ${cashierName}` : ''}
+────────────────────────────────────────
 
-Total: ₱${orderPayload.total_amount?.toFixed(2) || '0.00'}
+${allItemsText || '  (No items)'}
+
+────────────────────────────────────────
+Subtotal:                    ₱${subtotal.toFixed(2)}${serviceFee > 0 ? `\nService Fee:                 ₱${serviceFee.toFixed(2)}` : ''}${handlingFee > 0 ? `\nHandling Fee:                ₱${handlingFee.toFixed(2)}` : ''}${tax > 0 ? `\nTax (VAT):                   ₱${tax.toFixed(2)}` : ''}
+========================================
+TOTAL:                       ₱${total.toFixed(2)}
+========================================
+
+Payment:                            ${paymentMethod}${gcashRef ? `\nGCash Ref:                   ${gcashRef}` : ''}
+Amount Paid:                    ₱${amountPaid.toFixed(2)}${change > 0 ? `\nChange:                      ₱${change.toFixed(2)}` : ''}
+
+${orderPayload.handling?.pickup?.scheduled ? `PICKUP SERVICE${orderPayload.handling?.pickup?.address ? `\nLocation: ${orderPayload.handling.pickup.address}` : ''}` : ''}${orderPayload.handling?.delivery?.scheduled ? `${orderPayload.handling?.pickup?.scheduled ? '\n\n' : '\n'}DELIVERY SERVICE${orderPayload.handling?.delivery?.address ? `\nAddress: ${orderPayload.handling.delivery.address}` : ''}` : ''}
+
+========================================
+          Thank you for your order!
+              Come again!
+========================================
         `.trim();
 
-        const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
-        const greeting = customerName ? `Hi ${customerName.split(" ")[0]}!` : "Hi there!";
+        const greeting = `Hi ${customerName.split(" ")[0]}!`;
 
         const emailResult = await resend.emails.send({
           from: "onboarding@resend.dev",
           to: customer.email_address,
-          subject: `Receipt for Order ${orderData.orderId.substring(0, 8).toUpperCase()}`,
-          text: `${greeting}\n\nThank you for your order! Here's your receipt:\n\n${receiptText}\n\nYour order is being processed. We'll notify you when it's ready!\n\nBest regards,\nKATFLIX Team`,
+          subject: `Receipt for Order ${orderNumber}`,
+          text: `${greeting}\n\nThank you for your order! Here's your receipt:\n\n${receiptText}\n\nWe appreciate your business!\n\nBest regards,\nKATFLIX Team`,
           html: `
             <html>
-              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2>${greeting}</h2>
-                  <p>Thank you for your order! Here's your receipt:</p>
+              <body style="font-family: 'Courier New', monospace; line-height: 1.6; color: #333; background-color: #f5f5f5;">
+                <div style="max-width: 600px; margin: 20px auto; padding: 30px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h2 style="margin-top: 0; color: #2c3e50;">${greeting}</h2>
+                  <p style="font-size: 16px; color: #555;">Thank you for your order! Here's your receipt:</p>
                   
-                  <div style="border: 1px solid #ddd; padding: 15px; margin: 20px 0; background-color: #f9f9f9; font-family: monospace; white-space: pre-wrap;">
+                  <div style="border: 2px solid #34495e; padding: 20px; margin: 20px 0; background-color: #ecf0f1; font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.8;">
 ${receiptText}
                   </div>
 
-                  <p>Your order is being processed. We'll notify you when it's ready!</p>
+                  <p style="font-size: 15px; color: #27ae60; margin-top: 20px;"><strong>✓ Order Confirmed</strong></p>
+                  <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Your laundry order has been received and is being processed. We'll notify you when your items are ready!</p>
 
-                  <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
-                  <p style="text-align: center; color: #666; font-size: 12px;">
+                  <hr style="margin: 20px 0; border: none; border-top: 2px solid #bdc3c7;" />
+                  <p style="text-align: center; color: #7f8c8d; font-size: 12px; margin-bottom: 0;">
                     Best regards,<br />
-                    <strong>KATFLIX Team</strong>
+                    <strong style="color: #2c3e50;">KATFLIX Team</strong><br />
+                    <span style="color: #95a5a6;">Laundry Services</span>
                   </p>
                 </div>
               </body>
