@@ -116,6 +116,9 @@ export default function POSPage() {
           setShowConfirm={pos.setShowConfirm}
           saveOrder={pos.saveOrder}
           resetPOS={pos.resetPOS}
+          customerLoyaltyPoints={pos.customerLoyaltyPoints}
+          useLoyaltyDiscount={pos.useLoyaltyDiscount}
+          setUseLoyaltyDiscount={pos.setUseLoyaltyDiscount}
         />
       </div>
 

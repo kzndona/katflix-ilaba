@@ -98,6 +98,10 @@ export function usePOSState() {
     method: "cash",
   });
 
+  // --- Loyalty Points ---
+  const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = React.useState(0);
+  const [useLoyaltyDiscount, setUseLoyaltyDiscount] = React.useState(false);
+
   React.useEffect(() => {
     const loadServices = async () => {
       const supabase = createClient();
@@ -141,6 +145,31 @@ export function usePOSState() {
       }
     })();
   }, [customerQuery]);
+
+  // --- Load loyalty points when customer is selected ---
+  React.useEffect(() => {
+    if (!customer?.id) {
+      setCustomerLoyaltyPoints(0);
+      setUseLoyaltyDiscount(false);
+      return;
+    }
+
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("customers")
+        .select("loyalty_points")
+        .eq("id", customer.id)
+        .single();
+
+      if (error) {
+        console.error("Failed to load loyalty points:", error);
+        setCustomerLoyaltyPoints(0);
+      } else {
+        setCustomerLoyaltyPoints(data?.loyalty_points || 0);
+      }
+    })();
+  }, [customer?.id]);
 
   // --- products add/remove ---
   // --- load products from DB ---
@@ -371,7 +400,26 @@ export function usePOSState() {
     const vatIncluded =
       subtotalBeforeTax * (PRICING.taxRate / (1 + PRICING.taxRate));
 
-    const total = subtotalBeforeTax; // final total includes VAT already
+    // ========== LOYALTY DISCOUNT ==========
+    // 3 points = 10%, 4 points = 15%
+    let loyaltyDiscountAmount = 0;
+    let loyaltyPointsUsed = 0;
+    let loyaltyDiscountPercentage = 0;
+
+    if (useLoyaltyDiscount) {
+      if (customerLoyaltyPoints >= 4) {
+        loyaltyPointsUsed = 4;
+        loyaltyDiscountPercentage = 15;
+        loyaltyDiscountAmount = subtotalBeforeTax * 0.15;
+      } else if (customerLoyaltyPoints >= 3) {
+        loyaltyPointsUsed = 3;
+        loyaltyDiscountPercentage = 10;
+        loyaltyDiscountAmount = subtotalBeforeTax * 0.10;
+      }
+    }
+
+    const totalAfterDiscount = subtotalBeforeTax - loyaltyDiscountAmount;
+    const total = totalAfterDiscount; // final total after loyalty discount
 
     // NEW: Build complete breakdown JSONB for database storage
     let breakdown: BreakdownJSON | null = null;
@@ -401,6 +449,11 @@ export function usePOSState() {
       handlingFee,
       taxIncluded: vatIncluded,
       total,
+      
+      // Loyalty discount info
+      loyaltyDiscountAmount,
+      loyaltyPointsUsed,
+      loyaltyDiscountPercentage,
 
       // NEW: Database storage objects
       breakdown,
@@ -414,6 +467,8 @@ export function usePOSState() {
     payment.method,
     payment.amountPaid,
     services,
+    useLoyaltyDiscount,
+    customerLoyaltyPoints,
   ]);
 
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -539,6 +594,10 @@ export function usePOSState() {
         order_note: null,
         breakdown: breakdownWithPayment,
         handling: computeReceipt.handling,
+        // Loyalty discount info (if applicable)
+        loyaltyPointsUsed: computeReceipt.loyaltyPointsUsed,
+        loyaltyDiscountAmount: computeReceipt.loyaltyDiscountAmount,
+        loyaltyDiscountPercentage: computeReceipt.loyaltyDiscountPercentage,
       };
 
       // CALL transactional API endpoint to update customer + create order
@@ -662,6 +721,8 @@ export function usePOSState() {
     });
     setPayment({ method: "cash" });
     setActivePane("customer");
+    setCustomerLoyaltyPoints(0);
+    setUseLoyaltyDiscount(false);
   };
 
   return {
@@ -698,6 +759,11 @@ export function usePOSState() {
     services,
     calculateBasketDuration,
     isProcessing,
+    // Loyalty points
+    customerLoyaltyPoints,
+    setCustomerLoyaltyPoints,
+    useLoyaltyDiscount,
+    setUseLoyaltyDiscount,
     // NEW: Expose JSONB objects for database storage
     orderBreakdown: computeReceipt.breakdown,
     orderHandling: computeReceipt.handling,

@@ -11,6 +11,9 @@ type Props = {
   setShowConfirm: (v: boolean) => void;
   saveOrder: () => Promise<void>;
   resetPOS: () => void;
+  customerLoyaltyPoints?: number;
+  useLoyaltyDiscount?: boolean;
+  setUseLoyaltyDiscount?: (v: boolean) => void;
 };
 
 export default function PaneReceipt({
@@ -20,6 +23,9 @@ export default function PaneReceipt({
   setShowConfirm,
   saveOrder,
   resetPOS,
+  customerLoyaltyPoints = 0,
+  useLoyaltyDiscount = false,
+  setUseLoyaltyDiscount,
 }: Props) {
   const isCustomerValid =
     customer?.first_name && customer?.last_name && customer?.phone_number;
@@ -249,6 +255,46 @@ export default function PaneReceipt({
         )}
       </div>
 
+      {/* Loyalty Discount Section */}
+      {customerLoyaltyPoints >= 3 && (
+        <div className="bg-linear-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200 mt-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-sm font-bold text-amber-900 mb-1">
+                💰 Loyalty Points Available
+              </div>
+              <div className="text-xs text-amber-800">
+                {customerLoyaltyPoints} points
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useLoyaltyDiscount}
+                onChange={(e) => setUseLoyaltyDiscount?.(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-xs font-semibold text-amber-900">Use</span>
+            </label>
+          </div>
+          {useLoyaltyDiscount && (
+            <div className="bg-white rounded p-3 text-sm">
+              {customerLoyaltyPoints >= 4 ? (
+                <div className="text-amber-900 font-semibold">
+                  🎉 15% discount - ₱
+                  {computeReceipt.loyaltyDiscountAmount.toFixed(2)} off
+                </div>
+              ) : (
+                <div className="text-amber-900 font-semibold">
+                  10% discount - ₱
+                  {computeReceipt.loyaltyDiscountAmount.toFixed(2)} off
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Totals Section */}
       <div className="border-t-2 border-gray-300 pt-5 space-y-4 text-sm mt-5">
         <div className="flex justify-between">
@@ -281,6 +327,16 @@ export default function PaneReceipt({
             <span className="text-gray-600">Delivery Fee</span>
             <span className="font-semibold text-gray-900">
               ₱{handling.deliveryFee.toFixed(2)}
+            </span>
+          </div>
+        )}
+        {computeReceipt.loyaltyDiscountAmount > 0 && (
+          <div className="flex justify-between text-green-700">
+            <span className="font-semibold">
+              Loyalty Discount ({computeReceipt.loyaltyDiscountPercentage}%)
+            </span>
+            <span className="font-bold">
+              -₱{computeReceipt.loyaltyDiscountAmount.toFixed(2)}
             </span>
           </div>
         )}

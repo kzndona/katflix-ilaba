@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
     customer = body.customer;
     orderPayload = body.orderPayload;
     
+    // Extract loyalty info (if present)
+    const loyaltyPointsUsed = orderPayload.loyaltyPointsUsed || 0;
+    const loyaltyDiscountAmount = orderPayload.loyaltyDiscountAmount || 0;
+    const loyaltyDiscountPercentage = orderPayload.loyaltyDiscountPercentage || 0;
+    
     console.log("📥 POS Format order received");
     // Ensure source is 'store' for POS orders
     orderPayload.source = 'store';
@@ -189,6 +194,32 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("✓ Order created successfully:", orderData.orderId);
+    
+    // ========== HANDLE LOYALTY DISCOUNT ==========
+    // Only deduct points if 4 points were used (15% discount)
+    // 3 points (10% discount) don't deduct the points
+    if (loyaltyPointsUsed === 4) {
+      const { data: customerLoyalty } = await supabase
+        .from('customers')
+        .select('loyalty_points')
+        .eq('id', customer.id)
+        .single();
+
+      if (customerLoyalty) {
+        const newPoints = Math.max(0, (customerLoyalty.loyalty_points || 0) - 4);
+        const { error: loyaltyError } = await supabase
+          .from('customers')
+          .update({ loyalty_points: newPoints })
+          .eq('id', customer.id);
+
+        if (loyaltyError) {
+          console.warn('Loyalty points deduction failed (non-critical):', loyaltyError.message);
+        } else {
+          console.log('✓ Loyalty points deducted (4 points reset). New total:', newPoints);
+        }
+      }
+    }
+    
     return NextResponse.json({
       success: true,
       orderId: orderData.orderId,
