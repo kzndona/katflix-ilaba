@@ -34,7 +34,15 @@ export default function PaneReceipt({
     computeReceipt.basketLines.length > 0 &&
     computeReceipt.basketLines.some((b: any) => b.weightKg > 0);
 
-  const isOrderValid = isCustomerValid && (hasProducts || hasServices);
+  // Check if trying to deliver products-only order (not allowed)
+  const isProductsOnlyOrder = hasProducts && !hasServices;
+  const isDeliverySelected = handling.deliver;
+  const deliveryWithProductsOnlyError =
+    isProductsOnlyOrder && isDeliverySelected
+      ? "Cannot deliver product-only orders. Products must be picked up at the store."
+      : null;
+
+  const isOrderValid = isCustomerValid && (hasProducts || hasServices) && !deliveryWithProductsOnlyError;
 
   const basketWarnings = computeReceipt.basketLines
     .filter((b: any) => b.weightKg > 0)
@@ -103,6 +111,33 @@ export default function PaneReceipt({
                   {basketWarnings.map((warning: string, idx: number) => (
                     <div key={idx}>• {warning}</div>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delivery with Products-Only Error */}
+        {deliveryWithProductsOnlyError && (
+          <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
+            <div className="flex gap-3">
+              <svg
+                className="w-5 h-5 shrink-0 text-red-600 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div>
+                <div className="text-sm font-semibold text-red-900 mb-1">
+                  ❌ Delivery Not Allowed
+                </div>
+                <div className="text-xs text-red-800">
+                  {deliveryWithProductsOnlyError}
                 </div>
               </div>
             </div>
