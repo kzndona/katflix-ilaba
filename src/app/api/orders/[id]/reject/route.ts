@@ -1,12 +1,13 @@
 import { createClient } from "@/src/app/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { restoreInventory } from "@/src/app/api/orders/inventoryHelpers";
 
 /**
  * POST /api/orders/{orderId}/reject
  * 
  * Rejects a pending mobile app order (cashier unable to fulfill).
  * When rejecting, all baskets in the order are marked as rejected.
- * Inventory is NOT deducted (never was deducted, so no restore needed).
+ * Inventory IS restored (was deducted at order creation, now returned).
  * 
  * Request body:
  * {
@@ -175,6 +176,28 @@ export async function POST(
         { success: false, error: "Failed to update order" },
         { status: 500 }
       );
+    }
+
+    // Step 5b: Restore inventory from breakdown items
+    if (order.breakdown?.items && order.breakdown.items.length > 0) {
+      console.log("📦 Restoring inventory for rejected order...");
+      
+      const restorationResult = await restoreInventory(
+        supabase,
+        orderId,
+        order.breakdown.items.map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+        }))
+      );
+
+      if (!restorationResult.success) {
+        console.warn('⚠️ Some inventory restorations failed:', restorationResult.failedProducts);
+        // Log but continue - don't fail the rejection
+      } else {
+        console.log('✓ Inventory restored successfully:', restorationResult.deductedProducts.map(p => `${p.productName}(${p.quantity})`).join(", "));
+      }
     }
 
     // Step 6: Decrement loyalty points for cancelled order
