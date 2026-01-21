@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * 
  * Internal endpoint called by /api/orders/transactional-create
  * 
- * Handles POS format only with JSONB breakdown + handling
+ * Handles POS format with JSONB breakdown + handling
  * {
  *   "source": "store",
  *   "customer_id": "uuid",
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       orderId: order.id,
       order: {
         id: order.id,
-        source: order.source,
+        source: order.source || 'store',
         customer_id: order.customer_id,
         cashier_id: order.cashier_id,
         status: order.status,

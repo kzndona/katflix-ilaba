@@ -21,6 +21,7 @@ export async function GET(req: Request) {
         completed_at,
         handling,
         breakdown,
+        gcash_receipt_url,
         customers (
           id,
           first_name,

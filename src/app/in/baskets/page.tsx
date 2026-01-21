@@ -9,6 +9,8 @@ type Order = {
   customer_id: string;
   status: string;
   total_amount: number;
+  source?: "store" | "app"; // Add source field
+  gcash_receipt_url?: string | null; // Add receipt URL
   handling: {
     pickup: {
       address: string;
@@ -69,6 +71,8 @@ export default function BasketsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [staffId, setStaffId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [mobileOrderModal, setMobileOrderModal] = useState<Order | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   // Get authenticated staff user
   useEffect(() => {
@@ -117,7 +121,7 @@ export default function BasketsPage() {
           (o.status === "pending" ||
             o.status === "for_pick-up" ||
             o.status === "processing" ||
-            o.status === "for_delivery")
+            o.status === "for_delivery"),
       );
 
       setOrders(processingOrders);
@@ -140,15 +144,15 @@ export default function BasketsPage() {
     const baskets = order.breakdown?.baskets || [];
     return baskets.every((b) =>
       b.services.every(
-        (s) => s.status === "completed" || s.status === "skipped"
-      )
+        (s) => s.status === "completed" || s.status === "skipped",
+      ),
     );
   };
 
   // Get the next pending item in the timeline (pickup → services → delivery)
   const getTimelineNextAction = (
     order: Order,
-    basket: any
+    basket: any,
   ): {
     label: string;
     action: "start" | "complete";
@@ -178,7 +182,7 @@ export default function BasketsPage() {
 
     // Check for in-progress service
     const inProgressIndex = services.findIndex(
-      (s: any) => s.status === "in_progress"
+      (s: any) => s.status === "in_progress",
     );
     if (inProgressIndex >= 0) {
       return {
@@ -233,7 +237,7 @@ export default function BasketsPage() {
     orderId: string,
     basketNumber: number | null,
     handlingType: string | null,
-    action: string
+    action: string,
   ) {
     setProcessingId(orderId);
     try {
@@ -265,6 +269,29 @@ export default function BasketsPage() {
       setErrorMsg(err.message);
     } finally {
       setProcessingId(null);
+    }
+  }
+
+  async function rejectMobileOrder(orderId: string) {
+    setRejectingId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to reject order");
+      }
+
+      setMobileOrderModal(null);
+      await load();
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setRejectingId(null);
     }
   }
 
@@ -354,7 +381,7 @@ export default function BasketsPage() {
                   {(order.breakdown?.baskets || []).map((basket, idx) => {
                     const nextAction = getTimelineNextAction(order, basket);
                     const allServicesComplete = basket.services.every(
-                      (s) => s.status === "completed" || s.status === "skipped"
+                      (s) => s.status === "completed" || s.status === "skipped",
                     );
 
                     return (
@@ -510,43 +537,56 @@ export default function BasketsPage() {
 
                         {/* Action Button */}
                         {nextAction ? (
-                          <button
-                            onClick={() => {
-                              if (nextAction.type === "pickup") {
-                                updateServiceStatus(
-                                  order.id,
-                                  null,
-                                  "pickup",
-                                  nextAction.action
-                                );
-                              } else if (nextAction.type === "service") {
-                                updateServiceStatus(
-                                  order.id,
-                                  nextAction.basketNumber ||
-                                    basket.basket_number,
-                                  null,
-                                  nextAction.action
-                                );
-                              } else if (nextAction.type === "delivery") {
-                                updateServiceStatus(
-                                  order.id,
-                                  null,
-                                  "delivery",
-                                  nextAction.action
-                                );
-                              }
-                            }}
-                            disabled={processingId === order.id}
-                            className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                              processingId === order.id
-                                ? "bg-gray-300 text-gray-700 cursor-wait"
-                                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-                            }`}
-                          >
-                            {processingId === order.id
-                              ? "Processing..."
-                              : nextAction.label}
-                          </button>
+                          <>
+                            {order.source === "app" &&
+                            order.status === "pending" ? (
+                              <button
+                                onClick={() => setMobileOrderModal(order)}
+                                disabled={processingId === order.id}
+                                className="w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
+                              >
+                                📸 View Screenshot
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (nextAction.type === "pickup") {
+                                    updateServiceStatus(
+                                      order.id,
+                                      null,
+                                      "pickup",
+                                      nextAction.action,
+                                    );
+                                  } else if (nextAction.type === "service") {
+                                    updateServiceStatus(
+                                      order.id,
+                                      nextAction.basketNumber ||
+                                        basket.basket_number,
+                                      null,
+                                      nextAction.action,
+                                    );
+                                  } else if (nextAction.type === "delivery") {
+                                    updateServiceStatus(
+                                      order.id,
+                                      null,
+                                      "delivery",
+                                      nextAction.action,
+                                    );
+                                  }
+                                }}
+                                disabled={processingId === order.id}
+                                className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                  processingId === order.id
+                                    ? "bg-gray-300 text-gray-700 cursor-wait"
+                                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                                }`}
+                              >
+                                {processingId === order.id
+                                  ? "Processing..."
+                                  : nextAction.label}
+                              </button>
+                            )}
+                          </>
                         ) : (
                           <div className="text-xs text-green-700 text-center py-3 px-3 bg-green-50 rounded-lg border border-green-200 font-semibold">
                             ✓ Basket Complete
@@ -558,6 +598,156 @@ export default function BasketsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Mobile Order Details Modal */}
+        {mobileOrderModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            onClick={() => setMobileOrderModal(null)}
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          >
+            {/* Modal - Click inside doesn't close */}
+            <div
+              className="relative bg-white shadow-xl w-11/12 h-5/6 max-w-4xl flex flex-col rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-linear-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200 flex justify-between items-center shrink-0">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Mobile Order Review
+                </h2>
+                <button
+                  onClick={() => setMobileOrderModal(null)}
+                  className="text-gray-600 hover:text-gray-900 text-2xl font-light"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Content - Two Column Layout */}
+              <div className="flex-1 overflow-hidden flex">
+                {/* Left Panel - Details */}
+                <div className="w-1/2 border-r border-gray-200 overflow-y-auto p-6 space-y-4">
+                  {/* Customer Info */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Customer
+                    </h3>
+                    <p className="text-sm text-gray-700 font-medium">
+                      {mobileOrderModal.customers?.first_name}{" "}
+                      {mobileOrderModal.customers?.last_name}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {mobileOrderModal.customers?.phone_number}
+                    </p>
+                  </div>
+
+                  {/* Pickup Address */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      📍 Pickup
+                    </h3>
+                    <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded border border-blue-200">
+                      {mobileOrderModal.handling.pickup.address}
+                    </p>
+                  </div>
+
+                  {/* Delivery Address */}
+                  {mobileOrderModal.handling.delivery.address && (
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        🚚 Delivery
+                      </h3>
+                      <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
+                        {mobileOrderModal.handling.delivery.address}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Order Total */}
+                  <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-900">
+                        Total:
+                      </span>
+                      <span className="text-2xl font-bold text-purple-600">
+                        ₱{mobileOrderModal.total_amount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Panel - GCash Receipt */}
+                <div className="w-1/2 bg-gray-50 overflow-hidden p-6 flex flex-col items-center justify-center">
+                  {mobileOrderModal.gcash_receipt_url ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center">
+                      <h3 className="font-semibold text-gray-900 mb-3 shrink-0">
+                        💳 GCash Receipt
+                      </h3>
+                      <img
+                        src={
+                          mobileOrderModal.gcash_receipt_url.startsWith("http")
+                            ? mobileOrderModal.gcash_receipt_url
+                            : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gcash-receipts/${mobileOrderModal.gcash_receipt_url}`
+                        }
+                        alt="GCash Receipt"
+                        className="flex-1 w-full object-contain"
+                        onError={(e) => {
+                          console.error(
+                            "Image failed to load:",
+                            (e.target as HTMLImageElement).src,
+                          );
+                          (e.target as HTMLImageElement).src =
+                            "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2216%22 fill=%22%23999%22%3EImage failed to load%3C/text%3E%3C/svg%3E";
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No receipt image</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer - Actions */}
+              <div className="border-t border-gray-200 px-6 py-4 flex gap-3 shrink-0 bg-white">
+                <button
+                  onClick={async () => {
+                    await updateServiceStatus(
+                      mobileOrderModal.id,
+                      null,
+                      "pickup",
+                      "start",
+                    );
+                    setMobileOrderModal(null);
+                  }}
+                  disabled={processingId === mobileOrderModal.id}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    processingId === mobileOrderModal.id
+                      ? "bg-gray-300 text-gray-700 cursor-wait"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {processingId === mobileOrderModal.id
+                    ? "Processing..."
+                    : "Start Pickup"}
+                </button>
+                <button
+                  onClick={() => rejectMobileOrder(mobileOrderModal.id)}
+                  disabled={rejectingId === mobileOrderModal.id}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    rejectingId === mobileOrderModal.id
+                      ? "bg-gray-300 text-gray-700 cursor-wait"
+                      : "bg-red-600 text-white hover:bg-red-700"
+                  }`}
+                >
+                  {rejectingId === mobileOrderModal.id
+                    ? "Rejecting..."
+                    : "Reject"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
     orderPayload = body.orderPayload;
     
     console.log("📥 POS Format order received");
+    // Ensure source is 'store' for POS orders
+    orderPayload.source = 'store';
 
     // ========== VALIDATE CUSTOMER ==========
     if (!customer?.id) {
