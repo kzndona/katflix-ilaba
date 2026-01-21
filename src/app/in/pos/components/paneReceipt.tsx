@@ -42,7 +42,10 @@ export default function PaneReceipt({
       ? "Cannot deliver product-only orders. Products must be picked up at the store."
       : null;
 
-  const isOrderValid = isCustomerValid && (hasProducts || hasServices) && !deliveryWithProductsOnlyError;
+  const isOrderValid =
+    isCustomerValid &&
+    (hasProducts || hasServices) &&
+    !deliveryWithProductsOnlyError;
 
   const basketWarnings = computeReceipt.basketLines
     .filter((b: any) => b.weightKg > 0)

@@ -45,6 +45,8 @@
 import { createClient } from "@/src/app/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { validateStockAvailability, deductInventory } from "@/src/app/api/orders/inventoryHelpers";
+import { Resend } from "resend";
+import { formatReceiptAsPlaintext } from "@/src/app/in/pos/logic/receiptGenerator";
 
 export async function POST(req: NextRequest) {
   try {
@@ -236,6 +238,69 @@ export async function POST(req: NextRequest) {
         // The order exists but inventory deduction had issues
       } else {
         console.log("✓ Inventory deducted successfully:", deductionResult.deductedProducts.map(p => `${p.productName}(${p.quantity})`).join(", "));
+      }
+    }
+
+    // ========== SEND RECEIPT EMAIL ==========
+    if (customer.email_address && orderData.order) {
+      try {
+        console.log("📧 Sending receipt email...");
+        
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        // Generate plaintext receipt from order data
+        const receiptText = `
+Order Number: ${orderData.orderId.substring(0, 8).toUpperCase()}
+Date: ${new Date().toLocaleString()}
+Customer: ${customer.first_name || ''} ${customer.last_name || ''}
+
+Items:
+${orderPayload.breakdown?.items?.map((item: any) => 
+  `  • ${item.name} x${item.quantity} - ₱${item.total?.toFixed(2) || '0.00'}`
+).join('\n') || 'No items'}
+
+Total: ₱${orderPayload.total_amount?.toFixed(2) || '0.00'}
+        `.trim();
+
+        const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+        const greeting = customerName ? `Hi ${customerName.split(" ")[0]}!` : "Hi there!";
+
+        const emailResult = await resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: customer.email_address,
+          subject: `Receipt for Order ${orderData.orderId.substring(0, 8).toUpperCase()}`,
+          text: `${greeting}\n\nThank you for your order! Here's your receipt:\n\n${receiptText}\n\nYour order is being processed. We'll notify you when it's ready!\n\nBest regards,\nKATFLIX Team`,
+          html: `
+            <html>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2>${greeting}</h2>
+                  <p>Thank you for your order! Here's your receipt:</p>
+                  
+                  <div style="border: 1px solid #ddd; padding: 15px; margin: 20px 0; background-color: #f9f9f9; font-family: monospace; white-space: pre-wrap;">
+${receiptText}
+                  </div>
+
+                  <p>Your order is being processed. We'll notify you when it's ready!</p>
+
+                  <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
+                  <p style="text-align: center; color: #666; font-size: 12px;">
+                    Best regards,<br />
+                    <strong>KATFLIX Team</strong>
+                  </p>
+                </div>
+              </body>
+            </html>
+          `,
+        });
+
+        if (emailResult.error) {
+          console.warn(`⚠️ Failed to send receipt email to ${customer.email_address}:`, emailResult.error.message);
+        } else {
+          console.log(`✅ Receipt email sent to ${customer.email_address}`);
+        }
+      } catch (emailErr) {
+        console.warn("⚠️ Email sending error (non-critical):", emailErr instanceof Error ? emailErr.message : String(emailErr));
       }
     }
     
