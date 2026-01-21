@@ -108,6 +108,29 @@ export async function POST(req: NextRequest) {
     }
 
     const order = orderData[0];
+    
+    // ========== INCREMENT LOYALTY POINTS ==========
+    // Award 1 loyalty point per order created
+    const { data: customerLoyalty } = await supabase
+      .from('customers')
+      .select('loyalty_points')
+      .eq('id', customer_id)
+      .single();
+
+    if (customerLoyalty) {
+      const newPoints = (customerLoyalty.loyalty_points || 0) + 1;
+      const { error: loyaltyError } = await supabase
+        .from('customers')
+        .update({ loyalty_points: newPoints })
+        .eq('id', customer_id);
+
+      if (loyaltyError) {
+        console.warn('Loyalty points update failed (non-critical):', loyaltyError.message);
+      } else {
+        console.log('✓ Loyalty point awarded to customer:', customer_id, '(new total:', newPoints, ')');
+      }
+    }
+    
     return NextResponse.json({
       success: true,
       orderId: order.id,

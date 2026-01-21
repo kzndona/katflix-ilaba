@@ -144,7 +144,32 @@ export async function POST(
       );
     }
 
-    // Step 6: Send push notification to customer
+    // Step 6: Decrement loyalty points for cancelled order
+    try {
+      const { data: customerLoyalty } = await supabase
+        .from('customers')
+        .select('loyalty_points')
+        .eq('id', order.customer_id)
+        .single();
+
+      if (customerLoyalty) {
+        const newPoints = Math.max(0, (customerLoyalty.loyalty_points || 0) - 1);
+        const { error: loyaltyError } = await supabase
+          .from('customers')
+          .update({ loyalty_points: newPoints })
+          .eq('id', order.customer_id);
+
+        if (loyaltyError) {
+          console.warn('Loyalty points decrement failed (non-critical):', loyaltyError.message);
+        } else {
+          console.log('✓ Loyalty point deducted from customer:', order.customer_id, '(new total:', newPoints, ')');
+        }
+      }
+    } catch (loyaltyErr) {
+      console.warn('Loyalty update error (non-critical):', loyaltyErr);
+    }
+
+    // Step 7: Send push notification to customer
     try {
       // TODO: Implement push notification service
       // Send notification to customer: "Order Could Not Be Approved"
