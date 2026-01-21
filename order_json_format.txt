@@ -1,19 +1,246 @@
-// TABLE FIELDS
+================================================================================
+POS ORDER CREATION REQUEST TO API
+================================================================================
 
-id, // UUID
-source: "store" | "app",
-customer_id, // customers.id FK
-cashier_id, staff.id FK | null // POS: cashier. Mobile: manager who approved
-status: "pending" | "for_pick-up" | "processing" | "for_delivery" | "completed" | "cancelled", // fulfillment workflow. order can only be "completed" if all baskets' services are "completed" or "skipped", if all handlings are "completed" or "skipped", and payment_status is "successful"
-created_at, // timestamp
-approved_at, // timestamp | null (if store: auto_approve. if app: upon cashier's approval)
-completed_at, // timestamp | null
-cancelled_at, // timestamp | null
-total_amount,
-order_note,
-handling, // JSON part
-breakdown, // JSON part
-cancellation, // JSON part
+ENDPOINT: POST /api/orders/transactional-create
+CALLED BY: Web POS Application
+PURPOSE: Create order with automatic customer detail update and loyalty handling
+
+FULL REQUEST STRUCTURE:
+{
+  "customer": {
+    "id": "uuid",                          // Required: customer ID
+    "phone_number": "+639123456789",       // Optional: update if provided
+    "email_address": "customer@email.com"  // Optional: update if provided
+  },
+  "orderPayload": {
+    "source": "store",                     // Fixed: always "store" for POS
+    "customer_id": "uuid",                 // Required: customer ID (must match customer.id)
+    "cashier_id": "uuid",                  // Required: staff ID of cashier
+    "status": "processing",                // Fixed: always "processing" for POS
+    "total_amount": 1500.50,               // Required: final total AFTER loyalty discount
+    "order_note": null,                    // Optional: special instructions
+    
+    // LOYALTY DISCOUNT INFO (NEW)
+    "loyaltyPointsUsed": 0 | 3 | 4,        // 0 = no discount, 3 = 10%, 4 = 15%
+    "loyaltyDiscountAmount": 150.50,       // Actual PHP deducted from total
+    "loyaltyDiscountPercentage": 10 | 15,  // Discount percentage applied
+    
+    "breakdown": {
+      "items": [                           // Product items (optional)
+        {
+          "id": "uuid",
+          "product_id": "uuid",
+          "product_name": "Detergent",
+          "quantity": 2,
+          "unit_cost": 100,                // Cost at order time
+          "unit_price": 150,               // Price at order time
+          "subtotal": 300,
+          "discount": {
+            "amount": 0,
+            "reason": null
+          }
+        }
+      ],
+      "baskets": [                         // Laundry baskets
+        {
+          "basket_number": 1,
+          "weight": 5,                     // kg
+          "basket_notes": null,
+          "approval_status": null,         // Always null for POS
+          "approved_at": null,
+          "approved_by": null,
+          "rejection_reason": null,
+          "services": [
+            {
+              "id": "uuid",
+              "service_id": "uuid",
+              "service_name": "Wash",
+              "is_premium": false,
+              "multiplier": 1,
+              "rate_per_kg": 25,           // Rate at order time
+              "subtotal": 125,
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "completed_by": null,
+              "duration_in_minutes": 45
+            }
+          ],
+          "total": 125                     // Sum of all services in basket
+        }
+      ],
+      "fees": [                            // Optional fees
+        {
+          "id": "uuid",
+          "type": "service_fee",           // or "handling_fee"
+          "description": "Service Fee",
+          "amount": 40
+        }
+      ],
+      "discounts": [                       // Loyalty discount recorded here (if applicable)
+        {
+          "id": "uuid",
+          "type": "loyalty",               // Could also be "manager" or "promotional"
+          "applied_to": "order_total",
+          "value_type": "percentage",      // or "fixed_amount"
+          "value": 10 | 15,                // 10% or 15%
+          "reason": "Loyalty points redemption",
+          "applied_amount": 150.50         // Actual PHP deducted
+        }
+      ],
+      "summary": {
+        "subtotal_products": 300,          // Sum of all products
+        "subtotal_services": 500,          // Sum of all services across baskets
+        "handling": 0,                     // Delivery fee (0 if pickup only)
+        "service_fee": 40,                 // Service fee
+        "discounts": 150.50,               // Total discounts applied
+        "vat_rate": 0.12,                  // 12%
+        "vat_amount": 145.20,              // Included in grand_total
+        "vat_model": "inclusive",          // VAT is included in totals
+        "grand_total": 1500.50             // Final total (VAT inclusive)
+      },
+      "payment": {
+        "method": "cash",                  // or "gcash"
+        "amount_paid": 1500.50,
+        "change": 0,
+        "reference_number": null,          // GCash ref if applicable
+        "payment_status": "successful",    // POS orders are auto-successful
+        "completed_at": "2026-01-21T10:30:00Z"
+      },
+      "audit_log": [
+        {
+          "action": "created",
+          "timestamp": "2026-01-21T10:30:00Z",
+          "changed_by": "cashier-uuid",    // Will be set by API
+          "details": {}
+        }
+      ]
+    },
+    
+    "handling": {
+      "pickup": {
+        "address": "In-store",             // or customer address
+        "latitude": null,                  // Optional for maps
+        "longitude": null,
+        "notes": null,
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "completed_by": null,
+        "duration_in_minutes": null
+      },
+      "delivery": {
+        "address": "123 Main St, Apt 4B",  // Optional if delivering
+        "latitude": null,
+        "longitude": null,
+        "notes": "Leave at door",
+        "status": "pending" | "skipped",   // "skipped" if no delivery
+        "started_at": null,
+        "completed_at": null,
+        "completed_by": null,
+        "duration_in_minutes": null
+      }
+    }
+  }
+}
+
+
+================================================================================
+API RESPONSE (Success)
+================================================================================
+
+{
+  "success": true,
+  "orderId": "order-uuid",
+  "order": {
+    "id": "order-uuid",
+    "source": "store",
+    "customer_id": "customer-uuid",
+    "cashier_id": "cashier-uuid",
+    "status": "processing",
+    "total_amount": 1500.50,
+    "order_note": null,
+    "breakdown": { ...same as sent... },
+    "handling": { ...same as sent... },
+    "gcash_receipt_url": null,
+    "created_at": "2026-01-21T10:30:00Z"
+  }
+}
+
+
+================================================================================
+KEY DIFFERENCES: POS vs MOBILE vs DATABASE
+================================================================================
+
+POS SENDS (to /api/orders/transactional-create):
+✓ Wrapped in { customer: {...}, orderPayload: {...} }
+✓ source: "store"
+✓ status: "processing" (always)
+✓ approval_status: null (not applicable)
+✓ cashier_id: required (filled)
+✓ loyaltyPointsUsed, loyaltyDiscountAmount, loyaltyDiscountPercentage (NEW)
+✓ payment_status: "successful" (immediately)
+
+MOBILE SENDS (directly to /api/orders or custom endpoint):
+✓ Separate format with baskets/products arrays
+✓ source: "app"
+✓ status: "pending" (awaiting cashier approval)
+✓ approval_status: "pending" for each basket
+✓ cashier_id: null (filled on approval)
+✓ payment_status: "processing" (pending cashier approval)
+✓ Loyalty support: TBD (not yet implemented)
+
+DATABASE STORES (orders table):
+✓ Entire breakdown JSONB object
+✓ Entire handling JSONB object
+✓ All loyalty discount data in breakdown.discounts[]
+✓ Loyalty points deduction happens in customers table via API
+
+
+================================================================================
+PROCESSING FLOW
+================================================================================
+
+1. POS sends POST /api/orders/transactional-create with full order data
+2. API receives request at /api/orders/transactional-create
+3. API updates customer phone/email if provided
+4. API extracts loyalty info: loyaltyPointsUsed, loyaltyDiscountAmount, loyaltyDiscountPercentage
+5. API calls /api/orders internally with orderPayload
+6. /api/orders validates and creates order in database
+7. /api/orders awards +1 loyalty point automatically
+8. /api/orders returns success
+9. /api/orders/transactional-create checks if loyaltyPointsUsed === 4
+10. If 4 points used: API deducts 4 points (resets to 0) from customers table
+11. If 3 points used: No deduction (keeps points for future use)
+12. API returns success with orderId to POS
+13. POS shows success and generates receipt
+
+
+================================================================================
+NOTES FOR CLARITY
+================================================================================
+
+• total_amount sent to API is ALREADY after loyalty discount
+  - POS calculates: subtotal - (subtotal * discount%) = total_amount
+  - API just stores this final total
+
+• loyaltyPointsUsed is informational for backend
+  - API uses it to decide whether to deduct (4) or not (3)
+  - Discount already reflected in total_amount
+
+• Loyalty discount recorded in breakdown.discounts[] array
+  - Provides audit trail of what discount was applied
+  - Shows amount, percentage, and reason
+
+• payment_status is "successful" for POS (payment taken immediately)
+  - Different from mobile orders where it's "processing" until approved
+
+• All timestamps are ISO format (UTC)
+
+• cashier_id is REQUIRED for POS orders
+  - Used for audit trail and staff performance tracking
+
 
 handling: {
     pickup: {

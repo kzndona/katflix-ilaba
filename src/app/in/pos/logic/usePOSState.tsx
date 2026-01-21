@@ -133,7 +133,7 @@ export function usePOSState() {
         .from("customers")
         .select("*")
         .or(
-          `first_name.ilike.%${customerQuery}%,last_name.ilike.%${customerQuery}%,phone_number.ilike.%${customerQuery}%`
+          `first_name.ilike.%${customerQuery}%,last_name.ilike.%${customerQuery}%,phone_number.ilike.%${customerQuery}%`,
         )
         .limit(10);
 
@@ -312,7 +312,7 @@ export function usePOSState() {
   const computeReceipt = React.useMemo(() => {
     // Build UI display lines (same as before for rendering)
     const productLines: ReceiptProductLine[] = Object.entries(
-      orderProductCounts
+      orderProductCounts,
     ).map(([pid, qty]) => {
       const p = products.find((x) => x.id === pid)!;
       const lineTotal = p.unit_price * qty;
@@ -381,7 +381,7 @@ export function usePOSState() {
 
     // Filter out empty baskets (weightKg === 0) for actual order processing
     const basketLines: ReceiptBasketLine[] = allBasketLines.filter(
-      (b) => b.weightKg > 0
+      (b) => b.weightKg > 0,
     );
 
     const basketSubtotal = basketLines.reduce((s, l) => s + l.total, 0);
@@ -414,7 +414,7 @@ export function usePOSState() {
       } else if (customerLoyaltyPoints >= 3) {
         loyaltyPointsUsed = 3;
         loyaltyDiscountPercentage = 10;
-        loyaltyDiscountAmount = subtotalBeforeTax * 0.10;
+        loyaltyDiscountAmount = subtotalBeforeTax * 0.1;
       }
     }
 
@@ -433,7 +433,7 @@ export function usePOSState() {
         payment.method || "cash",
         payment.amountPaid || 0,
         PRICING.serviceFeePerBasket,
-        PRICING.taxRate
+        PRICING.taxRate,
       );
     } catch (err) {
       console.error("Error building breakdown:", err);
@@ -449,7 +449,7 @@ export function usePOSState() {
       handlingFee,
       taxIncluded: vatIncluded,
       total,
-      
+
       // Loyalty discount info
       loyaltyDiscountAmount,
       loyaltyPointsUsed,
@@ -494,7 +494,7 @@ export function usePOSState() {
 
       if (!hasService) {
         warnings.push(
-          `Basket ${basket.originalIndex} has weight (${basket.weightKg}kg) but no services selected.`
+          `Basket ${basket.originalIndex} has weight (${basket.weightKg}kg) but no services selected.`,
         );
       }
     });
@@ -536,7 +536,7 @@ export function usePOSState() {
       } = await supabase.auth.getUser();
       if (!user || userError) {
         alert(
-          "Unable to get authenticated staff. Please refresh and try again."
+          "Unable to get authenticated staff. Please refresh and try again.",
         );
         setIsProcessing(false);
         return null;
@@ -620,7 +620,7 @@ export function usePOSState() {
         console.error("Transactional order creation failed:", data);
         if (data.partialSuccess) {
           alert(
-            "Customer details were saved, but the order could not be created. Please try again."
+            "Customer details were saved, but the order could not be created. Please try again.",
           );
         } else {
           alert(data.error || "Failed to save order. Please try again.");
@@ -655,7 +655,7 @@ export function usePOSState() {
             handlingFee: computeReceipt.handlingFee,
             taxIncluded: computeReceipt.taxIncluded,
             total: computeReceipt.total,
-          }
+          },
         );
 
         const receiptRes = await fetch("/api/receipts", {

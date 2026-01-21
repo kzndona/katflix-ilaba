@@ -196,9 +196,8 @@ export async function POST(req: NextRequest) {
     console.log("✓ Order created successfully:", orderData.orderId);
     
     // ========== HANDLE LOYALTY DISCOUNT ==========
-    // Only deduct points if 4 points were used (15% discount)
-    // 3 points (10% discount) don't deduct the points
-    if (loyaltyPointsUsed === 4) {
+    // Deduct loyalty points if any were used (no hard cap on max points)
+    if (loyaltyPointsUsed > 0) {
       const { data: customerLoyalty } = await supabase
         .from('customers')
         .select('loyalty_points')
@@ -206,7 +205,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (customerLoyalty) {
-        const newPoints = Math.max(0, (customerLoyalty.loyalty_points || 0) - 4);
+        const newPoints = Math.max(0, (customerLoyalty.loyalty_points || 0) - loyaltyPointsUsed);
         const { error: loyaltyError } = await supabase
           .from('customers')
           .update({ loyalty_points: newPoints })
@@ -215,7 +214,7 @@ export async function POST(req: NextRequest) {
         if (loyaltyError) {
           console.warn('Loyalty points deduction failed (non-critical):', loyaltyError.message);
         } else {
-          console.log('✓ Loyalty points deducted (4 points reset). New total:', newPoints);
+          console.log(`✓ Loyalty points deducted (${loyaltyPointsUsed} points used). New total: ${newPoints}`);
         }
       }
     }
