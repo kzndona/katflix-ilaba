@@ -5,11 +5,11 @@ LOYALTY POINTS SYSTEM - API vs APP RESPONSIBILITIES
 OVERVIEW
 --------
 Two-tier loyalty discount system:
-- 3 points = 10% discount (points NOT deducted)
-- 4 points = 15% discount (points RESET to 0 - hard cap)
+- 10 points = 10% discount (points deducted)
+- 20 points = 15% discount (points deducted)
 
-Points are automatically awarded (+1) when orders are created and deducted (-1)
-when orders are rejected. Discounts are optional and user-initiated.
+Points are automatically awarded (+1) when orders are created and deducted
+when used for discounts. Discounts are optional and user-initiated.
 
 
 ================================================================================
@@ -19,17 +19,17 @@ API RESPONSIBILITIES
 1. ORDER CREATION (POST /api/orders/transactional-create)
    - Receives loyalty discount info from client
    - Records discount in breakdown.discounts array with type "loyalty"
-   - DEDUCTS POINTS ONLY IF 4 POINTS WERE USED (resets to 0)
-   - 3-point discounts do NOT deduct points
+   - DEDUCTS POINTS when discount is used (10 or 20 points)
    - Logs deduction for audit trail
    - Returns success with order details
 
 2. INITIAL POINT AWARD (POST /api/orders)
-   - Automatically awards +1 loyalty point when ANY order is created
+   - Automatically awards +1 loyalty point when ANY order is created (unless loyalty discount used)
    - Works for both store and app orders
    - Fetches current points, increments by 1, updates customer
+   - Skips award if customer is redeeming loyalty points on this order
    - Non-critical operation (order succeeds even if loyalty update fails)
-   - Logs: "✓ Loyalty point awarded to customer"
+   - Logs: "✓ Loyalty point awarded to customer" or "ℹ Loyalty discount used, skipping point award"
 
 3. ORDER REJECTION (POST /api/orders/{id}/reject)
    - Automatically deducts 1 loyalty point from customer
@@ -91,16 +91,15 @@ APP RESPONSIBILITIES
 KEY RULES FOR APP IMPLEMENTATION
 ================================================================================
 
-1. 3-POINT TIER (10%)
-   - Do NOT deduct points from app
-   - API will NOT deduct points either
-   - Customer keeps 3 points for future use
-   - Can redeem multiple times (3pts, 3pts, 3pts, etc.)
+1. 10-POINT TIER (10%)
+   - Deducts 10 points from customer
+   - Can use when customer has 10+ points
+   - Once redeemed, points deducted (customer loses discount value)
 
-2. 4-POINT TIER (15%)
-   - Points ARE deducted by API (reset to 0)
-   - Hard cap - once used, customer starts accumulating again
-   - Net effect: Customer gets 15% off, loses 3 net points
+2. 20-POINT TIER (15%)
+   - Points ARE deducted by API (deducts 20 points)
+   - Can use when customer has 20+ points
+   - Net effect: Customer gets 15% off, loses 20 points
 
 3. DISCOUNT IS OPTIONAL
    - User can decline even with sufficient points
@@ -125,52 +124,52 @@ EXAMPLE FLOW
 SCENARIO: Customer has 20 loyalty points
 
 Step 1: PREPARE ORDER
-   App shows: "💰 You have 20 points - Use 4 points (15% off - Save ₱XXX)"
+   App shows: "💰 You have 20 points - Use 20 points (15% off - Save ₱XXX)"
    User toggles: YES, use discount
 
 Step 2: ORDER SUBMISSION
    App sends:
    {
-     "loyaltyPointsUsed": 4,
+     "loyaltyPointsUsed": 20,
      "loyaltyDiscountAmount": 250.00,
      "loyaltyDiscountPercentage": 15
    }
 
 Step 3: API PROCESSES
    ✓ Creates order with discount recorded in breakdown
-   ✓ Awards +1 point → 21 points
-   ✓ Deducts 4 points → 17 points final
+   ✓ Skips +1 award (discount is being used)
+   ✓ Deducts 20 points → 0 points final
    ✓ Returns success
 
 Step 4: NEXT ORDER
-   Customer now has 17 points
-   App shows: "💰 You have 17 points - Use 4 points (15% off - Save ₱XXX)"
-   Can redeem again
+   Customer now has 0 points
+   App shows: "🎯 You have 0 points - Keep purchasing to earn more"
+   Must accumulate before next redemption
 
-SCENARIO 2: Customer has 3 points
+SCENARIO 2: Customer has 10 points
 
 Step 1: PREPARE ORDER
-   App shows: "💰 You have 3 points - Use 3 points (10% off - Save ₱XXX)"
+   App shows: "💰 You have 10 points - Use 10 points (10% off - Save ₱XXX)"
    User toggles: YES, use discount
 
 Step 2: ORDER SUBMISSION
    App sends:
    {
-     "loyaltyPointsUsed": 3,
+     "loyaltyPointsUsed": 10,
      "loyaltyDiscountAmount": 150.00,
      "loyaltyDiscountPercentage": 10
    }
 
 Step 3: API PROCESSES
    ✓ Creates order with discount recorded
-   ✓ Awards +1 point → 4 points
-   ✓ Does NOT deduct (3-point tier doesn't deduct)
-   ✓ Customer keeps 4 points
+   ✓ Skips +1 award (discount is being used)
+   ✓ Deducts 10 points → 0 points
+   ✓ Returns success
 
 Step 4: NEXT ORDER
-   Customer now has 4 points
-   App shows: "💰 You have 4 points - Use 4 points (15% off - Save ₱XXX)"
-   Can now use the better 4-point tier
+   Customer now has 0 points
+   App shows: "🎯 You have 0 points - Keep purchasing to earn more"
+   Must create 10 more orders to reach 10-point tier again
 
 
 ================================================================================
@@ -182,13 +181,36 @@ Transaction Log:
    Order 1 created: +1 = 1 point
    Order 2 created: +1 = 2 points
    Order 3 created: +1 = 3 points
-   Order 3 rejected: -1 = 2 points
-   Order 4 created: +1 = 3 points
-   Order 5 created (3-point discount used): +1 = 4 points (discount doesn't deduct)
-   Order 6 created (4-point discount used): +1 = 5 points, -4 = 1 point final
-   Order 7 created: +1 = 2 points
-   Order 8 created: +1 = 3 points
-   Order 8 rejected: -1 = 2 points
+   Order 4 created: +1 = 4 points
+   Order 5 created: +1 = 5 points
+   Order 6 created: +1 = 6 points
+   Order 7 created: +1 = 7 points
+   Order 8 created: +1 = 8 points
+   Order 9 created: +1 = 9 points
+   Order 10 created: +1 = 10 points
+   Order 11 created (10-point discount used): -10 = 0 points
+   Order 12 created: +1 = 1 point
+   Order 13 created: +1 = 2 points
+   Order 14 created: +1 = 3 points
+   Order 15 created: +1 = 4 points
+   Order 16 created: +1 = 5 points
+   Order 17 created: +1 = 6 points
+   Order 18 created: +1 = 7 points
+   Order 19 created: +1 = 8 points
+   Order 20 created: +1 = 9 points
+   Order 21 created: +1 = 10 points
+   Order 22 created: +1 = 11 points
+   Order 23 created: +1 = 12 points
+   Order 24 created: +1 = 13 points
+   Order 25 created: +1 = 14 points
+   Order 26 created: +1 = 15 points
+   Order 27 created: +1 = 16 points
+   Order 28 created: +1 = 17 points
+   Order 29 created: +1 = 18 points
+   Order 30 created: +1 = 19 points
+   Order 31 created: +1 = 20 points
+   Order 32 created (20-point discount used): -20 = 0 points
+   Order 33 created: +1 = 1 point
    ...continues...
 
 
@@ -196,17 +218,17 @@ Transaction Log:
 QUESTIONS FOR CLARIFICATION
 ================================================================================
 
-Q: What if customer has exactly 3 points and we calculate discount?
-A: Show 10% option only (3-point tier)
+Q: What if customer has exactly 10 points and we calculate discount?
+A: Show 10% option only (10-point tier)
 
-Q: What if customer has exactly 4 points?
-A: Show 15% option (4-point tier)
+Q: What if customer has exactly 20 points?
+A: Show 15% option (20-point tier)
 
-Q: What if customer has 5+ points?
-A: Show 15% option (4-point tier) - always cap at 4
+Q: What if customer has 25+ points?
+A: Show 15% option (20-point tier) - deduct 20 points when used
 
-Q: Can customer use 3 points today and 3 points tomorrow?
-A: Yes! 3-point tier doesn't deduct, so they can keep using it
+Q: Can customer use 10 points today and 10 points tomorrow?
+A: No. After using 10 points, customer has 0 and must accumulate again.
 
 Q: Should app show "Best Deal" badge or recommendation?
 A: Up to you, but don't force it - user must explicitly toggle

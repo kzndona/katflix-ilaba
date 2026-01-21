@@ -83,13 +83,35 @@ export default function BasketsPage() {
           data: { user },
         } = await supabase.auth.getUser();
 
+        console.log("👤 Auth user:", user?.id);
+
         if (!user) {
           setErrorMsg("Not authenticated. Please log in.");
           setAuthLoading(false);
           return;
         }
 
-        setStaffId(user.id);
+        // Fetch staff record by auth_id
+        const { data: staffData, error: staffError } = await supabase
+          .from("staff")
+          .select("id")
+          .eq("auth_id", user.id)
+          .single();
+
+        console.log("👤 Staff lookup result:", {
+          authUserId: user.id,
+          staffError: staffError?.message,
+          staffData,
+        });
+
+        if (staffError || !staffData) {
+          setErrorMsg("Staff profile not found. Contact administrator.");
+          setAuthLoading(false);
+          return;
+        }
+
+        console.log("✅ Staff ID resolved:", staffData.id);
+        setStaffId(staffData.id);
       } catch (err: any) {
         setErrorMsg("Failed to get authentication: " + err.message);
       } finally {
@@ -274,21 +296,34 @@ export default function BasketsPage() {
 
   async function rejectMobileOrder(orderId: string) {
     setRejectingId(orderId);
+    console.log("🔴 REJECT - Starting reject for order:", {
+      orderId,
+      staffId,
+      getStaffId: getStaffId(),
+    });
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/orders/${orderId}/reject`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.stringify({
+          cashier_id: getStaffId(),
+          reason: "Rejected by staff",
+          notes: "Order rejected through mobile order review",
+        }),
       });
+
+      console.log("🔴 REJECT - Response status:", res.status);
 
       if (!res.ok) {
         const error = await res.json();
+        console.error("🔴 REJECT - Error response:", error);
         throw new Error(error.error || "Failed to reject order");
       }
 
       setMobileOrderModal(null);
       await load();
     } catch (err: any) {
+      console.error("🔴 REJECT - Exception:", err);
       setErrorMsg(err.message);
     } finally {
       setRejectingId(null);

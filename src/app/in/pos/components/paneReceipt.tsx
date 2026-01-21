@@ -256,7 +256,7 @@ export default function PaneReceipt({
       </div>
 
       {/* Loyalty Discount Section */}
-      {customerLoyaltyPoints >= 3 && (
+      {customerLoyaltyPoints >= 10 && (
         <div className="bg-linear-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200 mt-5">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -279,7 +279,7 @@ export default function PaneReceipt({
           </div>
           {useLoyaltyDiscount && (
             <div className="bg-white rounded p-3 text-sm">
-              {customerLoyaltyPoints >= 4 ? (
+              {customerLoyaltyPoints >= 20 ? (
                 <div className="text-amber-900 font-semibold">
                   🎉 15% discount - ₱
                   {computeReceipt.loyaltyDiscountAmount.toFixed(2)} off

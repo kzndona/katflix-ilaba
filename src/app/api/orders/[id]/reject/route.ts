@@ -31,8 +31,16 @@ export async function POST(
     const { id: orderId } = await params;
     const { cashier_id, reason, notes } = await req.json();
 
+    console.log("🔴 REJECT ENDPOINT - Received request:", {
+      orderId,
+      cashier_id,
+      reason,
+      notes,
+    });
+
     // Validate required fields
     if (!cashier_id || !reason) {
+      console.error("❌ Missing required fields:", { cashier_id, reason });
       return NextResponse.json(
         {
           success: false,
@@ -51,7 +59,16 @@ export async function POST(
       .eq("id", orderId)
       .single();
 
+    console.log("🔴 REJECT ENDPOINT - Step 1 (Fetch order):", {
+      orderId,
+      fetchError: fetchError?.message,
+      orderExists: !!order,
+      orderStatus: order?.status,
+      orderSource: order?.source,
+    });
+
     if (fetchError || !order) {
+      console.error("❌ Order not found:", fetchError?.message);
       return NextResponse.json(
         { success: false, error: "Order not found" },
         { status: 404 }
@@ -79,16 +96,30 @@ export async function POST(
       );
     }
 
-    // Step 3: Verify cashier exists
+    // Step 3: Verify staff member exists (by staff ID)
+    console.log("🔴 REJECT ENDPOINT - Step 3 (Lookup staff):", {
+      cashier_id,
+    });
+
     const { data: cashier, error: cashierError } = await supabase
       .from("staff")
-      .select("id, name")
+      .select("id, first_name, last_name")
       .eq("id", cashier_id)
       .single();
 
+    console.log("🔴 REJECT ENDPOINT - Step 3 result:", {
+      cashierError: cashierError?.message,
+      cashierFound: !!cashier,
+      cashierData: cashier,
+    });
+
     if (cashierError || !cashier) {
+      console.error("❌ Staff not found:", {
+        cashierError: cashierError?.message,
+        code: cashierError?.code,
+      });
       return NextResponse.json(
-        { success: false, error: "Cashier not found" },
+        { success: false, error: "Staff member not found" },
         { status: 404 }
       );
     }
@@ -126,10 +157,12 @@ export async function POST(
     breakdown.audit_log = auditLog;
 
     // Step 5: Update order to cancelled status
+    // Assign the rejecting staff member as the cashier if not already assigned
     const { data: updatedOrder, error: updateError } = await supabase
       .from("orders")
       .update({
         status: "cancelled",
+        cashier_id: order.cashier_id || cashier_id, // Assign staff member if no cashier yet
         breakdown,
       })
       .eq("id", orderId)

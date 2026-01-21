@@ -86,16 +86,16 @@ export async function POST(
       );
     }
 
-    // Step 3: Validate cashier exists
+    // Step 3: Validate staff member exists (by staff ID)
     const { data: staffData, error: staffError } = await supabase
       .from("staff")
-      .select("id")
+      .select("id, first_name, last_name")
       .eq("id", cashier_id)
       .single();
 
     if (staffError || !staffData) {
       return NextResponse.json(
-        { success: false, error: "Cashier/staff not found" },
+        { success: false, error: "Staff member not found" },
         { status: 404 }
       );
     }

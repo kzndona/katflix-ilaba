@@ -401,18 +401,18 @@ export function usePOSState() {
       subtotalBeforeTax * (PRICING.taxRate / (1 + PRICING.taxRate));
 
     // ========== LOYALTY DISCOUNT ==========
-    // 3 points = 10%, 4 points = 15%
+    // 10 points = 10%, 20 points = 15%
     let loyaltyDiscountAmount = 0;
     let loyaltyPointsUsed = 0;
     let loyaltyDiscountPercentage = 0;
 
     if (useLoyaltyDiscount) {
-      if (customerLoyaltyPoints >= 4) {
-        loyaltyPointsUsed = 4;
+      if (customerLoyaltyPoints >= 20) {
+        loyaltyPointsUsed = 20;
         loyaltyDiscountPercentage = 15;
         loyaltyDiscountAmount = subtotalBeforeTax * 0.15;
-      } else if (customerLoyaltyPoints >= 3) {
-        loyaltyPointsUsed = 3;
+      } else if (customerLoyaltyPoints >= 10) {
+        loyaltyPointsUsed = 10;
         loyaltyDiscountPercentage = 10;
         loyaltyDiscountAmount = subtotalBeforeTax * 0.1;
       }

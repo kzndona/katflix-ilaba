@@ -78,8 +78,10 @@ export async function POST(req: NextRequest) {
     const loyaltyDiscountPercentage = orderPayload.loyaltyDiscountPercentage || 0;
     
     console.log("📥 POS Format order received");
-    // Ensure source is 'store' for POS orders
-    orderPayload.source = 'store';
+    // Preserve source from orderPayload (app or store), default to 'store' for backwards compatibility
+    if (!orderPayload.source) {
+      orderPayload.source = 'store';
+    }
 
     // ========== VALIDATE CUSTOMER ==========
     if (!customer?.id) {

@@ -208,13 +208,12 @@ PROCESSING FLOW
 4. API extracts loyalty info: loyaltyPointsUsed, loyaltyDiscountAmount, loyaltyDiscountPercentage
 5. API calls /api/orders internally with orderPayload
 6. /api/orders validates and creates order in database
-7. /api/orders awards +1 loyalty point automatically
+7. /api/orders skips +1 award if loyalty discount is being used
 8. /api/orders returns success
-9. /api/orders/transactional-create checks if loyaltyPointsUsed === 4
-10. If 4 points used: API deducts 4 points (resets to 0) from customers table
-11. If 3 points used: No deduction (keeps points for future use)
-12. API returns success with orderId to POS
-13. POS shows success and generates receipt
+9. /api/orders/transactional-create checks if loyaltyPointsUsed > 0
+10. If loyalty points used: API deducts the used points (10 or 20) from customers table
+11. API returns success with orderId to POS
+12. POS shows success and generates receipt
 
 
 ================================================================================
@@ -226,7 +225,7 @@ NOTES FOR CLARITY
   - API just stores this final total
 
 • loyaltyPointsUsed is informational for backend
-  - API uses it to decide whether to deduct (4) or not (3)
+  - API uses it to decide how many points to deduct (10 or 20)
   - Discount already reflected in total_amount
 
 • Loyalty discount recorded in breakdown.discounts[] array
