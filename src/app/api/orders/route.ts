@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // ========== VALIDATE POS FORMAT ==========
     // Must have breakdown + handling (JSONB)
     
-    const { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling, gcash_receipt_url } = body;
+    const { source, customer_id, cashier_id, status, total_amount, order_note, breakdown, handling, gcash_receipt_url, loyaltyPointsUsed } = body;
 
     if (!customer_id || !breakdown || !handling) {
       return NextResponse.json(
@@ -110,25 +110,30 @@ export async function POST(req: NextRequest) {
     const order = orderData[0];
     
     // ========== INCREMENT LOYALTY POINTS ==========
-    // Award 1 loyalty point per order created
-    const { data: customerLoyalty } = await supabase
-      .from('customers')
-      .select('loyalty_points')
-      .eq('id', customer_id)
-      .single();
-
-    if (customerLoyalty) {
-      const newPoints = (customerLoyalty.loyalty_points || 0) + 1;
-      const { error: loyaltyError } = await supabase
+    // Award 1 loyalty point per order created (unless loyalty discount is being used)
+    // If customer is redeeming points, don't award new points for this order
+    if (!loyaltyPointsUsed || loyaltyPointsUsed === 0) {
+      const { data: customerLoyalty } = await supabase
         .from('customers')
-        .update({ loyalty_points: newPoints })
-        .eq('id', customer_id);
+        .select('loyalty_points')
+        .eq('id', customer_id)
+        .single();
 
-      if (loyaltyError) {
-        console.warn('Loyalty points update failed (non-critical):', loyaltyError.message);
-      } else {
-        console.log('✓ Loyalty point awarded to customer:', customer_id, '(new total:', newPoints, ')');
+      if (customerLoyalty) {
+        const newPoints = (customerLoyalty.loyalty_points || 0) + 1;
+        const { error: loyaltyError } = await supabase
+          .from('customers')
+          .update({ loyalty_points: newPoints })
+          .eq('id', customer_id);
+
+        if (loyaltyError) {
+          console.warn('Loyalty points update failed (non-critical):', loyaltyError.message);
+        } else {
+          console.log('✓ Loyalty point awarded to customer:', customer_id, '(new total:', newPoints, ')');
+        }
       }
+    } else {
+      console.log(`ℹ Loyalty discount used (${loyaltyPointsUsed} points), skipping point award for this order`);
     }
     
     return NextResponse.json({
