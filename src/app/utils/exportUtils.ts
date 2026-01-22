@@ -1,6 +1,31 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+/**
+ * Format a number as currency with proper symbol, decimals, and thousands separators
+ * Used for display in UI
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+/**
+ * Format a number as currency for PDF output
+ * Uses simpler format without Unicode characters to avoid encoding issues
+ */
+export function formatCurrencyPDF(value: number): string {
+  const formatter = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return "PHP " + formatter.format(value);
+}
+
 export interface ExportSummaryData {
   dateRange: { start: string; end: string };
   totalRevenue: number;
@@ -34,9 +59,9 @@ export interface ProductTransaction {
   type: string;
 }
 
-export function generateMonthlySummaryPDF(data: ExportSummaryData) {
+export function generateMonthlySummaryPDF(data: ExportSummaryData, userEmail?: string) {
   const doc = new jsPDF();
-  let yPosition = 20;
+  let yPosition = 15;
 
   // Title
   doc.setFontSize(20);
@@ -44,27 +69,33 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
     align: "center",
   });
 
-  // Date range
-  yPosition += 15;
-  doc.setFontSize(11);
+  // Date range and generated info
+  yPosition += 12;
+  doc.setFontSize(9);
   doc.text(
     `Period: ${formatDate(data.dateRange.start)} to ${formatDate(data.dateRange.end)}`,
     20,
     yPosition
   );
+  yPosition += 4;
+  doc.text(
+    `Generated: ${new Date().toLocaleString()} | By: ${userEmail || "System"}`,
+    20,
+    yPosition
+  );
 
-  // Key metrics section
-  yPosition += 20;
-  doc.setFontSize(14);
+  yPosition += 8;  // Key metrics section
+  yPosition += 8;
+  doc.setFontSize(12);
   doc.text("Key Performance Metrics", 20, yPosition);
 
-  yPosition += 12;
-  doc.setFontSize(10);
+  yPosition += 6;
+  doc.setFontSize(9);
   const metricsData = [
     ["Metric", "Value"],
-    ["Total Revenue", `₱${data.totalRevenue.toFixed(2)}`],
+    ["Total Revenue", formatCurrencyPDF(data.totalRevenue)],
     ["Total Orders", data.totalOrders.toString()],
-    ["Average Order Value", `₱${data.avgOrderValue.toFixed(2)}`],
+    ["Average Order Value", formatCurrencyPDF(data.avgOrderValue)],
     ["New Customers", data.newCustomers.toString()],
     ["Returning Customers", data.returningCustomers.toString()],
   ];
@@ -73,29 +104,30 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
     startY: yPosition,
     head: [metricsData[0]],
     body: metricsData.slice(1),
-    margin: 20,
+    margin: { left: 20, right: 20 },
     theme: "grid",
     styles: {
-      fontSize: 10,
-      cellPadding: 8,
+      fontSize: 9,
+      cellPadding: 3,
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: [255, 255, 255],
       fontStyle: "bold",
+      fontSize: 9,
     },
     alternateRowStyles: {
       fillColor: [243, 244, 246],
     },
   });
 
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = (doc as any).lastAutoTable.finalY + 8;
 
   // Fulfillment breakdown
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.text("Fulfillment Breakdown", 20, yPosition);
 
-  yPosition += 12;
+  yPosition += 6;
   const fulfillmentData = [
     ["Type", "Orders"],
     ["Pick-up Only", data.fulfillmentBreakdown.pickupOnly.toString()],
@@ -108,23 +140,24 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
     startY: yPosition,
     head: [fulfillmentData[0]],
     body: fulfillmentData.slice(1),
-    margin: 20,
+    margin: { left: 20, right: 20 },
     theme: "grid",
     styles: {
-      fontSize: 10,
-      cellPadding: 8,
+      fontSize: 9,
+      cellPadding: 3,
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: [255, 255, 255],
       fontStyle: "bold",
+      fontSize: 9,
     },
     alternateRowStyles: {
       fillColor: [243, 244, 246],
     },
   });
 
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = (doc as any).lastAutoTable.finalY + 8;
 
   // Top products
   if (data.topProducts.length > 0) {
@@ -133,68 +166,71 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
       yPosition = 20;
     }
 
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.text("Top Products by Revenue", 20, yPosition);
 
-    yPosition += 12;
+    yPosition += 6;
     const productData = [
       ["Product", "Revenue"],
-      ...data.topProducts.map((p) => [p.product, `₱${p.revenue.toFixed(2)}`]),
+      ...data.topProducts.map((p) => [p.product, formatCurrencyPDF(p.revenue)]),
     ];
 
     autoTable(doc, {
       startY: yPosition,
       head: [productData[0]],
       body: productData.slice(1),
-      margin: 20,
+      margin: { left: 20, right: 20 },
       theme: "grid",
       styles: {
-        fontSize: 10,
-        cellPadding: 8,
+        fontSize: 9,
+        cellPadding: 3,
       },
       headStyles: {
         fillColor: [59, 130, 246],
         textColor: [255, 255, 255],
         fontStyle: "bold",
+        fontSize: 9,
       },
       alternateRowStyles: {
         fillColor: [243, 244, 246],
       },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = (doc as any).lastAutoTable.finalY + 8;
   }
 
   // Top services
   if (data.topServices.length > 0) {
     if (yPosition > doc.internal.pageSize.getHeight() - 40) {
       doc.addPage();
-      yPosition = 20;
+      yPosition = 15;
     }
 
-    doc.setFontSize(14);
+    yPosition += 8;
+    doc.setFontSize(12);
     doc.text("Top Services by Revenue", 20, yPosition);
 
-    yPosition += 12;
+    yPosition += 6;
     const serviceData = [
       ["Service", "Revenue"],
-      ...data.topServices.map((s) => [s.service, `₱${s.revenue.toFixed(2)}`]),
+      ...data.topServices.map((s) => [s.service, formatCurrencyPDF(s.revenue)]),
     ];
 
     autoTable(doc, {
       startY: yPosition,
       head: [serviceData[0]],
       body: serviceData.slice(1),
-      margin: 20,
+      margin: { left: 20, right: 20 },
       theme: "grid",
       styles: {
-        fontSize: 10,
-        cellPadding: 8,
+        fontSize: 9,
+        cellPadding: 3,
       },
       headStyles: {
         fillColor: [59, 130, 246],
         textColor: [255, 255, 255],
         fontStyle: "bold",
+        fontSize: 9,
       },
       alternateRowStyles: {
         fillColor: [243, 244, 246],
@@ -207,6 +243,7 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
     doc.text(
       `Page ${i} of ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,
@@ -220,10 +257,11 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData) {
 
 export function generateTransactionsPDF(
   orderTransactions: OrderTransaction[],
-  productTransactions: ProductTransaction[]
+  productTransactions: ProductTransaction[],
+  userEmail?: string
 ) {
   const doc = new jsPDF("l"); // landscape mode for more columns
-  let yPosition = 20;
+  let yPosition = 15;
 
   // Title
   doc.setFontSize(18);
@@ -231,106 +269,121 @@ export function generateTransactionsPDF(
     align: "center",
   });
 
-  yPosition += 15;
+  yPosition += 10;
+  doc.setFontSize(9);
+  doc.text(`Generated: ${new Date().toLocaleString()} | By: ${userEmail || "System"}`, 20, yPosition);
+
+  yPosition += 8;
+  const totalOrderEarnings = orderTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalProductCost = productTransactions.reduce((sum, t) => sum + t.totalCost, 0);
+  const totalEarnings = totalOrderEarnings + totalProductCost;
+
+  // Total Earnings Summary
+  yPosition += 8;
   doc.setFontSize(11);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, yPosition);
+  doc.setFont(undefined, "bold");
+  doc.text("Total Earnings Summary", 20, yPosition);
+  yPosition += 6;
+  
+  const earningsData = [
+    ["Category", "Amount"],
+    ["Order Earnings", formatCurrencyPDF(totalOrderEarnings)],
+    ["Product Earnings", formatCurrencyPDF(totalProductCost)],
+    ["Total", formatCurrencyPDF(totalEarnings)],
+  ];
 
-  // Order Transactions Section
-  yPosition += 20;
-  doc.setFontSize(14);
-  doc.text("Order Transactions", 20, yPosition);
+  autoTable(doc, {
+    startY: yPosition,
+    head: [earningsData[0]],
+    body: earningsData.slice(1),
+    margin: { left: 20, right: 20 },
+    theme: "grid",
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+    headStyles: {
+      fillColor: [34, 197, 94],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9,
+    },
+    alternateRowStyles: {
+      fillColor: [240, 253, 244],
+    },
+    columnStyles: {
+      1: { halign: "right" },
+    },
+  });
 
-  yPosition += 10;
-  if (orderTransactions.length > 0) {
-    const orderData = [
-      ["Order ID", "Date", "Customer Name", "Amount", "Payment Method"],
-      ...orderTransactions.map((t) => [
-        t.orderId,
-        formatDate(t.date),
-        t.customerName,
-        `₱${t.amount.toFixed(2)}`,
-        t.paymentMethod,
-      ]),
+  yPosition = (doc as any).lastAutoTable.finalY + 8;
+
+  // Unified Transactions Section
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.text("All Transactions", 20, yPosition);
+
+  yPosition += 6;
+  if (orderTransactions.length > 0 || productTransactions.length > 0) {
+    // Create unified transaction data with all rows
+    const allTransactionData = [
+      ["Order ID", "Date", "Customer Name", "Product Name", "Quantity", "Total Cost", "Type"],
     ];
+
+    // Add order transactions
+    orderTransactions.forEach((t) => {
+      allTransactionData.push([
+        t.orderId || "N/A",
+        formatDate(t.date),
+        t.customerName || "N/A",
+        "N/A", // Product Name
+        "N/A", // Quantity
+        formatCurrencyPDF(t.amount),
+        "Order",
+      ]);
+    });
+
+    // Add product transactions
+    productTransactions.forEach((t) => {
+      allTransactionData.push([
+        "N/A", // Order ID
+        formatDate(t.date),
+        "N/A", // Customer Name
+        t.productName || "N/A",
+        t.quantity ? t.quantity.toString() : "N/A",
+        formatCurrencyPDF(t.totalCost),
+        t.type || "N/A",
+      ]);
+    });
 
     autoTable(doc, {
       startY: yPosition,
-      head: [orderData[0]],
-      body: orderData.slice(1),
+      head: [allTransactionData[0]],
+      body: allTransactionData.slice(1),
       margin: { left: 20, right: 20 },
       theme: "grid",
       styles: {
-        fontSize: 9,
-        cellPadding: 6,
+        fontSize: 8,
+        cellPadding: 3,
       },
       headStyles: {
         fillColor: [34, 197, 94],
         textColor: [255, 255, 255],
         fontStyle: "bold",
+        fontSize: 8,
       },
       alternateRowStyles: {
         fillColor: [240, 253, 244],
       },
       columnStyles: {
-        3: { halign: "right" },
-      },
-    });
-
-    yPosition = (doc as any).lastAutoTable.finalY + 20;
-  } else {
-    doc.setFontSize(10);
-    doc.text("No order transactions found for the selected period.", 20, yPosition);
-    yPosition += 15;
-  }
-
-  // Product Transactions Section
-  if (yPosition > doc.internal.pageSize.getHeight() - 50) {
-    doc.addPage("l");
-    yPosition = 20;
-  }
-
-  doc.setFontSize(14);
-  doc.text("Product Transactions", 20, yPosition);
-
-  yPosition += 10;
-  if (productTransactions.length > 0) {
-    const productData = [
-      ["Date", "Product Name", "Quantity", "Total Cost", "Type"],
-      ...productTransactions.map((t) => [
-        formatDate(t.date),
-        t.productName,
-        t.quantity.toString(),
-        `₱${t.totalCost.toFixed(2)}`,
-        t.type,
-      ]),
-    ];
-
-    autoTable(doc, {
-      startY: yPosition,
-      head: [productData[0]],
-      body: productData.slice(1),
-      margin: { left: 20, right: 20 },
-      theme: "grid",
-      styles: {
-        fontSize: 9,
-        cellPadding: 6,
-      },
-      headStyles: {
-        fillColor: [34, 197, 94],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [240, 253, 244],
-      },
-      columnStyles: {
-        2: { halign: "right" },
-        3: { halign: "right" },
+        4: { halign: "right" },
+        5: { halign: "right" },
       },
     });
   } else {
     doc.setFontSize(10);
-    doc.text("No product transactions found for the selected period.", 20, yPosition);
+    doc.setFont(undefined, "normal");
+    doc.text("No transactions found for the selected period.", 20, yPosition);
   }
 
   // Footer
@@ -338,6 +391,7 @@ export function generateTransactionsPDF(
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
     doc.text(
       `Page ${i} of ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,

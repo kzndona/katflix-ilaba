@@ -23,6 +23,8 @@ import {
   type OrderTransaction,
   type ProductTransaction,
 } from "../../utils/exportUtils";
+import { ExportSummaryPreviewModal } from "../../components/ExportSummaryPreviewModal";
+import { ExportTransactionsPreviewModal } from "../../components/ExportTransactionsPreviewModal";
 
 type RevenueData = {
   date: string;
@@ -96,6 +98,42 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [productsPage, setProductsPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+  
+  // Modal states
+  const [showSummaryPreview, setShowSummaryPreview] = useState(false);
+  const [summaryPreviewData, setSummaryPreviewData] = useState<ExportSummaryData | null>(null);
+  const [customerEarnings, setCustomerEarnings] = useState<Array<{ customerName: string; earnings: number }>>([]);
+  const [showTransactionsPreview, setShowTransactionsPreview] = useState(false);
+  const [transactionsPreviewData, setTransactionsPreviewData] = useState<{
+    orders: OrderTransaction[];
+    products: ProductTransaction[];
+  } | null>(null);
+
+  // Fetch current user name
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const response = await fetch("/api/auth/user");
+        if (response.ok) {
+          const data = await response.json();
+          console.log("User data:", data);
+          // Construct full name or use email as fallback
+          const fullName = data.firstName && data.lastName 
+            ? `${data.firstName} ${data.lastName}`
+            : data.email || "";
+          console.log("Setting userEmail to:", fullName);
+          setUserEmail(fullName);
+        } else {
+          console.error("Failed to fetch user - response not ok", response.status);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user info:", err);
+      }
+    };
+
+    fetchUserName();
+  }, []);
 
   // Fetch all analytics data
   useEffect(() => {
@@ -206,33 +244,50 @@ export default function AnalyticsPage() {
       return;
     }
 
-    setExporting(true);
+    const totalRevenue = revenueData.dailyRevenue.reduce(
+      (sum, day) => sum + day.revenue,
+      0
+    );
+
+    const summaryData: ExportSummaryData = {
+      dateRange: { start: dateRange.startDate, end: dateRange.endDate },
+      totalRevenue,
+      totalOrders: ordersData.totalOrders,
+      avgOrderValue: ordersData.avgOrderValue,
+      newCustomers: customersData.newCustomers,
+      returningCustomers: customersData.returningCustomers,
+      fulfillmentBreakdown: ordersData.fulfillmentBreakdown,
+      topProducts: revenueData.productRevenue.slice(0, 5),
+      topServices: revenueData.serviceRevenue.slice(0, 5),
+    };
+
+    // Fetch order transactions to calculate customer earnings
+    let customerEarnings: Array<{ customerName: string; earnings: number }> = [];
     try {
-      const totalRevenue = revenueData.dailyRevenue.reduce(
-        (sum, day) => sum + day.revenue,
-        0
+      const ordersRes = await fetch(
+        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
       );
-
-      const summaryData: ExportSummaryData = {
-        dateRange: { start: dateRange.startDate, end: dateRange.endDate },
-        totalRevenue,
-        totalOrders: ordersData.totalOrders,
-        avgOrderValue: ordersData.avgOrderValue,
-        newCustomers: customersData.newCustomers,
-        returningCustomers: customersData.returningCustomers,
-        fulfillmentBreakdown: ordersData.fulfillmentBreakdown,
-        topProducts: revenueData.productRevenue.slice(0, 5),
-        topServices: revenueData.serviceRevenue.slice(0, 5),
-      };
-
-      const pdf = generateMonthlySummaryPDF(summaryData);
-      pdf.save(`summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
+      if (ordersRes.ok) {
+        const orderTransactions: OrderTransaction[] = await ordersRes.json();
+        // Calculate total earnings per customer
+        const earningsMap = new Map<string, number>();
+        orderTransactions.forEach((t) => {
+          const current = earningsMap.get(t.customerName) || 0;
+          earningsMap.set(t.customerName, current + t.amount);
+        });
+        // Convert to array and sort by earnings descending
+        customerEarnings = Array.from(earningsMap, ([customerName, earnings]) => ({
+          customerName,
+          earnings,
+        })).sort((a, b) => b.earnings - a.earnings);
+      }
     } catch (err) {
-      console.error("Export failed:", err);
-      alert("Failed to export summary");
-    } finally {
-      setExporting(false);
+      console.error("Failed to fetch customer earnings:", err);
     }
+
+    setSummaryPreviewData(summaryData);
+    setCustomerEarnings(customerEarnings);
+    setShowSummaryPreview(true);
   }
 
   // Export Transactions
@@ -255,13 +310,11 @@ export default function AnalyticsPage() {
       const productTransactions: ProductTransaction[] =
         await productsRes.json();
 
-      const pdf = generateTransactionsPDF(
-        orderTransactions,
-        productTransactions
-      );
-      pdf.save(
-        `transactions_${dateRange.startDate}_to_${dateRange.endDate}.pdf`
-      );
+      setTransactionsPreviewData({
+        orders: orderTransactions,
+        products: productTransactions,
+      });
+      setShowTransactionsPreview(true);
     } catch (err) {
       console.error("Export failed:", err);
       alert("Failed to export transactions");
@@ -864,6 +917,28 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Export Summary Preview Modal */}
+      {showSummaryPreview && summaryPreviewData && (
+        <ExportSummaryPreviewModal
+          data={summaryPreviewData}
+          onClose={() => setShowSummaryPreview(false)}
+          dateRange={dateRange}
+          customerEarnings={customerEarnings}
+          userEmail={userEmail}
+        />
+      )}
+
+      {/* Export Transactions Preview Modal */}
+      {showTransactionsPreview && transactionsPreviewData && (
+        <ExportTransactionsPreviewModal
+          orderTransactions={transactionsPreviewData.orders}
+          productTransactions={transactionsPreviewData.products}
+          onClose={() => setShowTransactionsPreview(false)}
+          dateRange={dateRange}
+          userEmail={userEmail}
+        />
+      )}
     </div>
   );
 }
