@@ -23,6 +23,8 @@ import {
   type OrderTransaction,
   type ProductTransaction,
 } from "../../utils/exportUtils";
+import SummaryPreview from "@/src/app/components/SummaryPreview";
+import { createClient } from "@/src/app/utils/supabase/client";
 
 type RevenueData = {
   date: string;
@@ -96,6 +98,9 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [productsPage, setProductsPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<ExportSummaryData | null>(null);
+  const [promptedBy, setPromptedBy] = useState<string | undefined>(undefined);
 
   // Fetch all analytics data
   useEffect(() => {
@@ -206,7 +211,6 @@ export default function AnalyticsPage() {
       return;
     }
 
-    setExporting(true);
     try {
       const totalRevenue = revenueData.dailyRevenue.reduce(
         (sum, day) => sum + day.revenue,
@@ -225,13 +229,21 @@ export default function AnalyticsPage() {
         topServices: revenueData.serviceRevenue.slice(0, 5),
       };
 
-      const pdf = generateMonthlySummaryPDF(summaryData);
-      pdf.save(`summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
+      setPreviewData(summaryData);
+
+      // fetch current user to display who prompted the summary
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        setPromptedBy(data?.user?.email || data?.user?.user_metadata?.name || undefined);
+      } catch {
+        setPromptedBy(undefined);
+      }
+
+      setShowPreview(true);
     } catch (err) {
       console.error("Export failed:", err);
-      alert("Failed to export summary");
-    } finally {
-      setExporting(false);
+      alert("Failed to prepare summary preview");
     }
   }
 
@@ -864,6 +876,14 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {showPreview && previewData && (
+        <SummaryPreview
+          data={previewData}
+          promptedBy={promptedBy}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }
