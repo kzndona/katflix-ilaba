@@ -41,6 +41,11 @@ export async function updateSession(request: NextRequest) {
 
   const user = data?.claims
   
+  // Allow public access to homepage and auth routes
+  if (!user && request.nextUrl.pathname === '/') {
+    return supabaseResponse
+  }
+  
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/auth') &&
