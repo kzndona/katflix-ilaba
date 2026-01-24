@@ -31,7 +31,7 @@ export default function ReceiptModal({
     // - Send receipt to printer API
     // - Show "Printing..." status
     // - Handle print success/failure
-    
+
     // For now: Download as .txt file
     const element = document.createElement("a");
     const file = new Blob([receiptContent], { type: "text/plain" });
@@ -76,7 +76,12 @@ export default function ReceiptModal({
             onClick={handleDownloadReceipt}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

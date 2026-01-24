@@ -646,16 +646,33 @@ export function usePOSState() {
 
       // GENERATE RECEIPT FROM DATABASE
       try {
+        console.log("🔄 [POS] Starting receipt generation for orderId:", orderId);
         const receiptData = await generateReceiptFromDB(orderId);
+        
+        console.log("✅ [POS] Receipt data received:", {
+          plaintext: receiptData.plaintext.substring(0, 100) + "...",
+          contentLength: receiptData.plaintext.length,
+          orderId: receiptData.orderId,
+          timestamp: receiptData.timestamp,
+        });
+
         setReceiptContent(receiptData.plaintext);
         setLastOrderId(orderId);
         setShowReceiptModal(true);
+        
+        console.log("✅ [POS] Receipt modal state updated, showing receipt");
         console.log("✓ Receipt generated successfully");
       } catch (receiptErr) {
-        console.error("Receipt generation error:", receiptErr);
+        console.error("❌ [POS] Receipt generation error:", receiptErr);
+        console.error("❌ [POS] Error details:", {
+          message: receiptErr instanceof Error ? receiptErr.message : String(receiptErr),
+          stack: receiptErr instanceof Error ? receiptErr.stack : undefined,
+        });
         // Don't block order completion if receipt generation fails
         // Fallback: show success message without receipt modal
-        alert(`Order created successfully (ID: ${orderId}). Receipt generation failed, but a copy will be sent via email.`);
+        alert(
+          `Order created successfully (ID: ${orderId}). Receipt generation failed, but a copy will be sent via email.`,
+        );
       }
 
       // RESET POS
