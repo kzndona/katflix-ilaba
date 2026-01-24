@@ -12,7 +12,6 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.81.1",
     "autoprefixer": "^10.4.22",
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "next": "^16.0.7",
