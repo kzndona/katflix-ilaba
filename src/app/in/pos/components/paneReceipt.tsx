@@ -293,39 +293,58 @@ export default function PaneReceipt({
         )}
       </div>
 
-      {/* Loyalty Discount Section */}
-      {customerLoyaltyPoints >= 10 && (
-        <div className="bg-linear-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200 mt-5">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="text-sm font-bold text-amber-900 mb-1">
-                💰 Loyalty Points Available
-              </div>
-              <div className="text-xs text-amber-800">
-                {customerLoyaltyPoints} points
-              </div>
+      {/* Loyalty Points Indicator */}
+      {customerLoyaltyPoints >= 0 && (
+        <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200 mt-5">
+          <div className="mb-4">
+            <div className="text-sm font-bold text-blue-900 mb-2">
+              💰 Loyalty Points: {customerLoyaltyPoints}
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useLoyaltyDiscount}
-                onChange={(e) => setUseLoyaltyDiscount?.(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <span className="text-xs font-semibold text-amber-900">Use</span>
-            </label>
+            {customerLoyaltyPoints < 10 ? (
+              <div className="text-xs text-blue-800 font-medium">
+                Need {10 - customerLoyaltyPoints} more points for discount
+              </div>
+            ) : (
+              <div className="text-xs space-y-1.5 text-blue-800">
+                {customerLoyaltyPoints >= 10 && (
+                  <div className="flex items-center gap-2">
+                    <span>•</span>
+                    <span>
+                      10 points: 10% off (Save ₱
+                      {(computeReceipt.subtotal * 0.1).toFixed(2)})
+                    </span>
+                  </div>
+                )}
+                {customerLoyaltyPoints >= 20 && (
+                  <div className="flex items-center gap-2">
+                    <span>•</span>
+                    <span>
+                      20 points: 15% off (Save ₱
+                      {(computeReceipt.subtotal * 0.15).toFixed(2)}) ⭐ Best
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          {useLoyaltyDiscount && (
-            <div className="bg-white rounded p-3 text-sm">
-              {customerLoyaltyPoints >= 20 ? (
-                <div className="text-amber-900 font-semibold">
-                  🎉 15% discount - ₱
-                  {computeReceipt.loyaltyDiscountAmount.toFixed(2)} off
-                </div>
-              ) : (
-                <div className="text-amber-900 font-semibold">
-                  10% discount - ₱
-                  {computeReceipt.loyaltyDiscountAmount.toFixed(2)} off
+
+          {customerLoyaltyPoints >= 10 && (
+            <div className="flex items-start justify-between gap-3 pt-3 border-t border-blue-200">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useLoyaltyDiscount}
+                  onChange={(e) => setUseLoyaltyDiscount?.(e.target.checked)}
+                  className="w-4 h-4 rounded border-blue-300 accent-blue-600"
+                />
+                <span className="text-xs font-semibold text-blue-900">
+                  Apply Discount
+                </span>
+              </label>
+              {useLoyaltyDiscount && computeReceipt.loyaltyPointsUsed > 0 && (
+                <div className="text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded">
+                  ✓ {computeReceipt.loyaltyPointsUsed} points •{" "}
+                  {computeReceipt.loyaltyDiscountPercentage}% off
                 </div>
               )}
             </div>
