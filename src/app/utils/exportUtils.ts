@@ -243,7 +243,6 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData, userEmail?: s
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(9);
-    doc.setFont(undefined, "normal");
     doc.text(
       `Page ${i} of ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,
@@ -391,7 +390,6 @@ export function generateTransactionsPDF(
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
-    doc.setFont(undefined, "normal");
     doc.text(
       `Page ${i} of ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,
