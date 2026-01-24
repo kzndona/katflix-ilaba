@@ -204,13 +204,13 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Analytics - Admin only */}
+        {/* Performance - Admin only */}
         {canAccessAccounts && (
           <button
             onClick={goToAnalytics}
             className="text-slate-200 font-medium hover:text-blue-400 transition px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
-            Analytics
+            Performance
           </button>
         )}
       </div>

@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
 
 // Status filter type
-type StatusFilter = "pending" | "for_pick-up" | "processing" | "for_delivery" | "completed" | "cancelled";
+type StatusFilter =
+  | "pending"
+  | "for_pick-up"
+  | "processing"
+  | "for_delivery"
+  | "completed"
+  | "cancelled";
 
 // Order type matching new JSONB schema
 type Order = {
@@ -194,13 +200,13 @@ export default function BasketsPage() {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.filter((s) => s !== status)
-        : [...prev, status]
+        : [...prev, status],
     );
   };
 
   // Filter orders by selected statuses
   const filteredOrders = orders.filter((o) =>
-    selectedStatuses.includes(o.status as StatusFilter)
+    selectedStatuses.includes(o.status as StatusFilter),
   );
 
   // TODO: Replace with actual authenticated session
@@ -512,7 +518,9 @@ export default function BasketsPage() {
         {filteredOrders.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">📦</div>
-            <p className="text-gray-500 text-lg">No orders in selected status</p>
+            <p className="text-gray-500 text-lg">
+              No orders in selected status
+            </p>
           </div>
         ) : (
           <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory">

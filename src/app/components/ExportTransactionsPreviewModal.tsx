@@ -22,6 +22,14 @@ export function ExportTransactionsPreviewModal({
     pdf.save(`transactions_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
   };
 
+  // Sort transactions by date
+  const sortedOrderTransactions = [...orderTransactions].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const sortedProductTransactions = [...productTransactions].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
   // Calculate total earnings
   const totalOrderEarnings = orderTransactions.reduce((sum, t) => sum + t.amount, 0);
   const totalProductCost = productTransactions.reduce((sum, t) => sum + t.totalCost, 0);
@@ -73,12 +81,12 @@ export function ExportTransactionsPreviewModal({
             </div>
           </div>
 
-          {/* Unified Transactions Table */}
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-green-600">
-              All Transactions
-            </h3>
-            {(orderTransactions.length > 0 || productTransactions.length > 0) ? (
+          {/* Order Transactions Table */}
+          {sortedOrderTransactions.length > 0 && (
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-green-600">
+                Order Transactions
+              </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -86,15 +94,11 @@ export function ExportTransactionsPreviewModal({
                       <th className="px-4 py-3 text-left font-semibold">Order ID</th>
                       <th className="px-4 py-3 text-left font-semibold">Date</th>
                       <th className="px-4 py-3 text-left font-semibold">Customer Name</th>
-                      <th className="px-4 py-3 text-left font-semibold">Product Name</th>
-                      <th className="px-4 py-3 text-right font-semibold">Quantity</th>
                       <th className="px-4 py-3 text-right font-semibold">Total Cost</th>
-                      <th className="px-4 py-3 text-left font-semibold">Type</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Order Transactions */}
-                    {orderTransactions.map((transaction, index) => (
+                    {sortedOrderTransactions.map((transaction, index) => (
                       <tr
                         key={`order-${index}`}
                         className={index % 2 === 0 ? "bg-green-50" : "bg-white border-b border-gray-200"}
@@ -102,34 +106,67 @@ export function ExportTransactionsPreviewModal({
                         <td className="px-4 py-3 font-medium text-gray-900">{transaction.orderId || "N/A"}</td>
                         <td className="px-4 py-3 text-gray-700">{new Date(transaction.date).toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-gray-700">{transaction.customerName || "N/A"}</td>
-                        <td className="px-4 py-3 text-gray-500">N/A</td>
-                        <td className="px-4 py-3 text-right text-gray-500">N/A</td>
                         <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(transaction.amount)}</td>
-                        <td className="px-4 py-3 text-gray-700">Order</td>
                       </tr>
                     ))}
-                    {/* Product Transactions */}
-                    {productTransactions.map((transaction, index) => (
+                    <tr className="bg-green-600 text-white font-bold">
+                      <td className="px-4 py-3">TOTAL</td>
+                      <td className="px-4 py-3"></td>
+                      <td className="px-4 py-3"></td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(totalOrderEarnings)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Product Transactions Table */}
+          {sortedProductTransactions.length > 0 && (
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-green-600">
+                Product Transactions
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-green-600 text-white">
+                      <th className="px-4 py-3 text-left font-semibold">Date</th>
+                      <th className="px-4 py-3 text-left font-semibold">Product Name</th>
+                      <th className="px-4 py-3 text-right font-semibold">Quantity</th>
+                      <th className="px-4 py-3 text-right font-semibold">Total Cost</th>
+                      <th className="px-4 py-3 text-left font-semibold">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedProductTransactions.map((transaction, index) => (
                       <tr
                         key={`product-${index}`}
-                        className={(orderTransactions.length + index) % 2 === 0 ? "bg-green-50" : "bg-white border-b border-gray-200"}
+                        className={index % 2 === 0 ? "bg-green-50" : "bg-white border-b border-gray-200"}
                       >
-                        <td className="px-4 py-3 text-gray-500">N/A</td>
                         <td className="px-4 py-3 text-gray-700">{new Date(transaction.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 text-gray-500">N/A</td>
                         <td className="px-4 py-3 font-medium text-gray-900">{transaction.productName || "N/A"}</td>
                         <td className="px-4 py-3 text-right text-gray-700">{transaction.quantity || "N/A"}</td>
                         <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(transaction.totalCost)}</td>
                         <td className="px-4 py-3 text-gray-700">{transaction.type || "N/A"}</td>
                       </tr>
                     ))}
+                    <tr className="bg-green-600 text-white font-bold">
+                      <td className="px-4 py-3">TOTAL</td>
+                      <td className="px-4 py-3"></td>
+                      <td className="px-4 py-3"></td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(totalProductCost)}</td>
+                      <td className="px-4 py-3"></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="text-center text-gray-500 py-8">No transactions found for the selected period.</p>
-            )}
-          </div>
+            </div>
+          )}
+
+          {sortedOrderTransactions.length === 0 && sortedProductTransactions.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No transactions found for the selected period.</p>
+          )}
         </div>
 
         {/* Footer */}

@@ -134,6 +134,7 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData, userEmail?: s
     ["Delivery Only", data.fulfillmentBreakdown.deliveryOnly.toString()],
     ["Pick-up & Delivery", data.fulfillmentBreakdown.both.toString()],
     ["In-store", data.fulfillmentBreakdown.inStore.toString()],
+    ["Total", (data.fulfillmentBreakdown.pickupOnly + data.fulfillmentBreakdown.deliveryOnly + data.fulfillmentBreakdown.both + data.fulfillmentBreakdown.inStore).toString()],
   ];
 
   autoTable(doc, {
@@ -167,12 +168,14 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData, userEmail?: s
     }
 
     doc.setFontSize(12);
-    doc.text("Top Products by Revenue", 20, yPosition);
+    doc.text("Products by Revenue", 20, yPosition);
 
     yPosition += 6;
+    const totalProductRevenue = data.topProducts.reduce((sum, p) => sum + p.revenue, 0);
     const productData = [
       ["Product", "Revenue"],
       ...data.topProducts.map((p) => [p.product, formatCurrencyPDF(p.revenue)]),
+      ["Total", formatCurrencyPDF(totalProductRevenue)],
     ];
 
     autoTable(doc, {
@@ -208,12 +211,14 @@ export function generateMonthlySummaryPDF(data: ExportSummaryData, userEmail?: s
 
     yPosition += 8;
     doc.setFontSize(12);
-    doc.text("Top Services by Revenue", 20, yPosition);
+    doc.text("Services by Revenue", 20, yPosition);
 
     yPosition += 6;
+    const totalServiceRevenue = data.topServices.reduce((sum, s) => sum + s.revenue, 0);
     const serviceData = [
       ["Service", "Revenue"],
       ...data.topServices.map((s) => [s.service, formatCurrencyPDF(s.revenue)]),
+      ["Total", formatCurrencyPDF(totalServiceRevenue)],
     ];
 
     autoTable(doc, {
@@ -272,91 +277,45 @@ export function generateTransactionsPDF(
   doc.setFontSize(9);
   doc.text(`Generated: ${new Date().toLocaleString()} | By: ${userEmail || "System"}`, 20, yPosition);
 
-  yPosition += 8;
-  const totalOrderEarnings = orderTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalProductCost = productTransactions.reduce((sum, t) => sum + t.totalCost, 0);
-  const totalEarnings = totalOrderEarnings + totalProductCost;
-
-  // Total Earnings Summary
+  // Transactions Section
   yPosition += 8;
   doc.setFontSize(11);
-  doc.text("Total Earnings Summary", 20, yPosition);
-  yPosition += 6;
-  
-  const earningsData = [
-    ["Category", "Amount"],
-    ["Order Earnings", formatCurrencyPDF(totalOrderEarnings)],
-    ["Product Earnings", formatCurrencyPDF(totalProductCost)],
-    ["Total", formatCurrencyPDF(totalEarnings)],
-  ];
 
-  autoTable(doc, {
-    startY: yPosition,
-    head: [earningsData[0]],
-    body: earningsData.slice(1),
-    margin: { left: 20, right: 20 },
-    theme: "grid",
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fillColor: [34, 197, 94],
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-      fontSize: 9,
-    },
-    alternateRowStyles: {
-      fillColor: [240, 253, 244],
-    },
-    columnStyles: {
-      1: { halign: "right" },
-    },
-  });
+  // Sort transactions by date
+  const sortedOrderTransactions = [...orderTransactions].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const sortedProductTransactions = [...productTransactions].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
-  yPosition = (doc as any).lastAutoTable.finalY + 8;
+  // Order Transactions Table
+  if (sortedOrderTransactions.length > 0) {
+    if (yPosition > doc.internal.pageSize.getHeight() - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
 
-  // Unified Transactions Section
-  doc.setFontSize(11);
-  doc.text("All Transactions", 20, yPosition);
+    doc.text("Order Transactions", 20, yPosition);
+    yPosition += 6;
 
-  yPosition += 6;
-  if (orderTransactions.length > 0 || productTransactions.length > 0) {
-    // Create unified transaction data with all rows
-    const allTransactionData = [
-      ["Order ID", "Date", "Customer Name", "Product Name", "Quantity", "Total Cost", "Type"],
-    ];
-
-    // Add order transactions
-    orderTransactions.forEach((t) => {
-      allTransactionData.push([
+    const orderTransactionData = [
+      ["Order ID", "Date", "Customer Name", "Total Amount"],
+      ...sortedOrderTransactions.map((t) => [
         t.orderId || "N/A",
         formatDate(t.date),
         t.customerName || "N/A",
-        "N/A", // Product Name
-        "N/A", // Quantity
         formatCurrencyPDF(t.amount),
-        "Order",
-      ]);
-    });
+      ]),
+    ];
 
-    // Add product transactions
-    productTransactions.forEach((t) => {
-      allTransactionData.push([
-        "N/A", // Order ID
-        formatDate(t.date),
-        "N/A", // Customer Name
-        t.productName || "N/A",
-        t.quantity ? t.quantity.toString() : "N/A",
-        formatCurrencyPDF(t.totalCost),
-        t.type || "N/A",
-      ]);
-    });
+    const totalOrderAmount = sortedOrderTransactions.reduce((sum, t) => sum + t.amount, 0);
+    orderTransactionData.push(["TOTAL", "", "", formatCurrencyPDF(totalOrderAmount)]);
 
     autoTable(doc, {
       startY: yPosition,
-      head: [allTransactionData[0]],
-      body: allTransactionData.slice(1),
+      head: [orderTransactionData[0]],
+      body: orderTransactionData.slice(1),
       margin: { left: 20, right: 20 },
       theme: "grid",
       styles: {
@@ -373,11 +332,66 @@ export function generateTransactionsPDF(
         fillColor: [240, 253, 244],
       },
       columnStyles: {
-        4: { halign: "right" },
-        5: { halign: "right" },
+        3: { halign: "right" },
       },
     });
-  } else {
+
+    yPosition = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  // Product Transactions Table
+  if (sortedProductTransactions.length > 0) {
+    if (yPosition > doc.internal.pageSize.getHeight() - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    doc.text("Product Transactions", 20, yPosition);
+    yPosition += 6;
+
+    const productTransactionData = [
+      ["Date", "Product Name", "Quantity", "Total Cost", "Type"],
+      ...sortedProductTransactions.map((t) => [
+        formatDate(t.date),
+        t.productName || "N/A",
+        t.quantity ? t.quantity.toString() : "N/A",
+        formatCurrencyPDF(t.totalCost),
+        t.type || "N/A",
+      ]),
+    ];
+
+    const totalProductCost = sortedProductTransactions.reduce((sum, t) => sum + t.totalCost, 0);
+    productTransactionData.push(["", "", "", formatCurrencyPDF(totalProductCost), ""]);
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [productTransactionData[0]],
+      body: productTransactionData.slice(1),
+      margin: { left: 20, right: 20 },
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [34, 197, 94],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8,
+      },
+      alternateRowStyles: {
+        fillColor: [240, 253, 244],
+      },
+      columnStyles: {
+        2: { halign: "right" },
+        3: { halign: "right" },
+      },
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  if (sortedOrderTransactions.length === 0 && sortedProductTransactions.length === 0) {
     doc.setFontSize(10);
     doc.text("No transactions found for the selected period.", 20, yPosition);
   }

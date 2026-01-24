@@ -139,32 +139,6 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
             </div>
           )}
 
-          {/* Customer Earnings Summary Table */}
-          {customerEarnings.length > 0 && (
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-indigo-600">
-                Earnings by Customer
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-indigo-600 text-white">
-                      <th className="px-4 py-3 text-left font-semibold">Customer Name</th>
-                      <th className="px-4 py-3 text-right font-semibold">Total Earnings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customerEarnings.map((customer, index) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-indigo-50" : "bg-white"}>
-                        <td className="px-4 py-3 font-semibold text-gray-700">{customer.customerName}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-indigo-600">{formatCurrency(customer.earnings)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
