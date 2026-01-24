@@ -66,12 +66,22 @@ export async function POST(req: Request) {
       }
     } else {
       // Update existing staff
-      // Don't allow changing email (would need re-invitation)
-      const { email_address, role, ...dataWithoutEmailAndRole } = data;
+      // Only allow updating these fields (not email_address, auth_id, or created_at)
+      const validFields = ['first_name', 'middle_name', 'last_name', 'birthdate', 'gender', 'address', 'phone_number', 'is_active', 'updated_at', 'updated_by'];
+      const updatePayload: Record<string, any> = {};
+      
+      for (const field of validFields) {
+        if (field in data && data[field] !== undefined) {
+          updatePayload[field] = data[field];
+        }
+      }
+      
+      // Always update updated_at to current timestamp
+      updatePayload.updated_at = new Date().toISOString();
       
       result = await supabase
         .from("staff")
-        .update(dataWithoutEmailAndRole)
+        .update(updatePayload)
         .eq("id", data.id);
         
       if (result.error) throw result.error;
