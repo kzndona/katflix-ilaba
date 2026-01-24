@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
 
+// Status filter type
+type StatusFilter = "pending" | "for_pick-up" | "processing" | "for_delivery" | "completed" | "cancelled";
+
 // Order type matching new JSONB schema
 type Order = {
   id: string;
@@ -73,6 +76,13 @@ export default function BasketsPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [mobileOrderModal, setMobileOrderModal] = useState<Order | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<string>("");
+  const [selectedStatuses, setSelectedStatuses] = useState<StatusFilter[]>([
+    "pending",
+    "for_pick-up",
+    "processing",
+    "for_delivery",
+  ]);
 
   // Get authenticated staff user
   useEffect(() => {
@@ -128,6 +138,26 @@ export default function BasketsPage() {
     }
   }, [authLoading]);
 
+  // Live clock update every second
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      const date = now.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      setCurrentTime(`${hours}:${minutes}:${seconds} • ${date}`);
+    };
+
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function load() {
     setLoading(true);
     setErrorMsg(null);
@@ -153,6 +183,25 @@ export default function BasketsPage() {
       setLoading(false);
     }
   }
+
+  // Count orders by status
+  const countByStatus = (status: StatusFilter) => {
+    return orders.filter((o) => o.status === status).length;
+  };
+
+  // Toggle status filter
+  const toggleStatus = (status: StatusFilter) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  // Filter orders by selected statuses
+  const filteredOrders = orders.filter((o) =>
+    selectedStatuses.includes(o.status as StatusFilter)
+  );
 
   // TODO: Replace with actual authenticated session
   const getStaffId = () => {
@@ -337,20 +386,116 @@ export default function BasketsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className=" mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              Processing Orders
+      <div className="mx-auto">
+        {/* Header with Clock, Filters, and Refresh - All Inline with Separators */}
+        <div className="flex items-center gap-8 mb-10 bg-white rounded-lg border border-gray-200 px-8 py-6 shadow-sm">
+          {/* Left: Clock & Active Count */}
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-gray-900">
+              🕐 {currentTime}
             </h1>
-            <p className="text-gray-500 mt-2">
-              {orders.length} active order{orders.length !== 1 ? "s" : ""}
+            <p className="text-gray-600 mt-2 text-sm font-mono">
+              {filteredOrders.length} active displayed
             </p>
           </div>
+
+          {/* Separator */}
+          <div className="h-12 w-px bg-linear-to-b from-transparent via-gray-300 to-transparent"></div>
+
+          {/* Center: Filters in Container */}
+          <div className="flex items-center gap-3">
+            {/* Pending Filter */}
+            <button
+              onClick={() => toggleStatus("pending")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("pending")
+                  ? "bg-blue-100 text-blue-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("pending")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-blue-400 cursor-pointer"
+              />
+              <span>Pending</span>
+              <span className="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("pending")}
+              </span>
+            </button>
+
+            {/* For Pickup Filter */}
+            <button
+              onClick={() => toggleStatus("for_pick-up")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("for_pick-up")
+                  ? "bg-teal-100 text-teal-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("for_pick-up")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-teal-400 cursor-pointer"
+              />
+              <span>Pickup</span>
+              <span className="text-xs bg-teal-200 text-teal-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("for_pick-up")}
+              </span>
+            </button>
+
+            {/* Processing Filter */}
+            <button
+              onClick={() => toggleStatus("processing")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("processing")
+                  ? "bg-amber-100 text-amber-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("processing")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-amber-400 cursor-pointer"
+              />
+              <span>Processing</span>
+              <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("processing")}
+              </span>
+            </button>
+
+            {/* For Delivery Filter */}
+            <button
+              onClick={() => toggleStatus("for_delivery")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("for_delivery")
+                  ? "bg-violet-100 text-violet-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("for_delivery")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-violet-400 cursor-pointer"
+              />
+              <span>Delivery</span>
+              <span className="text-xs bg-violet-200 text-violet-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("for_delivery")}
+              </span>
+            </button>
+          </div>
+
+          {/* Separator */}
+          <div className="h-12 w-px bg-linear-to-b from-transparent via-gray-300 to-transparent"></div>
+
+          {/* Right: Refresh Button */}
           <button
             onClick={() => load()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="px-8 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-semibold text-base whitespace-nowrap shadow-lg hover:shadow-xl"
           >
             ↻ Refresh
           </button>
@@ -364,17 +509,17 @@ export default function BasketsPage() {
         )}
 
         {/* Orders Grid */}
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">📦</div>
-            <p className="text-gray-500 text-lg">No orders being processed</p>
+            <p className="text-gray-500 text-lg">No orders in selected status</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {orders.map((order) => (
+          <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory">
+            {filteredOrders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col h-full border border-gray-100"
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col h-full border border-gray-100 shrink-0 w-80 snap-start"
               >
                 {/* Order Header */}
                 <div className="bg-linear-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
