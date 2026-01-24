@@ -336,7 +336,7 @@ export default function OrdersPage() {
                     <div className="sticky top-0 bg-orange-50 px-4 py-3 border-b border-orange-200 font-semibold text-orange-900 text-sm">
                       🔄 Processing ({processingRows.length})
                     </div>
-                    <div className="divide-y divide-gray-200">
+                    <div>
                       {processingRows.map((order) => (
                         <OrderListItem
                           key={order.id}
@@ -355,7 +355,7 @@ export default function OrdersPage() {
                     <div className="sticky top-0 bg-amber-50 px-4 py-3 border-b border-amber-200 font-semibold text-amber-900 text-sm">
                       🏪 Pickup ({pickupRows.length})
                     </div>
-                    <div className="divide-y divide-gray-200">
+                    <div>
                       {pickupRows.map((order) => (
                         <OrderListItem
                           key={order.id}
@@ -374,7 +374,7 @@ export default function OrdersPage() {
                     <div className="sticky top-0 bg-cyan-50 px-4 py-3 border-b border-cyan-200 font-semibold text-cyan-900 text-sm">
                       🚚 Delivery ({deliveryRows.length})
                     </div>
-                    <div className="divide-y divide-gray-200">
+                    <div>
                       {deliveryRows.map((order) => (
                         <OrderListItem
                           key={order.id}
@@ -393,7 +393,7 @@ export default function OrdersPage() {
                     <div className="sticky top-0 bg-gray-100 px-4 py-3 border-b border-gray-300 font-semibold text-gray-900 text-sm">
                       📋 Other Orders ({filteredRows.length})
                     </div>
-                    <div className="divide-y divide-gray-200">
+                    <div>
                       {filteredRows.map((order) => (
                         <OrderListItem
                           key={order.id}
@@ -467,39 +467,52 @@ function OrderListItem({
 
   const statusColor =
     {
-      pending: "text-gray-600",
-      "for_pick-up": "text-blue-600",
-      processing: "text-orange-600",
-      for_delivery: "text-purple-600",
-      completed: "text-green-600",
-      cancelled: "text-red-600",
-    }[order.status] || "text-gray-600";
+      pending: "bg-gray-100 text-gray-700",
+      "for_pick-up": "bg-blue-100 text-blue-700",
+      processing: "bg-orange-100 text-orange-700",
+      for_delivery: "bg-purple-100 text-purple-700",
+      completed: "bg-green-100 text-green-700",
+      cancelled: "bg-red-100 text-red-700",
+    }[order.status] || "bg-gray-100 text-gray-700";
+
+  const statusLabel = {
+    pending: "Pending",
+    "for_pick-up": "Pick-up",
+    processing: "Processing",
+    for_delivery: "Delivery",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  }[order.status] || order.status;
 
   return (
     <div
       onClick={onClick}
-      className={`p-4 cursor-pointer transition ${
+      className={`px-3 py-2.5 cursor-pointer transition border-l-4 border-b border-b-gray-100 ${
         isSelected
-          ? "bg-blue-50 border-l-4 border-blue-600"
-          : "hover:bg-gray-50"
+          ? "bg-blue-50 border-blue-600"
+          : "border-transparent hover:bg-gray-50"
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="font-medium text-sm">{customerName}</div>
-          <div className={`text-xs font-semibold mt-1 ${statusColor}`}>
-            {order.status.toUpperCase()}
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm text-gray-900 truncate">
+            {customerName}
           </div>
-          <div className="text-xs text-gray-500 mt-2">
-            {formatDateToPST(order.created_at)}
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColor}`}>
+              {statusLabel}
+            </span>
+            <span className="text-xs text-gray-500">
+              {formatDateToPST(order.created_at)}
+            </span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-semibold text-sm">
+        <div className="text-right shrink-0">
+          <div className="font-bold text-sm text-gray-900">
             ₱{order.total_amount.toFixed(2)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {order.breakdown?.baskets?.length || 0} baskets
+          <div className="text-xs text-gray-500 mt-0.5">
+            {order.breakdown?.baskets?.length || 0}B
           </div>
         </div>
       </div>
