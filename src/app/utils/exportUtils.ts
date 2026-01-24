@@ -280,7 +280,6 @@ export function generateTransactionsPDF(
   // Total Earnings Summary
   yPosition += 8;
   doc.setFontSize(11);
-  doc.setFont(undefined, "bold");
   doc.text("Total Earnings Summary", 20, yPosition);
   yPosition += 6;
   
@@ -319,7 +318,6 @@ export function generateTransactionsPDF(
 
   // Unified Transactions Section
   doc.setFontSize(11);
-  doc.setFont(undefined, "bold");
   doc.text("All Transactions", 20, yPosition);
 
   yPosition += 6;
@@ -381,7 +379,6 @@ export function generateTransactionsPDF(
     });
   } else {
     doc.setFontSize(10);
-    doc.setFont(undefined, "normal");
     doc.text("No transactions found for the selected period.", 20, yPosition);
   }
 
