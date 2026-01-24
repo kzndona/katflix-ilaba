@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     // Fetch complete staff data with role
     const completeResult = await supabase
       .from("staff")
-      .select("*, staff_roles(role_id)")
+      .select("id, auth_id, first_name, last_name, email_address, is_active, staff_roles(role_id)")
       .eq("id", staffId)
       .single();
       
