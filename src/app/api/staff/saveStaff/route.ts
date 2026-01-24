@@ -72,8 +72,7 @@ export async function POST(req: Request) {
       result = await supabase
         .from("staff")
         .update(dataWithoutEmailAndRole)
-        .eq("id", data.id)
-        .select();
+        .eq("id", data.id);
         
       if (result.error) throw result.error;
       staffId = data.id;
