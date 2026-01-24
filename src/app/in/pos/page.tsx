@@ -8,6 +8,7 @@ import PaneHandling from "./components/paneHandling";
 import PaneBaskets from "./components/paneBaskets";
 import PaneProducts from "./components/paneProducts";
 import PaneReceipt from "./components/paneReceipt";
+import ReceiptModal from "./components/receiptModal";
 
 export default function POSPage() {
   const pos = usePOSState();
@@ -121,6 +122,13 @@ export default function POSPage() {
           setUseLoyaltyDiscount={pos.setUseLoyaltyDiscount}
         />
       </div>
+
+      <ReceiptModal
+        isOpen={pos.showReceiptModal}
+        receiptContent={pos.receiptContent}
+        orderId={pos.lastOrderId || ""}
+        onClose={() => pos.setShowReceiptModal(false)}
+      />
 
       {pos.showConfirm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">

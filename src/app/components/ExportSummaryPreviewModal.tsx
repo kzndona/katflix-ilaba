@@ -1,6 +1,10 @@
 "use client";
 
-import { type ExportSummaryData, generateMonthlySummaryPDF, formatCurrency } from "../utils/exportUtils";
+import {
+  type ExportSummaryData,
+  generateMonthlySummaryPDF,
+  formatCurrency,
+} from "../utils/exportUtils";
 
 interface Props {
   data: ExportSummaryData;
@@ -10,7 +14,13 @@ interface Props {
   userEmail?: string;
 }
 
-export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEarnings = [], userEmail }: Props) {
+export function ExportSummaryPreviewModal({
+  data,
+  onClose,
+  dateRange,
+  customerEarnings = [],
+  userEmail,
+}: Props) {
   const handleDownloadPDF = () => {
     const pdf = generateMonthlySummaryPDF(data, userEmail);
     pdf.save(`summary_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
@@ -34,8 +44,18 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
               className="text-blue-100 hover:text-white transition"
               title="Close"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -51,24 +71,44 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
             <table className="w-full">
               <tbody>
                 <tr className="bg-blue-50">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Total Revenue</td>
-                  <td className="px-4 py-3 text-right font-semibold text-blue-600">{formatCurrency(data.totalRevenue)}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Total Revenue
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-blue-600">
+                    {formatCurrency(data.totalRevenue)}
+                  </td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Total Orders</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.totalOrders}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Total Orders
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.totalOrders}
+                  </td>
                 </tr>
                 <tr className="bg-blue-50">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Average Order Value</td>
-                  <td className="px-4 py-3 text-right font-semibold text-blue-600">{formatCurrency(data.avgOrderValue)}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Average Order Value
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-blue-600">
+                    {formatCurrency(data.avgOrderValue)}
+                  </td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="px-4 py-3 font-semibold text-gray-700">New Customers</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.newCustomers}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    New Customers
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.newCustomers}
+                  </td>
                 </tr>
                 <tr className="bg-blue-50">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Returning Customers</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.returningCustomers}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Returning Customers
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.returningCustomers}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -82,20 +122,36 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
             <table className="w-full">
               <tbody>
                 <tr className="bg-emerald-50">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Pick-up Only</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.fulfillmentBreakdown.pickupOnly}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Pick-up Only
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.fulfillmentBreakdown.pickupOnly}
+                  </td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Delivery Only</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.fulfillmentBreakdown.deliveryOnly}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Delivery Only
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.fulfillmentBreakdown.deliveryOnly}
+                  </td>
                 </tr>
                 <tr className="bg-emerald-50">
-                  <td className="px-4 py-3 font-semibold text-gray-700">Pick-up & Delivery</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.fulfillmentBreakdown.both}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    Pick-up & Delivery
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.fulfillmentBreakdown.both}
+                  </td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="px-4 py-3 font-semibold text-gray-700">In-store</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{data.fulfillmentBreakdown.inStore}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-700">
+                    In-store
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    {data.fulfillmentBreakdown.inStore}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -110,9 +166,16 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
               <table className="w-full">
                 <tbody>
                   {data.topProducts.map((product, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-orange-50" : "bg-white"}>
-                      <td className="px-4 py-3 font-semibold text-gray-700">{product.product}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-orange-600">{formatCurrency(product.revenue)}</td>
+                    <tr
+                      key={index}
+                      className={index % 2 === 0 ? "bg-orange-50" : "bg-white"}
+                    >
+                      <td className="px-4 py-3 font-semibold text-gray-700">
+                        {product.product}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-orange-600">
+                        {formatCurrency(product.revenue)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -129,16 +192,22 @@ export function ExportSummaryPreviewModal({ data, onClose, dateRange, customerEa
               <table className="w-full">
                 <tbody>
                   {data.topServices.map((service, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-purple-50" : "bg-white"}>
-                      <td className="px-4 py-3 font-semibold text-gray-700">{service.service}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-purple-600">{formatCurrency(service.revenue)}</td>
+                    <tr
+                      key={index}
+                      className={index % 2 === 0 ? "bg-purple-50" : "bg-white"}
+                    >
+                      <td className="px-4 py-3 font-semibold text-gray-700">
+                        {service.service}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-purple-600">
+                        {formatCurrency(service.revenue)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-
         </div>
 
         {/* Footer */}

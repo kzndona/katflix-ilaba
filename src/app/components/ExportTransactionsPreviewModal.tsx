@@ -1,6 +1,11 @@
 "use client";
 
-import { type OrderTransaction, type ProductTransaction, generateTransactionsPDF, formatCurrency } from "../utils/exportUtils";
+import {
+  type OrderTransaction,
+  type ProductTransaction,
+  generateTransactionsPDF,
+  formatCurrency,
+} from "../utils/exportUtils";
 
 interface Props {
   orderTransactions: OrderTransaction[];
@@ -18,21 +23,31 @@ export function ExportTransactionsPreviewModal({
   userEmail,
 }: Props) {
   const handleDownloadPDF = () => {
-    const pdf = generateTransactionsPDF(orderTransactions, productTransactions, userEmail);
+    const pdf = generateTransactionsPDF(
+      orderTransactions,
+      productTransactions,
+      userEmail,
+    );
     pdf.save(`transactions_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
   };
 
   // Sort transactions by date
-  const sortedOrderTransactions = [...orderTransactions].sort((a, b) =>
-    new Date(a.date).getTime() - new Date(b.date).getTime()
+  const sortedOrderTransactions = [...orderTransactions].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
-  const sortedProductTransactions = [...productTransactions].sort((a, b) =>
-    new Date(a.date).getTime() - new Date(b.date).getTime()
+  const sortedProductTransactions = [...productTransactions].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
   // Calculate total earnings
-  const totalOrderEarnings = orderTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalProductCost = productTransactions.reduce((sum, t) => sum + t.totalCost, 0);
+  const totalOrderEarnings = orderTransactions.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+  const totalProductCost = productTransactions.reduce(
+    (sum, t) => sum + t.totalCost,
+    0,
+  );
   const totalEarnings = totalOrderEarnings + totalProductCost;
 
   return (
@@ -53,8 +68,18 @@ export function ExportTransactionsPreviewModal({
               className="text-green-100 hover:text-white transition"
               title="Close"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -64,19 +89,31 @@ export function ExportTransactionsPreviewModal({
         <div className="p-8 space-y-8">
           {/* Total Earnings Summary */}
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-600 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Total Earnings</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Total Earnings
+            </h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Order Earnings</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalOrderEarnings)}</p>
+                <p className="text-gray-600 text-sm font-medium">
+                  Order Earnings
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(totalOrderEarnings)}
+                </p>
               </div>
               <div>
-                <p className="text-gray-600 text-sm font-medium">Product Earnings</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalProductCost)}</p>
+                <p className="text-gray-600 text-sm font-medium">
+                  Product Earnings
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(totalProductCost)}
+                </p>
               </div>
               <div className="bg-green-600 text-white rounded-lg p-4">
                 <p className="text-sm font-medium opacity-90">Total</p>
-                <p className="text-3xl font-bold">{formatCurrency(totalEarnings)}</p>
+                <p className="text-3xl font-bold">
+                  {formatCurrency(totalEarnings)}
+                </p>
               </div>
             </div>
           </div>
@@ -91,29 +128,51 @@ export function ExportTransactionsPreviewModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-green-600 text-white">
-                      <th className="px-4 py-3 text-left font-semibold">Order ID</th>
-                      <th className="px-4 py-3 text-left font-semibold">Date</th>
-                      <th className="px-4 py-3 text-left font-semibold">Customer Name</th>
-                      <th className="px-4 py-3 text-right font-semibold">Total Cost</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Order ID
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Customer Name
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        Total Cost
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedOrderTransactions.map((transaction, index) => (
                       <tr
                         key={`order-${index}`}
-                        className={index % 2 === 0 ? "bg-green-50" : "bg-white border-b border-gray-200"}
+                        className={
+                          index % 2 === 0
+                            ? "bg-green-50"
+                            : "bg-white border-b border-gray-200"
+                        }
                       >
-                        <td className="px-4 py-3 font-medium text-gray-900">{transaction.orderId || "N/A"}</td>
-                        <td className="px-4 py-3 text-gray-700">{new Date(transaction.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 text-gray-700">{transaction.customerName || "N/A"}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(transaction.amount)}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {transaction.orderId || "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {transaction.customerName || "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600">
+                          {formatCurrency(transaction.amount)}
+                        </td>
                       </tr>
                     ))}
                     <tr className="bg-green-600 text-white font-bold">
                       <td className="px-4 py-3">TOTAL</td>
                       <td className="px-4 py-3"></td>
                       <td className="px-4 py-3"></td>
-                      <td className="px-4 py-3 text-right">{formatCurrency(totalOrderEarnings)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {formatCurrency(totalOrderEarnings)}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -131,31 +190,57 @@ export function ExportTransactionsPreviewModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-green-600 text-white">
-                      <th className="px-4 py-3 text-left font-semibold">Date</th>
-                      <th className="px-4 py-3 text-left font-semibold">Product Name</th>
-                      <th className="px-4 py-3 text-right font-semibold">Quantity</th>
-                      <th className="px-4 py-3 text-right font-semibold">Total Cost</th>
-                      <th className="px-4 py-3 text-left font-semibold">Type</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Product Name
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        Total Cost
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Type
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedProductTransactions.map((transaction, index) => (
                       <tr
                         key={`product-${index}`}
-                        className={index % 2 === 0 ? "bg-green-50" : "bg-white border-b border-gray-200"}
+                        className={
+                          index % 2 === 0
+                            ? "bg-green-50"
+                            : "bg-white border-b border-gray-200"
+                        }
                       >
-                        <td className="px-4 py-3 text-gray-700">{new Date(transaction.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{transaction.productName || "N/A"}</td>
-                        <td className="px-4 py-3 text-right text-gray-700">{transaction.quantity || "N/A"}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(transaction.totalCost)}</td>
-                        <td className="px-4 py-3 text-gray-700">{transaction.type || "N/A"}</td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {transaction.productName || "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {transaction.quantity || "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600">
+                          {formatCurrency(transaction.totalCost)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {transaction.type || "N/A"}
+                        </td>
                       </tr>
                     ))}
                     <tr className="bg-green-600 text-white font-bold">
                       <td className="px-4 py-3">TOTAL</td>
                       <td className="px-4 py-3"></td>
                       <td className="px-4 py-3"></td>
-                      <td className="px-4 py-3 text-right">{formatCurrency(totalProductCost)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {formatCurrency(totalProductCost)}
+                      </td>
                       <td className="px-4 py-3"></td>
                     </tr>
                   </tbody>
@@ -164,9 +249,12 @@ export function ExportTransactionsPreviewModal({
             </div>
           )}
 
-          {sortedOrderTransactions.length === 0 && sortedProductTransactions.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No transactions found for the selected period.</p>
-          )}
+          {sortedOrderTransactions.length === 0 &&
+            sortedProductTransactions.length === 0 && (
+              <p className="text-center text-gray-500 py-8">
+                No transactions found for the selected period.
+              </p>
+            )}
         </div>
 
         {/* Footer */}

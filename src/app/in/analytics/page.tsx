@@ -99,11 +99,14 @@ export default function AnalyticsPage() {
   const [productsPage, setProductsPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
-  
+
   // Modal states
   const [showSummaryPreview, setShowSummaryPreview] = useState(false);
-  const [summaryPreviewData, setSummaryPreviewData] = useState<ExportSummaryData | null>(null);
-  const [customerEarnings, setCustomerEarnings] = useState<Array<{ customerName: string; earnings: number }>>([]);
+  const [summaryPreviewData, setSummaryPreviewData] =
+    useState<ExportSummaryData | null>(null);
+  const [customerEarnings, setCustomerEarnings] = useState<
+    Array<{ customerName: string; earnings: number }>
+  >([]);
   const [showTransactionsPreview, setShowTransactionsPreview] = useState(false);
   const [transactionsPreviewData, setTransactionsPreviewData] = useState<{
     orders: OrderTransaction[];
@@ -119,13 +122,17 @@ export default function AnalyticsPage() {
           const data = await response.json();
           console.log("User data:", data);
           // Construct full name or use email as fallback
-          const fullName = data.firstName && data.lastName 
-            ? `${data.firstName} ${data.lastName}`
-            : data.email || "";
+          const fullName =
+            data.firstName && data.lastName
+              ? `${data.firstName} ${data.lastName}`
+              : data.email || "";
           console.log("Setting userEmail to:", fullName);
           setUserEmail(fullName);
         } else {
-          console.error("Failed to fetch user - response not ok", response.status);
+          console.error(
+            "Failed to fetch user - response not ok",
+            response.status,
+          );
         }
       } catch (err) {
         console.error("Failed to fetch user info:", err);
@@ -143,13 +150,13 @@ export default function AnalyticsPage() {
         setError(null);
 
         const revenueRes = await fetch(
-          `/api/analytics/revenue?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+          `/api/analytics/revenue?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
         );
         const ordersRes = await fetch(
-          `/api/analytics/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+          `/api/analytics/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
         );
         const customersRes = await fetch(
-          `/api/analytics/customers?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+          `/api/analytics/customers?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
         );
         const productsRes = await fetch(`/api/analytics/products`);
 
@@ -234,7 +241,7 @@ export default function AnalyticsPage() {
   const totalPages = Math.ceil(normalProducts.length / productsPerPage);
   const paginatedProducts = normalProducts.slice(
     (productsPage - 1) * productsPerPage,
-    productsPage * productsPerPage
+    productsPage * productsPerPage,
   );
 
   // Export Monthly Summary
@@ -246,7 +253,7 @@ export default function AnalyticsPage() {
 
     const totalRevenue = revenueData.dailyRevenue.reduce(
       (sum, day) => sum + day.revenue,
-      0
+      0,
     );
 
     const summaryData: ExportSummaryData = {
@@ -257,15 +264,20 @@ export default function AnalyticsPage() {
       newCustomers: customersData.newCustomers,
       returningCustomers: customersData.returningCustomers,
       fulfillmentBreakdown: ordersData.fulfillmentBreakdown,
-      topProducts: revenueData.productRevenue.sort((a, b) => b.revenue - a.revenue),
-      topServices: revenueData.serviceRevenue.sort((a, b) => b.revenue - a.revenue),
+      topProducts: revenueData.productRevenue.sort(
+        (a, b) => b.revenue - a.revenue,
+      ),
+      topServices: revenueData.serviceRevenue.sort(
+        (a, b) => b.revenue - a.revenue,
+      ),
     };
 
     // Fetch order transactions to calculate customer earnings
-    let customerEarnings: Array<{ customerName: string; earnings: number }> = [];
+    let customerEarnings: Array<{ customerName: string; earnings: number }> =
+      [];
     try {
       const ordersRes = await fetch(
-        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
       );
       if (ordersRes.ok) {
         const orderTransactions: OrderTransaction[] = await ordersRes.json();
@@ -276,10 +288,13 @@ export default function AnalyticsPage() {
           earningsMap.set(t.customerName, current + t.amount);
         });
         // Convert to array and sort by earnings descending
-        customerEarnings = Array.from(earningsMap, ([customerName, earnings]) => ({
-          customerName,
-          earnings,
-        })).sort((a, b) => b.earnings - a.earnings);
+        customerEarnings = Array.from(
+          earningsMap,
+          ([customerName, earnings]) => ({
+            customerName,
+            earnings,
+          }),
+        ).sort((a, b) => b.earnings - a.earnings);
       }
     } catch (err) {
       console.error("Failed to fetch customer earnings:", err);
@@ -296,14 +311,14 @@ export default function AnalyticsPage() {
     try {
       // Fetch order transactions
       const ordersRes = await fetch(
-        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+        `/api/analytics/transactions/orders?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
       );
       if (!ordersRes.ok) throw new Error("Failed to fetch order transactions");
       const orderTransactions: OrderTransaction[] = await ordersRes.json();
 
       // Fetch product transactions
       const productsRes = await fetch(
-        `/api/analytics/transactions/products?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+        `/api/analytics/transactions/products?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
       );
       if (!productsRes.ok)
         throw new Error("Failed to fetch product transactions");
