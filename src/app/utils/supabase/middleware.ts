@@ -53,8 +53,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-
-
   // Query staff table and their roles (via staff_roles junction table)
   if (user) {
     const { data: staffData, error: staffError } = await supabase
@@ -64,10 +62,17 @@ export async function updateSession(request: NextRequest) {
       .single()
 
     if (!staffData || !staffData.is_active) {
+      // Sign out the user since their staff record is invalid/inactive
+      await supabase.auth.signOut()
+      
       const url = request.nextUrl.clone()
       url.pathname = '/auth/sign-in'
-      console.log("PROXY: Staff not found or inactive, redirecting to /auth/sign-in")
-      return NextResponse.redirect(url)
+      console.log("PROXY: Staff not found or inactive, signing out and redirecting to /auth/sign-in")
+      
+      const response = NextResponse.redirect(url)
+      // Clear auth cookies
+      response.cookies.delete('sb-auth-token')
+      return response
     }
 
     // Query roles for this staff member
