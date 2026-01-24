@@ -144,37 +144,37 @@ export default function OrdersPage() {
 
     // Separate processing, pickup, delivery, and other orders
     const processing = filtered.filter(
-      (order) => order.status === "processing"
+      (order) => order.status === "processing",
     );
     const pickup = filtered.filter((order) => order.status === "for_pick-up");
     const delivery = filtered.filter(
-      (order) => order.status === "for_delivery"
+      (order) => order.status === "for_delivery",
     );
     const nonProcessing = filtered.filter(
       (order) =>
-        !["processing", "for_pick-up", "for_delivery"].includes(order.status)
+        !["processing", "for_pick-up", "for_delivery"].includes(order.status),
     );
 
     // Sort by created_at descending
     processing.sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(a.created_at || 0).getTime(),
     );
     pickup.sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(a.created_at || 0).getTime(),
     );
     delivery.sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(a.created_at || 0).getTime(),
     );
     nonProcessing.sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(a.created_at || 0).getTime(),
     );
 
     setProcessingRows(processing);
@@ -475,14 +475,15 @@ function OrderListItem({
       cancelled: "bg-red-100 text-red-700",
     }[order.status] || "bg-gray-100 text-gray-700";
 
-  const statusLabel = {
-    pending: "Pending",
-    "for_pick-up": "Pick-up",
-    processing: "Processing",
-    for_delivery: "Delivery",
-    completed: "Completed",
-    cancelled: "Cancelled",
-  }[order.status] || order.status;
+  const statusLabel =
+    {
+      pending: "Pending",
+      "for_pick-up": "Pick-up",
+      processing: "Processing",
+      for_delivery: "Delivery",
+      completed: "Completed",
+      cancelled: "Cancelled",
+    }[order.status] || order.status;
 
   return (
     <div
@@ -499,7 +500,9 @@ function OrderListItem({
             {customerName}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColor}`}>
+            <span
+              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColor}`}
+            >
               {statusLabel}
             </span>
             <span className="text-xs text-gray-500">
