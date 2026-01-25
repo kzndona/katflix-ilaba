@@ -42,7 +42,13 @@ export default function SetPasswordForm() {
           return;
         }
 
-        // Create a new session with the recovery token
+        // CRITICAL FIX: Sign out any existing session FIRST
+        // This prevents the admin's session from interfering with the recovery token
+        // See: https://github.com/supabase/supabase-js/issues/XXX
+        console.log("Clearing any existing sessions...");
+        await supabase.auth.signOut({ scope: 'local' });
+
+        // Now set the recovery session - this should be the ONLY active session
         const {
           data: { session },
           error: sessionError,
@@ -60,6 +66,16 @@ export default function SetPasswordForm() {
         }
 
         console.log("Recovery session established for:", session.user?.email);
+
+        // SECURITY: Verify the session was set correctly
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error("Session established but no user found");
+          setError("Failed to verify your identity. Please request a new invitation.");
+          return;
+        }
+
+        console.log("Session verified for user:", user.id);
       } catch (err) {
         if (!isMounted) return;
         console.error("Recovery token handling error:", err);
@@ -97,6 +113,16 @@ export default function SetPasswordForm() {
     setLoading(true);
 
     try {
+      // SECURITY: Verify we still have a valid session before updating password
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Session expired. Please request a new invitation link.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Updating password for user:", user.id, "email:", user.email);
+
       // Update the user's password
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
@@ -104,6 +130,7 @@ export default function SetPasswordForm() {
 
       if (updateError) {
         setError(updateError.message || "Failed to set password");
+        console.error("Password update error:", updateError);
         return;
       }
 
@@ -116,6 +143,7 @@ export default function SetPasswordForm() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
       setError(message);
+      console.error("Password setting error:", err);
     } finally {
       setLoading(false);
     }
