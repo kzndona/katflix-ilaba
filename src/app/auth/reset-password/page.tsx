@@ -58,15 +58,32 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // If we have an authorization code, exchange it for a session
+        // If we have an authorization code, verify it as an OTP
         if (code) {
-          console.log("Found authorization code, exchanging for session...");
-          const { data, error } = await supabase.auth.exchangeCodeForSession(
-            code,
-          );
+          console.log("Found authorization code, verifying as recovery OTP...");
+          
+          // Get the email from localStorage (stored during password reset request)
+          const storedEmail = localStorage.getItem("reset_password_email");
+          console.log("Stored email from localStorage:", storedEmail);
+
+          if (!storedEmail) {
+            console.error("No email found in localStorage for password reset");
+            setError(
+              "Session expired. Please request a new password reset link.",
+            );
+            setSessionValid(false);
+            setVerifying(false);
+            return;
+          }
+
+          const { data, error } = await supabase.auth.verifyOtp({
+            email: storedEmail,
+            token: code,
+            type: "recovery",
+          });
 
           if (error || !data.session) {
-            console.error("Failed to exchange code for session:", error);
+            console.error("Failed to verify OTP:", error);
             setError(
               "Failed to establish session. Please request a new password reset link.",
             );
@@ -75,7 +92,10 @@ export default function ResetPasswordPage() {
             return;
           }
 
-          console.log("Session established from code:", data.session.user?.email);
+          console.log(
+            "Session established from recovery OTP:",
+            data.session.user?.email,
+          );
           setSessionValid(true);
           setVerifying(false);
           return;
