@@ -30,11 +30,13 @@ export default function ResetPasswordPage() {
         const queryError = queryParams.get("error");
         const errorCode = queryParams.get("error_code");
         const errorDescription = queryParams.get("error_description");
+        const code = queryParams.get("code");
 
         console.log("Query params:", {
           queryError,
           errorCode,
           errorDescription,
+          hasCode: !!code,
         });
 
         // If Supabase returned an error, show it
@@ -56,8 +58,33 @@ export default function ResetPasswordPage() {
           return;
         }
 
+        // If we have an authorization code, exchange it for a session
+        if (code) {
+          console.log("Found authorization code, exchanging for session...");
+          const { data, error } = await supabase.auth.exchangeCodeForSession(
+            code,
+          );
+
+          if (error || !data.session) {
+            console.error("Failed to exchange code for session:", error);
+            setError(
+              "Failed to establish session. Please request a new password reset link.",
+            );
+            setSessionValid(false);
+            setVerifying(false);
+            return;
+          }
+
+          console.log("Session established from code:", data.session.user?.email);
+          setSessionValid(true);
+          setVerifying(false);
+          return;
+        }
+
         // Supabase might append tokens in the hash after 303 redirect
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hashParams = new URLSearchParams(
+          window.location.hash.substring(1),
+        );
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
         const hashType = hashParams.get("type");
@@ -78,7 +105,9 @@ export default function ResetPasswordPage() {
 
           if (error || !data.session) {
             console.error("Failed to set session from hash:", error);
-            setError("Failed to establish session. Please request a new password reset link.");
+            setError(
+              "Failed to establish session. Please request a new password reset link.",
+            );
             setSessionValid(false);
             setVerifying(false);
             return;
@@ -95,7 +124,7 @@ export default function ResetPasswordPage() {
         console.log(
           "No tokens in hash, checking for session from /verify redirect...",
         );
-        
+
         let session = null;
         let attempts = 0;
         const maxAttempts = 5;
@@ -112,10 +141,7 @@ export default function ResetPasswordPage() {
           }
 
           if (currentSession) {
-            console.log(
-              "Session found:",
-              currentSession.user?.email,
-            );
+            console.log("Session found:", currentSession.user?.email);
             session = currentSession;
             setSessionValid(true);
             break;
@@ -135,7 +161,6 @@ export default function ResetPasswordPage() {
           );
           setSessionValid(false);
         }
-
       } catch (err) {
         console.error("Error handling password reset:", err);
         setError("An error occurred. Please try again.");
