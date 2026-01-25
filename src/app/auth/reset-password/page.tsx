@@ -22,30 +22,23 @@ export default function ResetPasswordPage() {
     const handlePasswordReset = async () => {
       try {
         console.log("Full URL:", window.location.href);
-        console.log("Hash:", window.location.hash);
         console.log("Search:", window.location.search);
 
-        // Check for error in query params first (expired link)
+        // Check for error in query params first (Supabase /verify endpoint returns errors here)
         const queryParams = new URLSearchParams(window.location.search);
         const queryError = queryParams.get("error");
         const errorCode = queryParams.get("error_code");
         const errorDescription = queryParams.get("error_description");
 
-        // Check for tokens (Supabase can send either token= or token_hash=)
-        const tokenHash = queryParams.get("token_hash");
-        const token = queryParams.get("token"); // New PKCE format uses 'token'
-        const type = queryParams.get("type");
-
         console.log("Query params:", {
-          tokenHash: !!tokenHash,
-          token: !!token,
-          type,
           queryError,
           errorCode,
+          errorDescription,
         });
 
+        // If Supabase returned an error, show it
         if (queryError) {
-          console.log("Error in URL:", {
+          console.log("Error from Supabase /verify:", {
             queryError,
             errorCode,
             errorDescription,
@@ -62,142 +55,20 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // Handle token_hash from query params (old Supabase magiclink format)
-        if (tokenHash && type === "recovery") {
-          console.log("Token hash found in query params, verifying OTP...");
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: "recovery",
-          });
+        // If no error, Supabase should have already set the session via the /verify redirect
+        // Just check if we have a valid session
+        console.log("Checking for existing session from Supabase /verify redirect...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-          if (error || !data.session) {
-            console.error("OTP verification error:", error);
-            setError(
-              "Invalid or expired reset link. Please request a new password reset.",
-            );
-            setSessionValid(false);
-          } else {
-            console.log("OTP verified successfully, session established!");
-            setSessionValid(true);
-          }
-          setVerifying(false);
-          return;
-        }
-
-        // Handle token from query params (new PKCE format - pkce_xxx)
-        if (token && type === "recovery") {
-          console.log("PKCE token found in query params, verifying...");
-          // For PKCE tokens, we need to clear any existing session first
-          await supabase.auth.signOut({ scope: "local" });
-
-          // Try to verify as OTP with the token as token_hash
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: "recovery",
-          });
-
-          if (error || !data.session) {
-            console.error("Token verification error:", error);
-            setError(
-              "Invalid or expired reset link. Please request a new password reset.",
-            );
-            setSessionValid(false);
-          } else {
-            console.log("Token verified successfully, session established!");
-            // Verify the session was actually set
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              console.log("User verified:", user.email);
-              setSessionValid(true);
-            } else {
-              console.error("Session established but no user found");
-              setError("Failed to establish session. Please try again.");
-              setSessionValid(false);
-            }
-          }
-          setVerifying(false);
-          return;
-        }
-
-        // Check if we have a hash in the URL (legacy token-based flow)
-        const hashParams = new URLSearchParams(
-          window.location.hash.substring(1),
-        );
-        const accessToken = hashParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token");
-        const hashType = hashParams.get("type");
-        const hashError = hashParams.get("error");
-
-        console.log("Parsed hash tokens:", {
-          hashType,
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          hashError,
-        });
-
-        // Check for error in hash
-        if (hashError) {
-          console.log("Error in hash:", hashError);
-          const hashErrorCode = hashParams.get("error_code");
-          if (hashErrorCode === "otp_expired") {
-            setError(
-              "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
-            );
-          } else {
-            setError(
-              `Error: ${hashParams.get("error_description") || hashError}`,
-            );
-          }
+        if (sessionError || !session) {
+          console.error("Session error:", sessionError);
+          setError(
+            "Failed to establish session. Please request a new password reset link.",
+          );
           setSessionValid(false);
-          setVerifying(false);
-          return;
-        }
-
-        // If this is a recovery/password reset link (legacy flow with hash)
-        if (hashType === "recovery" && accessToken) {
-          console.log(
-            "Attempting to set session with recovery token from hash...",
-          );
-          // Exchange the tokens for a session
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || "",
-          });
-
-          if (error || !data.session) {
-            console.error("Session error:", error);
-            setError(
-              "Invalid or expired reset link. Please request a new password reset.",
-            );
-            setSessionValid(false);
-          } else {
-            console.log("Session established successfully from hash!");
-            // Session established successfully
-            setSessionValid(true);
-          }
         } else {
-          console.log(
-            "No recovery token or code found, checking existing session...",
-          );
-          // No valid token in URL, check if already has session
-          const {
-            data: { session },
-            error,
-          } = await supabase.auth.getSession();
-
-          console.log("Existing session check:", {
-            hasSession: !!session,
-            error,
-          });
-
-          if (error || !session) {
-            setError(
-              "Invalid or expired reset link. Please request a new password reset.",
-            );
-            setSessionValid(false);
-          } else {
-            setSessionValid(true);
-          }
+          console.log("Session established by Supabase /verify:", session.user?.email);
+          setSessionValid(true);
         }
       } catch (err) {
         console.error("Error handling password reset:", err);
