@@ -21,27 +21,39 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const handlePasswordReset = async () => {
       try {
-        console.log('Full URL:', window.location.href);
-        console.log('Hash:', window.location.hash);
-        console.log('Search:', window.location.search);
-        
+        console.log("Full URL:", window.location.href);
+        console.log("Hash:", window.location.hash);
+        console.log("Search:", window.location.search);
+
         // Check for error in query params first (expired link)
         const queryParams = new URLSearchParams(window.location.search);
-        const queryError = queryParams.get('error');
-        const errorCode = queryParams.get('error_code');
-        const errorDescription = queryParams.get('error_description');
-        
-        // Check for tokens (Supabase can send either token= or token_hash=)
-        const tokenHash = queryParams.get('token_hash');
-        const token = queryParams.get('token'); // New PKCE format uses 'token'
-        const type = queryParams.get('type');
+        const queryError = queryParams.get("error");
+        const errorCode = queryParams.get("error_code");
+        const errorDescription = queryParams.get("error_description");
 
-        console.log('Query params:', { tokenHash: !!tokenHash, token: !!token, type, queryError, errorCode });
+        // Check for tokens (Supabase can send either token= or token_hash=)
+        const tokenHash = queryParams.get("token_hash");
+        const token = queryParams.get("token"); // New PKCE format uses 'token'
+        const type = queryParams.get("type");
+
+        console.log("Query params:", {
+          tokenHash: !!tokenHash,
+          token: !!token,
+          type,
+          queryError,
+          errorCode,
+        });
 
         if (queryError) {
-          console.log('Error in URL:', { queryError, errorCode, errorDescription });
-          if (errorCode === 'otp_expired') {
-            setError("This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.");
+          console.log("Error in URL:", {
+            queryError,
+            errorCode,
+            errorDescription,
+          });
+          if (errorCode === "otp_expired") {
+            setError(
+              "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
+            );
           } else {
             setError(`Error: ${errorDescription || queryError}`);
           }
@@ -51,19 +63,21 @@ export default function ResetPasswordPage() {
         }
 
         // Handle token_hash from query params (old Supabase magiclink format)
-        if (tokenHash && type === 'recovery') {
-          console.log('Token hash found in query params, verifying OTP...');
+        if (tokenHash && type === "recovery") {
+          console.log("Token hash found in query params, verifying OTP...");
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: 'recovery',
+            type: "recovery",
           });
 
           if (error || !data.session) {
-            console.error('OTP verification error:', error);
-            setError("Invalid or expired reset link. Please request a new password reset.");
+            console.error("OTP verification error:", error);
+            setError(
+              "Invalid or expired reset link. Please request a new password reset.",
+            );
             setSessionValid(false);
           } else {
-            console.log('OTP verified successfully, session established!');
+            console.log("OTP verified successfully, session established!");
             setSessionValid(true);
           }
           setVerifying(false);
@@ -71,46 +85,59 @@ export default function ResetPasswordPage() {
         }
 
         // Handle token from query params (new PKCE format - pkce_xxx)
-        if (token && type === 'recovery') {
-          console.log('PKCE token found in query params, verifying...');
+        if (token && type === "recovery") {
+          console.log("PKCE token found in query params, verifying...");
           // For PKCE tokens, we need to clear any existing session first
-          await supabase.auth.signOut({ scope: 'local' });
-          
+          await supabase.auth.signOut({ scope: "local" });
+
           // Try to verify as OTP with the token as token_hash
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: token,
-            type: 'recovery',
+            type: "recovery",
           });
 
           if (error || !data.session) {
-            console.error('Token verification error:', error);
-            setError("Invalid or expired reset link. Please request a new password reset.");
+            console.error("Token verification error:", error);
+            setError(
+              "Invalid or expired reset link. Please request a new password reset.",
+            );
             setSessionValid(false);
           } else {
-            console.log('Token verified successfully, session established!');
+            console.log("Token verified successfully, session established!");
             setSessionValid(true);
           }
           setVerifying(false);
           return;
         }
-        
-        // Check if we have a hash in the URL (legacy token-based flow)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const hashType = hashParams.get('type');
-        const hashError = hashParams.get('error');
 
-        console.log('Parsed hash tokens:', { hashType, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken, hashError });
+        // Check if we have a hash in the URL (legacy token-based flow)
+        const hashParams = new URLSearchParams(
+          window.location.hash.substring(1),
+        );
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const hashType = hashParams.get("type");
+        const hashError = hashParams.get("error");
+
+        console.log("Parsed hash tokens:", {
+          hashType,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hashError,
+        });
 
         // Check for error in hash
         if (hashError) {
-          console.log('Error in hash:', hashError);
-          const hashErrorCode = hashParams.get('error_code');
-          if (hashErrorCode === 'otp_expired') {
-            setError("This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.");
+          console.log("Error in hash:", hashError);
+          const hashErrorCode = hashParams.get("error_code");
+          if (hashErrorCode === "otp_expired") {
+            setError(
+              "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
+            );
           } else {
-            setError(`Error: ${hashParams.get('error_description') || hashError}`);
+            setError(
+              `Error: ${hashParams.get("error_description") || hashError}`,
+            );
           }
           setSessionValid(false);
           setVerifying(false);
@@ -118,39 +145,53 @@ export default function ResetPasswordPage() {
         }
 
         // If this is a recovery/password reset link (legacy flow with hash)
-        if (hashType === 'recovery' && accessToken) {
-          console.log('Attempting to set session with recovery token from hash...');
+        if (hashType === "recovery" && accessToken) {
+          console.log(
+            "Attempting to set session with recovery token from hash...",
+          );
           // Exchange the tokens for a session
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: refreshToken || '',
+            refresh_token: refreshToken || "",
           });
 
           if (error || !data.session) {
-            console.error('Session error:', error);
-            setError("Invalid or expired reset link. Please request a new password reset.");
+            console.error("Session error:", error);
+            setError(
+              "Invalid or expired reset link. Please request a new password reset.",
+            );
             setSessionValid(false);
           } else {
-            console.log('Session established successfully from hash!');
+            console.log("Session established successfully from hash!");
             // Session established successfully
             setSessionValid(true);
           }
         } else {
-          console.log('No recovery token or code found, checking existing session...');
+          console.log(
+            "No recovery token or code found, checking existing session...",
+          );
           // No valid token in URL, check if already has session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          console.log('Existing session check:', { hasSession: !!session, error });
-          
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
+
+          console.log("Existing session check:", {
+            hasSession: !!session,
+            error,
+          });
+
           if (error || !session) {
-            setError("Invalid or expired reset link. Please request a new password reset.");
+            setError(
+              "Invalid or expired reset link. Please request a new password reset.",
+            );
             setSessionValid(false);
           } else {
             setSessionValid(true);
           }
         }
       } catch (err) {
-        console.error('Error handling password reset:', err);
+        console.error("Error handling password reset:", err);
         setError("An error occurred. Please try again.");
         setSessionValid(false);
       } finally {
@@ -183,7 +224,9 @@ export default function ResetPasswordPage() {
 
     try {
       // SECURITY: Verify we still have a valid session before updating password
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setError("Session expired. Please request a new password reset link.");
         setLoading(false);
@@ -242,9 +285,7 @@ export default function ResetPasswordPage() {
         <div className="w-1/2 bg-gray-100 p-48 rounded-2xl flex flex-col justify-center space-y-6">
           <div>
             <h1 className="text-6xl font-bold text-gray-800 mb-2">KATFLIX</h1>
-            <h2 className="text-2xl text-gray-600 mb-4">
-              Reset Password
-            </h2>
+            <h2 className="text-2xl text-gray-600 mb-4">Reset Password</h2>
             <p className="text-lg text-gray-500 mb-6">
               Enter your new password below.
             </p>
@@ -259,7 +300,7 @@ export default function ResetPasswordPage() {
                   {error}
                 </div>
               )}
-              
+
               {/* Back to Login */}
               <div className="text-center">
                 <button
@@ -272,7 +313,10 @@ export default function ResetPasswordPage() {
               </div>
             </>
           ) : (
-            <form onSubmit={handleResetPassword} className="flex flex-col space-y-4">
+            <form
+              onSubmit={handleResetPassword}
+              className="flex flex-col space-y-4"
+            >
               {/* New Password */}
               <div>
                 <label className="block text-md font-medium text-gray-700 mb-2">

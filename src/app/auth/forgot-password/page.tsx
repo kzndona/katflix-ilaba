@@ -3,10 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../utils/supabase/client";
 
 export default function ForgotPasswordPage() {
-  const supabase = createClient();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -20,16 +18,31 @@ export default function ForgotPasswordPage() {
     setError("");
     setSuccess("");
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
+    try {
+      // Use backend API instead of client-side Supabase call
+      // This ensures proper server-side token generation with service role
+      const response = await fetch("/api/auth/reset-password-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    setLoading(false);
+      const data = await response.json();
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
+      if (!response.ok) {
+        setError(data.error || "Failed to send reset link");
+        return;
+      }
+
+      setSuccess(data.message || "Password reset link has been sent to your email. Please check your inbox.");
+      setEmail(""); // Clear the email input on success
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An error occurred";
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
