@@ -22,6 +22,7 @@ export default function ResetPasswordPage() {
     const handlePasswordReset = async () => {
       try {
         console.log("Full URL:", window.location.href);
+        console.log("Hash:", window.location.hash);
         console.log("Search:", window.location.search);
 
         // Check for error in query params first (Supabase /verify endpoint returns errors here)
@@ -55,21 +56,86 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // If no error, Supabase should have already set the session via the /verify redirect
-        // Just check if we have a valid session
-        console.log("Checking for existing session from Supabase /verify redirect...");
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Supabase might append tokens in the hash after 303 redirect
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const hashType = hashParams.get("type");
 
-        if (sessionError || !session) {
-          console.error("Session error:", sessionError);
+        console.log("Checking hash for tokens:", {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hashType,
+        });
+
+        // If tokens are in the hash, set the session
+        if (accessToken && hashType === "recovery") {
+          console.log("Found recovery tokens in hash, setting session...");
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          });
+
+          if (error || !data.session) {
+            console.error("Failed to set session from hash:", error);
+            setError("Failed to establish session. Please request a new password reset link.");
+            setSessionValid(false);
+            setVerifying(false);
+            return;
+          }
+
+          console.log("Session set from hash tokens");
+          setSessionValid(true);
+          setVerifying(false);
+          return;
+        }
+
+        // If no tokens in hash, wait for Supabase to set the session via cookies
+        // The /verify endpoint should have already set the session
+        console.log(
+          "No tokens in hash, checking for session from /verify redirect...",
+        );
+        
+        let session = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+
+        // Try multiple times in case the session takes a moment to be available
+        while (!session && attempts < maxAttempts) {
+          const {
+            data: { session: currentSession },
+            error: sessionError,
+          } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            console.error("Session error:", sessionError);
+          }
+
+          if (currentSession) {
+            console.log(
+              "Session found:",
+              currentSession.user?.email,
+            );
+            session = currentSession;
+            setSessionValid(true);
+            break;
+          }
+
+          attempts++;
+          if (attempts < maxAttempts) {
+            // Wait before retrying
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+        }
+
+        if (!session) {
+          console.error("No session found after retries");
           setError(
-            "Failed to establish session. Please request a new password reset link.",
+            "Failed to establish session. The link may have expired. Please request a new password reset link.",
           );
           setSessionValid(false);
-        } else {
-          console.log("Session established by Supabase /verify:", session.user?.email);
-          setSessionValid(true);
         }
+
       } catch (err) {
         console.error("Error handling password reset:", err);
         setError("An error occurred. Please try again.");
