@@ -30,7 +30,7 @@ export default function CustomersPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(
-    null
+    null,
   );
 
   // Load customers on component mount
@@ -196,7 +196,7 @@ export default function CustomersPage() {
           result.error?.includes("violates")
         ) {
           throw new Error(
-            "Cannot delete this customer because they have existing orders. Please contact support if you need to remove this customer."
+            "Cannot delete this customer because they have existing orders. Please contact support if you need to remove this customer.",
           );
         }
         throw new Error(result.error || "Failed to delete customer");
@@ -498,7 +498,7 @@ function EditPane({
             type="date"
             value={customer.birthdate ?? ""}
             onChange={(v) => updateField("birthdate", v)}
-            max={new Date().toISOString().split('T')[0]}
+            max={new Date().toISOString().split("T")[0]}
           />
 
           <Select

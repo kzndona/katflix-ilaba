@@ -546,7 +546,7 @@ function EditPane({
             type="date"
             value={staff.birthdate ?? ""}
             onChange={(v) => updateField("birthdate", v)}
-            max={new Date().toISOString().split('T')[0]}
+            max={new Date().toISOString().split("T")[0]}
           />
 
           <Select
