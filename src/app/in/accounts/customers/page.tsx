@@ -498,6 +498,7 @@ function EditPane({
             type="date"
             value={customer.birthdate ?? ""}
             onChange={(v) => updateField("birthdate", v)}
+            max={new Date().toISOString().split('T')[0]}
           />
 
           <Select
@@ -626,12 +627,14 @@ function Field({
   onChange,
   type = "text",
   disabled = false,
+  max,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   disabled?: boolean;
+  max?: string;
 }) {
   return (
     <div className="flex flex-col">
@@ -641,6 +644,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        max={max}
         className="border border-gray-300 px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
       />
     </div>

@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Products | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editing, setEditing] = useState<Products | null>(null);
+  const [editingImageFile, setEditingImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function ProductsPage() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantityAdjustment, setQuantityAdjustment] = useState<string>("");
   const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">(
-    "add"
+    "add",
   );
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function ProductsPage() {
       is_active: true,
       image_url: undefined,
     });
+    setEditingImageFile(null);
     setSelected(null);
     setIsEditingDetails(true);
     setErrorMsg(null);
@@ -118,6 +120,7 @@ export default function ProductsPage() {
       ...row,
       unit_cost: row.unit_cost ?? "0.00",
     });
+    setEditingImageFile(null);
     setSelected(row);
     setIsEditingDetails(true);
     setErrorMsg(null);
@@ -202,11 +205,31 @@ export default function ProductsPage() {
         is_active: data.is_active,
       };
 
-      const res = await fetch("/api/manage/products/saveProduct", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // Check if this is a new product with an image
+      const isNewProduct = !data.id;
+      let requestUrl = "/api/manage/products/saveProduct";
+      let requestOptions: RequestInit;
+
+      if (isNewProduct && editingImageFile) {
+        // Send as FormData to support image upload
+        const formData = new FormData();
+        formData.append("productData", JSON.stringify(payload));
+        formData.append("file", editingImageFile);
+
+        requestOptions = {
+          method: "POST",
+          body: formData,
+        };
+      } else {
+        // Send as JSON (edits without image or no image selected)
+        requestOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        };
+      }
+
+      const res = await fetch(requestUrl, requestOptions);
 
       const body = await res.json().catch(() => ({}));
       if (!res.ok)
@@ -215,6 +238,7 @@ export default function ProductsPage() {
       await load();
       setIsEditingDetails(false);
       setEditing(null);
+      setEditingImageFile(null);
     } catch (err) {
       console.error("Save failed:", err);
       setErrorMsg("Failed to save products");
@@ -303,7 +327,7 @@ export default function ProductsPage() {
     } catch (err) {
       console.error("Quantity adjustment failed:", err);
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to adjust quantity"
+        err instanceof Error ? err.message : "Failed to adjust quantity",
       );
     } finally {
       setSaving(false);
@@ -391,9 +415,12 @@ export default function ProductsPage() {
               onCancel={() => {
                 setIsEditingDetails(false);
                 setEditing(null);
+                setEditingImageFile(null);
                 setErrorMsg(null);
               }}
               isNewProduct={!editing.id}
+              editingImageFile={editingImageFile}
+              setEditingImageFile={setEditingImageFile}
             />
           ) : selected ? (
             <DetailsPane
@@ -499,7 +526,7 @@ export default function ProductsPage() {
                   <div className="text-sm text-blue-700 mt-1">
                     {(() => {
                       const product = rows.find(
-                        (r) => r.id === selectedProductId
+                        (r) => r.id === selectedProductId,
                       );
                       if (!product) return "";
                       const current = Number(product.quantity);
@@ -673,6 +700,8 @@ function EditPane({
   errorMsg,
   onCancel,
   isNewProduct,
+  editingImageFile,
+  setEditingImageFile,
 }: {
   product: Products;
   updateField: (key: keyof Products, value: any) => void;
@@ -682,6 +711,8 @@ function EditPane({
   errorMsg: string | null;
   onCancel: () => void;
   isNewProduct: boolean;
+  editingImageFile: File | null;
+  setEditingImageFile: (file: File | null) => void;
 }) {
   return (
     <div className="p-8 h-full flex flex-col">
@@ -710,8 +741,10 @@ function EditPane({
 
         <ImageUploadField
           product={product}
-          onImageUpdate={() => {}}
-          saving={false}
+          editingImageFile={editingImageFile}
+          setEditingImageFile={setEditingImageFile}
+          saving={saving}
+          isNewProduct={isNewProduct}
         />
 
         <div className="grid grid-cols-2 gap-4">
@@ -820,21 +853,24 @@ function EditPane({
   );
 }
 
-// Image Upload Component
+// Image Upload Component - Now handles both immediate uploads (for existing products) and deferred uploads (for new products)
 function ImageUploadField({
   product,
-  onImageUpdate,
+  editingImageFile,
+  setEditingImageFile,
   saving,
+  isNewProduct,
 }: {
   product: Products;
-  onImageUpdate: () => void;
+  editingImageFile: File | null;
+  setEditingImageFile: (file: File | null) => void;
   saving: boolean;
+  isNewProduct: boolean;
 }) {
-  const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  const handleUpload = async (file: File) => {
+  const handleFileSelect = (file: File) => {
     if (!file.type.startsWith("image/")) {
       setUploadError("Please upload an image file");
       return;
@@ -845,7 +881,18 @@ function ImageUploadField({
       return;
     }
 
-    setUploading(true);
+    setUploadError(null);
+
+    if (isNewProduct) {
+      // For new products, store the file to be uploaded with the save
+      setEditingImageFile(file);
+    } else {
+      // For existing products, upload immediately
+      uploadImageImmediately(file);
+    }
+  };
+
+  const uploadImageImmediately = async (file: File) => {
     setUploadError(null);
 
     try {
@@ -863,23 +910,17 @@ function ImageUploadField({
         throw new Error(body?.error || "Upload failed");
       }
 
-      const data = await res.json();
-      if (!product.image_url) {
-        // If first upload, reload to get new image
-        onImageUpdate();
-      }
+      // Reload to get updated image
+      window.location.reload();
     } catch (err) {
       console.error("Upload error:", err);
       setUploadError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!product.image_url) return;
 
-    setUploading(true);
     setUploadError(null);
 
     try {
@@ -897,14 +938,11 @@ function ImageUploadField({
         throw new Error(body?.error || "Delete failed");
       }
 
-      // Clear the image_url after successful deletion
-      product.image_url = undefined;
-      onImageUpdate();
+      // Reload to refresh
+      window.location.reload();
     } catch (err) {
       console.error("Delete error:", err);
       setUploadError(err instanceof Error ? err.message : "Delete failed");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -924,9 +962,12 @@ function ImageUploadField({
     setDragActive(false);
     const files = e.dataTransfer.files;
     if (files && files[0]) {
-      handleUpload(files[0]);
+      handleFileSelect(files[0]);
     }
   };
+
+  // Show preview of file being added to new product
+  const previewFile = isNewProduct ? editingImageFile : null;
 
   return (
     <div className="space-y-3">
@@ -934,64 +975,80 @@ function ImageUploadField({
         Product Image
       </label>
 
-      {product.image_url && (
+      {(product.image_url || previewFile) && (
         <div className="relative w-full">
           <img
-            src={product.image_url}
+            src={
+              previewFile
+                ? URL.createObjectURL(previewFile)
+                : product.image_url!
+            }
             alt={product.item_name}
             className="w-full h-32 object-cover rounded-lg border border-gray-300"
           />
-          <button
-            onClick={handleDelete}
-            disabled={uploading || saving}
-            className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
-          >
-            ✕
-          </button>
+          {previewFile && (
+            <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
+              ✓ Ready to upload
+            </div>
+          )}
+          {!previewFile && !isNewProduct && (
+            <button
+              onClick={handleDelete}
+              disabled={saving}
+              className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
+            >
+              ✕
+            </button>
+          )}
         </div>
       )}
 
-      <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
-          dragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:bg-gray-100"
-        }`}
-      >
-        <input
-          type="file"
-          id="image-upload"
-          accept="image/*"
-          onChange={(e) => {
-            if (e.target.files?.[0]) {
-              handleUpload(e.target.files[0]);
-            }
-          }}
-          disabled={uploading || saving}
-          className="hidden"
-        />
-        <label htmlFor="image-upload" className="cursor-pointer block">
-          <div className="text-3xl mb-2">🖼️</div>
-          <div className="text-sm font-medium text-gray-700">
-            Drag image here or click to upload
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            Max 2MB • JPG, PNG, etc.
-          </div>
-        </label>
-      </div>
+      {!previewFile && (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
+            dragActive
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+          }`}
+        >
+          <input
+            type="file"
+            id="image-upload"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                handleFileSelect(e.target.files[0]);
+              }
+            }}
+            disabled={saving}
+            className="hidden"
+          />
+          <label htmlFor="image-upload" className="cursor-pointer block">
+            <div className="text-3xl mb-2">🖼️</div>
+            <div className="text-sm font-medium text-gray-700">
+              Drag image here or click to upload
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Max 2MB • JPG, PNG, etc.
+            </div>
+            {isNewProduct && (
+              <div className="text-xs text-blue-600 mt-2 font-medium">
+                Image will be uploaded when you save the product
+              </div>
+            )}
+          </label>
+        </div>
+      )}
 
       {uploadError && (
         <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
           {uploadError}
         </div>
       )}
-
-      {uploading && <div className="text-blue-600 text-sm">Uploading...</div>}
     </div>
   );
 }

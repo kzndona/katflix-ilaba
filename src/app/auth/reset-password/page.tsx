@@ -28,7 +28,11 @@ export default function ResetPasswordPage() {
     const errorDescription = queryParams.get("error_description");
 
     if (queryError) {
-      console.error("Error from Supabase:", { queryError, errorCode, errorDescription });
+      console.error("Error from Supabase:", {
+        queryError,
+        errorCode,
+        errorDescription,
+      });
       if (errorCode === "otp_expired") {
         setError(
           "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
@@ -47,7 +51,10 @@ export default function ResetPasswordPage() {
       console.log("Auth state changed:", { event, hasSession: !!session });
 
       if (event === "PASSWORD_RECOVERY" && session) {
-        console.log("✅ Password recovery session established for:", session.user?.email);
+        console.log(
+          "✅ Password recovery session established for:",
+          session.user?.email,
+        );
         setSessionValid(true);
         setVerifying(false);
       } else if (session) {

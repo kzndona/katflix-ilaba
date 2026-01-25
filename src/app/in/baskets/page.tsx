@@ -598,24 +598,31 @@ export default function BasketsPage() {
                         <div className="space-y-1.5 mb-3">
                           {/* PICKUP */}
                           {(order.handling.pickup.status === "pending" ||
-                            order.handling.pickup.status === "in_progress") && (
+                            order.handling.pickup.status === "in_progress" ||
+                            order.handling.pickup.status === "completed") && (
                             <div
                               className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
-                                order.handling.pickup.status === "in_progress"
-                                  ? "bg-blue-100 text-blue-900 border border-blue-300"
-                                  : "bg-white text-gray-700 border border-gray-200"
+                                order.handling.pickup.status === "completed"
+                                  ? "bg-green-100 text-green-900 border border-green-300"
+                                  : order.handling.pickup.status === "in_progress"
+                                    ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                    : "bg-white text-gray-700 border border-gray-200"
                               }`}
                             >
                               <span
                                 className={`text-lg font-bold ${
-                                  order.handling.pickup.status === "in_progress"
-                                    ? "text-blue-600 animate-pulse"
-                                    : "text-gray-400"
+                                  order.handling.pickup.status === "completed"
+                                    ? "text-green-600"
+                                    : order.handling.pickup.status === "in_progress"
+                                      ? "text-blue-600 animate-pulse"
+                                      : "text-gray-400"
                                 }`}
                               >
-                                {order.handling.pickup.status === "in_progress"
-                                  ? "●"
-                                  : "○"}
+                                {order.handling.pickup.status === "completed"
+                                  ? "✓"
+                                  : order.handling.pickup.status === "in_progress"
+                                    ? "●"
+                                    : "○"}
                               </span>
                               <span>Pickup</span>
                             </div>
