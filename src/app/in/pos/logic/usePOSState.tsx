@@ -35,7 +35,7 @@ import { createClient } from "@/src/app/utils/supabase/client";
 
 export const PRICING = {
   taxRate: 0.12, // 12%
-  serviceFeePerBasket: 10,
+  serviceFeePerBasket: 40, // Flat PHP40 service fee (not per basket)
 };
 
 const newBasket = (index: number): Basket => ({

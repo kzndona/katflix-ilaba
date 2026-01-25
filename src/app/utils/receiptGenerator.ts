@@ -184,7 +184,9 @@ function formatReceiptAsPlaintext(
   const fees = breakdown.fees || [];
   const serviceFee = fees.find((f: any) => f.type === "service_fee")?.amount || 0;
   const handlingFee = fees.find((f: any) => f.type === "handling_fee")?.amount || 0;
-  const taxes = fees.find((f: any) => f.type === "tax")?.amount || 0;
+  // VAT is stored in summary, not in fees array
+  const summary = breakdown.summary || {};
+  const taxes = summary.vat_amount || 0;
 
   console.log("💰 [Receipt] Extracted fees:", {
     serviceFee,

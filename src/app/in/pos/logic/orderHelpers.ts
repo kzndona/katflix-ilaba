@@ -312,11 +312,12 @@ export const buildFeesArray = (
   const fees: OrderFee[] = [];
 
   if (basketCount > 0) {
+    // Service fee is flat PHP40, not per basket
     fees.push({
       id: crypto.randomUUID(),
       type: 'service_fee',
-      description: `Service fee (${basketCount} basket${basketCount > 1 ? 's' : ''})`,
-      amount: basketCount * serviceFeePerBasket,
+      description: 'Service fee',
+      amount: serviceFeePerBasket,
     });
   }
 
@@ -351,8 +352,9 @@ export const buildOrderSummary = (
     .reduce((sum, f) => sum + f.amount, 0);
 
   const subtotalBeforeTax = productSubtotal + serviceSubtotal + serviceFee + handlingFee - discounts;
-  const vatAmount = subtotalBeforeTax * vatRate;
-  const grandTotal = subtotalBeforeTax + vatAmount;
+  // VAT is INCLUSIVE - extracted from the total, not added on top
+  const vatAmount = subtotalBeforeTax * (vatRate / (1 + vatRate));
+  const grandTotal = subtotalBeforeTax;
 
   return {
     subtotal_products: productSubtotal > 0 ? productSubtotal : null,

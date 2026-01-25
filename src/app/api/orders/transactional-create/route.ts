@@ -299,9 +299,9 @@ export async function POST(req: NextRequest) {
         
         // Build totals from summary or calculate
         const summary = orderPayload.breakdown?.summary || {};
-        const subtotal = summary.subtotal_products || 0 + (summary.subtotal_services || 0);
+        const subtotal = (summary.subtotal_products || 0) + (summary.subtotal_services || 0);
         const serviceFee = summary.service_fee || 0;
-        const handlingFee = summary.handling_fee || 0;
+        const handlingFee = summary.handling || 0;
         const tax = summary.vat_amount || 0;
         const total = orderPayload.total_amount;
         
