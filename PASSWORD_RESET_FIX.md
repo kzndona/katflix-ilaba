@@ -3,6 +3,7 @@
 ## The Real Problem
 
 Your Supabase logs revealed the actual issue:
+
 ```
 "error":"One-time token not found"
 ```
@@ -14,6 +15,7 @@ The invites work because they use the **server-side admin API**: `supabase.auth.
 ## The Root Cause
 
 **Client-side call (failing):**
+
 ```typescript
 // In forgot-password/page.tsx (CLIENT component)
 const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -22,12 +24,14 @@ const { error } = await supabase.auth.resetPasswordForEmail(email, {
 ```
 
 **Problems:**
+
 - Client has limited Supabase permissions
 - Token generation isn't being stored properly in Supabase's database
 - When user clicks the email link, Supabase's `/verify` endpoint can't find the token
 - Result: "One-time token not found" error
 
 **Server-side call (working):**
+
 ```typescript
 // In api/auth/reset-password-request/route.ts (SERVER endpoint)
 const { error } = await supabase.auth.admin.generateLink({
@@ -38,6 +42,7 @@ const { error } = await supabase.auth.admin.generateLink({
 ```
 
 **Why it works:**
+
 - Server has full admin permissions via `SUPABASE_SERVICE_ROLE_KEY`
 - Uses `generateLink()` which properly stores the token in Supabase's database
 - Same method used internally by `inviteUserByEmail()`
@@ -48,6 +53,7 @@ const { error } = await supabase.auth.admin.generateLink({
 ### 1. Created new API endpoint: `/api/auth/reset-password-request`
 
 This endpoint:
+
 - Receives email from frontend
 - Uses `supabase.auth.admin.generateLink()` with service role key
 - Generates valid recovery token stored in Supabase
@@ -58,12 +64,14 @@ This endpoint:
 ### 2. Updated forgot-password page to use the API
 
 Changed from:
+
 ```typescript
 // Direct Supabase call (was failing)
 await supabase.auth.resetPasswordForEmail(email, { ... })
 ```
 
 To:
+
 ```typescript
 // API call that uses server-side admin API
 const response = await fetch("/api/auth/reset-password-request", {
@@ -84,11 +92,11 @@ const response = await fetch("/api/auth/reset-password-request", {
 
 ## Key Difference: generateLink vs resetPasswordForEmail
 
-| Method | Location | Scope | Token Storage | Works |
-|--------|----------|-------|----------------|-------|
-| `resetPasswordForEmail()` | Client | Limited | ❌ Unreliable | ❌ No |
-| `generateLink('recovery')` | Server | Admin | ✅ Proper storage | ✅ Yes |
-| `inviteUserByEmail()` | Server | Admin | ✅ Proper storage | ✅ Yes |
+| Method                     | Location | Scope   | Token Storage     | Works  |
+| -------------------------- | -------- | ------- | ----------------- | ------ |
+| `resetPasswordForEmail()`  | Client   | Limited | ❌ Unreliable     | ❌ No  |
+| `generateLink('recovery')` | Server   | Admin   | ✅ Proper storage | ✅ Yes |
+| `inviteUserByEmail()`      | Server   | Admin   | ✅ Proper storage | ✅ Yes |
 
 ## Testing
 
@@ -99,4 +107,3 @@ const response = await fetch("/api/auth/reset-password-request", {
 - [ ] You should see the reset-password page (not "expired" error)
 - [ ] Set your new password
 - [ ] Log in with new password ✅
-

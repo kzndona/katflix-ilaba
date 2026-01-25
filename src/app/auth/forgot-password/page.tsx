@@ -3,8 +3,10 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "../../utils/supabase/client";
 
 export default function ForgotPasswordPage() {
+  const supabase = createClient();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -18,31 +20,17 @@ export default function ForgotPasswordPage() {
     setError("");
     setSuccess("");
 
-    try {
-      // Use backend API instead of client-side Supabase call
-      // This ensures proper server-side token generation with service role
-      const response = await fetch("/api/auth/reset-password-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
 
-      const data = await response.json();
+    setLoading(false);
 
-      if (!response.ok) {
-        setError(data.error || "Failed to send reset link");
-        return;
-      }
-
-      setSuccess(data.message || "Password reset link has been sent to your email. Please check your inbox.");
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
       setEmail(""); // Clear the email input on success
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "An error occurred";
-      setError(message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -64,15 +52,17 @@ export default function ForgotPasswordPage() {
         <div className="w-1/2 bg-gray-100 p-48 rounded-2xl flex flex-col justify-center space-y-6">
           <div>
             <h1 className="text-6xl font-bold text-gray-800 mb-2">KATFLIX</h1>
-            <h2 className="text-2xl text-gray-600 mb-4">
-              Forgot Password
-            </h2>
+            <h2 className="text-2xl text-gray-600 mb-4">Forgot Password</h2>
             <p className="text-lg text-gray-500 mb-6">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a link to reset your
+              password.
             </p>
           </div>
 
-          <form onSubmit={handleResetRequest} className="flex flex-col space-y-4">
+          <form
+            onSubmit={handleResetRequest}
+            className="flex flex-col space-y-4"
+          >
             {/* Email */}
             <div>
               <label className="block text-md font-medium text-gray-700 mb-2">
