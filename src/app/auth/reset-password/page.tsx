@@ -31,11 +31,12 @@ export default function ResetPasswordPage() {
         const errorCode = queryParams.get('error_code');
         const errorDescription = queryParams.get('error_description');
         
-        // Check for token_hash (new Supabase magiclink format)
+        // Check for tokens (Supabase can send either token= or token_hash=)
         const tokenHash = queryParams.get('token_hash');
+        const token = queryParams.get('token'); // New PKCE format uses 'token'
         const type = queryParams.get('type');
 
-        console.log('Query params:', { tokenHash: !!tokenHash, type, queryError, errorCode });
+        console.log('Query params:', { tokenHash: !!tokenHash, token: !!token, type, queryError, errorCode });
 
         if (queryError) {
           console.log('Error in URL:', { queryError, errorCode, errorDescription });
@@ -49,7 +50,7 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // Handle token_hash from query params (new Supabase magiclink format)
+        // Handle token_hash from query params (old Supabase magiclink format)
         if (tokenHash && type === 'recovery') {
           console.log('Token hash found in query params, verifying OTP...');
           const { data, error } = await supabase.auth.verifyOtp({
@@ -63,6 +64,30 @@ export default function ResetPasswordPage() {
             setSessionValid(false);
           } else {
             console.log('OTP verified successfully, session established!');
+            setSessionValid(true);
+          }
+          setVerifying(false);
+          return;
+        }
+
+        // Handle token from query params (new PKCE format - pkce_xxx)
+        if (token && type === 'recovery') {
+          console.log('PKCE token found in query params, verifying...');
+          // For PKCE tokens, we need to clear any existing session first
+          await supabase.auth.signOut({ scope: 'local' });
+          
+          // Try to verify as OTP with the token as token_hash
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery',
+          });
+
+          if (error || !data.session) {
+            console.error('Token verification error:', error);
+            setError("Invalid or expired reset link. Please request a new password reset.");
+            setSessionValid(false);
+          } else {
+            console.log('Token verified successfully, session established!');
             setSessionValid(true);
           }
           setVerifying(false);
@@ -156,19 +181,35 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password: password,
-    });
+    try {
+      // SECURITY: Verify we still have a valid session before updating password
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Session expired. Please request a new password reset link.");
+        setLoading(false);
+        return;
+      }
 
-    setLoading(false);
+      console.log("Updating password for user:", user.id, "email:", user.email);
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccess("Password updated successfully! Redirecting to login...");
-      setTimeout(() => {
-        router.push("/auth/sign-in");
-      }, 2000);
+      const { error } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess("Password updated successfully! Redirecting to login...");
+        setTimeout(() => {
+          router.push("/auth/sign-in");
+        }, 2000);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      console.error("Password update error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 

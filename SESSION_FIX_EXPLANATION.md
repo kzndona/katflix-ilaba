@@ -18,21 +18,27 @@ Your instinct was **100% correct**. This is a **session/cookie collision** issue
 When you're logged in as admin and a new staff member tries to set their password:
 
 **Step 1: Admin logged in**
+
 - Browser has admin's session cookies: `sb-<project>-auth-token`
 - Supabase client instance reads these cookies automatically
 
 **Step 2: Staff clicks invite link**
+
 - URL has recovery token: `#access_token=xxx&refresh_token=yyy&type=recovery`
 
 **Step 3: `setSession()` called (OLD CODE)**
+
 ```typescript
-const { data: { session } } = await supabase.auth.setSession({
+const {
+  data: { session },
+} = await supabase.auth.setSession({
   access_token: recoveryToken,
   refresh_token: refreshToken,
 });
 ```
 
-**Problem**: 
+**Problem**:
+
 - `setSession()` tries to add/update the session
 - But the admin's session cookies are **still present** in the browser
 - Supabase's client has already loaded the admin's session
@@ -40,16 +46,19 @@ const { data: { session } } = await supabase.auth.setSession({
 - They coexist in a weird state
 
 **Step 4: `updateUser()` called (OLD CODE)**
+
 ```typescript
 const { error } = await supabase.auth.updateUser({ password });
 ```
 
-**Result**: 
+**Result**:
+
 - `updateUser()` updates whoever is currently "active"
 - The admin's session still takes priority
 - **Admin's password gets changed instead of staff's** ❌
 
 ### Why Private Window Fixes It
+
 - No existing cookies = no admin session to conflict
 - Recovery token is the **only** session
 - `updateUser()` has no ambiguity
@@ -62,28 +71,37 @@ const { error } = await supabase.auth.updateUser({ password });
 ### Change 1: Explicit Session Clearing (Line 31 in set-password-form.tsx)
 
 **BEFORE:**
+
 ```typescript
 // Just tried to set new session without clearing old one
-const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+const {
+  data: { session },
+  error: sessionError,
+} = await supabase.auth.setSession({
   access_token: accessToken,
   refresh_token: params.get("refresh_token") || "",
 });
 ```
 
 **AFTER:**
+
 ```typescript
 // CRITICAL FIX: Sign out any existing session FIRST
 console.log("Clearing any existing sessions...");
-await supabase.auth.signOut({ scope: 'local' });
+await supabase.auth.signOut({ scope: "local" });
 
 // Now set the recovery session - this should be the ONLY active session
-const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+const {
+  data: { session },
+  error: sessionError,
+} = await supabase.auth.setSession({
   access_token: accessToken,
   refresh_token: params.get("refresh_token") || "",
 });
 ```
 
 **What this does:**
+
 - `signOut({ scope: 'local' })` clears ALL browser-stored sessions
 - Removes the admin's session from memory
 - Recovery token becomes the **only** active session
@@ -92,9 +110,12 @@ const { data: { session }, error: sessionError } = await supabase.auth.setSessio
 ### Change 2: Session Verification (Lines 58-63)
 
 **ADDED:**
+
 ```typescript
 // SECURITY: Verify the session was set correctly
-const { data: { user } } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 if (!user) {
   console.error("Session established but no user found");
   setError("Failed to verify your identity. Please request a new invitation.");
@@ -104,6 +125,7 @@ console.log("Session verified for user:", user.id);
 ```
 
 **What this does:**
+
 - Confirms the recovery session was actually established
 - Fails fast if something went wrong
 - Better error message for debugging
@@ -111,6 +133,7 @@ console.log("Session verified for user:", user.id);
 ### Change 3: Pre-Update Verification (Lines 79-90)
 
 **BEFORE:**
+
 ```typescript
 // No verification before updating
 const { error: updateError } = await supabase.auth.updateUser({
@@ -119,9 +142,12 @@ const { error: updateError } = await supabase.auth.updateUser({
 ```
 
 **AFTER:**
+
 ```typescript
 // SECURITY: Verify we still have a valid session before updating password
-const { data: { user } } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 if (!user) {
   setError("Session expired. Please request a new invitation link.");
   setLoading(false);
@@ -137,6 +163,7 @@ const { error: updateError } = await supabase.auth.updateUser({
 ```
 
 **What this does:**
+
 - Double-checks the correct user is still authenticated
 - Prevents accidental password changes of wrong user
 - Logs the user ID for debugging
@@ -147,12 +174,14 @@ const { error: updateError } = await supabase.auth.updateUser({
 ## Why This Fixes Both Problems
 
 ### Problem #1: Admin's password getting changed ✅ FIXED
+
 - Old session is explicitly cleared
 - Only recovery token exists
 - `updateUser()` can only update the staff member
 - Admin's password stays safe
 
-### Problem #2: 90% "link expired" error  ✅ LIKELY FIXED
+### Problem #2: 90% "link expired" error ✅ LIKELY FIXED
+
 - The error wasn't actually token expiration
 - It was session negotiation failure
 - With explicit session clearing, the handoff is clean
@@ -160,6 +189,7 @@ const { error: updateError } = await supabase.auth.updateUser({
 - Should work now within your 3-minute window
 
 ### Problem #3: Mobile users stuck in loop ✅ LIKELY FIXED
+
 - Same root cause as #2
 - Explicit session management is more reliable
 - Works on first try in new/private context
@@ -212,17 +242,20 @@ const { error: updateError } = await supabase.auth.updateUser({
 ## Additional Notes
 
 ### About Token Expiration
+
 - Supabase recovery tokens DO have expiration (typically 1 hour)
 - But you're using them within 3 minutes, so this isn't the issue
 - The UTC concern you mentioned is valid for OTHER date-based auth, but Supabase handles token comparison server-side, so local timezone shouldn't matter
 
 ### About the "Link Expired" Message
+
 - Your code shows: `"Invalid or expired link. Please request a new invitation."`
 - This appears for BOTH actual expiration AND session errors
 - The error message is misleading you about the root cause
 - With this fix, the real cause (session collision) is eliminated
 
 ### About Mobile Delays
+
 - Email apps sometimes delay opening links (that's real)
 - But within a few minutes you're safe
 - The session fix makes the handoff more reliable
@@ -239,4 +272,3 @@ const { error: updateError } = await supabase.auth.updateUser({
   - Email verification token in the URL (confirm right person)
   - One-time use codes instead of recovery tokens
   - Simpler "set password on first login" flow
-

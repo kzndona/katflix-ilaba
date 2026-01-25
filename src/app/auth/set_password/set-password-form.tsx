@@ -46,7 +46,7 @@ export default function SetPasswordForm() {
         // This prevents the admin's session from interfering with the recovery token
         // See: https://github.com/supabase/supabase-js/issues/XXX
         console.log("Clearing any existing sessions...");
-        await supabase.auth.signOut({ scope: 'local' });
+        await supabase.auth.signOut({ scope: "local" });
 
         // Now set the recovery session - this should be the ONLY active session
         const {
@@ -68,10 +68,14 @@ export default function SetPasswordForm() {
         console.log("Recovery session established for:", session.user?.email);
 
         // SECURITY: Verify the session was set correctly
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           console.error("Session established but no user found");
-          setError("Failed to verify your identity. Please request a new invitation.");
+          setError(
+            "Failed to verify your identity. Please request a new invitation.",
+          );
           return;
         }
 
@@ -114,7 +118,9 @@ export default function SetPasswordForm() {
 
     try {
       // SECURITY: Verify we still have a valid session before updating password
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setError("Session expired. Please request a new invitation link.");
         setLoading(false);
