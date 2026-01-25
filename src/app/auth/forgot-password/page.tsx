@@ -20,9 +20,6 @@ export default function ForgotPasswordPage() {
     setError("");
     setSuccess("");
 
-    // Store the email in localStorage so reset-password page can retrieve it
-    localStorage.setItem("reset_password_email", email);
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
@@ -31,9 +28,10 @@ export default function ForgotPasswordPage() {
 
     if (error) {
       setError(error.message);
-      localStorage.removeItem("reset_password_email"); // Clear on error
     } else {
-      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
+      setSuccess(
+        "Password reset link has been sent to your email. Please check your inbox.",
+      );
       setEmail(""); // Clear the email input on success
     }
   };

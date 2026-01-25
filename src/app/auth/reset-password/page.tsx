@@ -17,180 +17,72 @@ export default function ResetPasswordPage() {
   const [verifying, setVerifying] = useState(true);
   const [sessionValid, setSessionValid] = useState(false);
 
-  // Verify and exchange the token from the email link on mount
+  // Listen for auth state changes - Supabase will automatically handle the recovery token
   useEffect(() => {
-    const handlePasswordReset = async () => {
-      try {
-        console.log("Full URL:", window.location.href);
-        console.log("Hash:", window.location.hash);
-        console.log("Search:", window.location.search);
+    console.log("Setting up auth state listener for password reset...");
 
-        // Check for error in query params first (Supabase /verify endpoint returns errors here)
-        const queryParams = new URLSearchParams(window.location.search);
-        const queryError = queryParams.get("error");
-        const errorCode = queryParams.get("error_code");
-        const errorDescription = queryParams.get("error_description");
-        const code = queryParams.get("code");
+    // Check for errors first
+    const queryParams = new URLSearchParams(window.location.search);
+    const queryError = queryParams.get("error");
+    const errorCode = queryParams.get("error_code");
+    const errorDescription = queryParams.get("error_description");
 
-        console.log("Query params:", {
-          queryError,
-          errorCode,
-          errorDescription,
-          hasCode: !!code,
-        });
-
-        // If Supabase returned an error, show it
-        if (queryError) {
-          console.log("Error from Supabase /verify:", {
-            queryError,
-            errorCode,
-            errorDescription,
-          });
-          if (errorCode === "otp_expired") {
-            setError(
-              "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
-            );
-          } else {
-            setError(`Error: ${errorDescription || queryError}`);
-          }
-          setSessionValid(false);
-          setVerifying(false);
-          return;
-        }
-
-        // If we have an authorization code, verify it as an OTP
-        if (code) {
-          console.log("Found authorization code, verifying as recovery OTP...");
-          
-          // Get the email from localStorage (stored during password reset request)
-          const storedEmail = localStorage.getItem("reset_password_email");
-          console.log("Stored email from localStorage:", storedEmail);
-
-          if (!storedEmail) {
-            console.error("No email found in localStorage for password reset");
-            setError(
-              "Session expired. Please request a new password reset link.",
-            );
-            setSessionValid(false);
-            setVerifying(false);
-            return;
-          }
-
-          const { data, error } = await supabase.auth.verifyOtp({
-            email: storedEmail,
-            token: code,
-            type: "recovery",
-          });
-
-          if (error || !data.session) {
-            console.error("Failed to verify OTP:", error);
-            setError(
-              "Failed to establish session. Please request a new password reset link.",
-            );
-            setSessionValid(false);
-            setVerifying(false);
-            return;
-          }
-
-          console.log(
-            "Session established from recovery OTP:",
-            data.session.user?.email,
-          );
-          setSessionValid(true);
-          setVerifying(false);
-          return;
-        }
-
-        // Supabase might append tokens in the hash after 303 redirect
-        const hashParams = new URLSearchParams(
-          window.location.hash.substring(1),
+    if (queryError) {
+      console.error("Error from Supabase:", { queryError, errorCode, errorDescription });
+      if (errorCode === "otp_expired") {
+        setError(
+          "This reset link has expired. Password reset links are valid for 1 hour. Please request a new one.",
         );
-        const accessToken = hashParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token");
-        const hashType = hashParams.get("type");
+      } else {
+        setError(`Error: ${errorDescription || queryError}`);
+      }
+      setVerifying(false);
+      return;
+    }
 
-        console.log("Checking hash for tokens:", {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          hashType,
-        });
+    // Listen for auth state changes - this will fire when Supabase recovers the session
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", { event, hasSession: !!session });
 
-        // If tokens are in the hash, set the session
-        if (accessToken && hashType === "recovery") {
-          console.log("Found recovery tokens in hash, setting session...");
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || "",
-          });
+      if (event === "PASSWORD_RECOVERY" && session) {
+        console.log("✅ Password recovery session established for:", session.user?.email);
+        setSessionValid(true);
+        setVerifying(false);
+      } else if (session) {
+        console.log("Session available:", session.user?.email);
+        setSessionValid(true);
+        setVerifying(false);
+      }
+    });
 
-          if (error || !data.session) {
-            console.error("Failed to set session from hash:", error);
-            setError(
-              "Failed to establish session. Please request a new password reset link.",
-            );
-            setSessionValid(false);
-            setVerifying(false);
-            return;
-          }
+    // Also check if there's already a session (in case the event already fired)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("Session found immediately:", session.user?.email);
+        setSessionValid(true);
+        setVerifying(false);
+      }
+    });
 
-          console.log("Session set from hash tokens");
-          setSessionValid(true);
-          setVerifying(false);
-          return;
-        }
-
-        // If no tokens in hash, wait for Supabase to set the session via cookies
-        // The /verify endpoint should have already set the session
-        console.log(
-          "No tokens in hash, checking for session from /verify redirect...",
-        );
-
-        let session = null;
-        let attempts = 0;
-        const maxAttempts = 5;
-
-        // Try multiple times in case the session takes a moment to be available
-        while (!session && attempts < maxAttempts) {
-          const {
-            data: { session: currentSession },
-            error: sessionError,
-          } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            console.error("Session error:", sessionError);
-          }
-
-          if (currentSession) {
-            console.log("Session found:", currentSession.user?.email);
-            session = currentSession;
-            setSessionValid(true);
-            break;
-          }
-
-          attempts++;
-          if (attempts < maxAttempts) {
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, 300));
-          }
-        }
-
-        if (!session) {
-          console.error("No session found after retries");
+    // Set a timeout - if no session after 5 seconds, show error
+    const timeout = setTimeout(() => {
+      setVerifying((v) => {
+        if (v) {
+          console.error("Timeout waiting for recovery session");
           setError(
             "Failed to establish session. The link may have expired. Please request a new password reset link.",
           );
-          setSessionValid(false);
         }
-      } catch (err) {
-        console.error("Error handling password reset:", err);
-        setError("An error occurred. Please try again.");
-        setSessionValid(false);
-      } finally {
-        setVerifying(false);
-      }
-    };
+        return false;
+      });
+    }, 5000);
 
-    handlePasswordReset();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [supabase]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
