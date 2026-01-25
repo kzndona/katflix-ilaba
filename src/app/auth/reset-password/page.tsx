@@ -104,7 +104,16 @@ export default function ResetPasswordPage() {
             setSessionValid(false);
           } else {
             console.log("Token verified successfully, session established!");
-            setSessionValid(true);
+            // Verify the session was actually set
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              console.log("User verified:", user.email);
+              setSessionValid(true);
+            } else {
+              console.error("Session established but no user found");
+              setError("Failed to establish session. Please try again.");
+              setSessionValid(false);
+            }
           }
           setVerifying(false);
           return;
