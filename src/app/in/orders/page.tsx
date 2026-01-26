@@ -509,6 +509,14 @@ export default function OrdersPage() {
 }
 
 function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  // Log order details for debugging
+  console.log("[ViewModal] Displaying order:", {
+    id: order.id,
+    customer: order.customers?.first_name,
+    baskets: order.breakdown?.baskets?.length,
+    basketServices: order.breakdown?.baskets?.[0]?.services,
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       {/* Modal Centered */}
@@ -775,7 +783,7 @@ function BasketCard({
   // Extract services from the services object with pricing snapshots
   // Services are stored as: { wash: "basic", dry: "basic", wash_pricing: {...}, dry_pricing: {...}, ... }
   const servicesObj = basket?.services || {};
-  
+
   // Find all *_pricing entries which contain the service snapshots
   const servicePricings = Object.entries(servicesObj)
     .filter(([key]) => key.endsWith("_pricing"))
@@ -787,11 +795,12 @@ function BasketCard({
 
   // For services without pricing info, extract from the base service keys
   const baseServices = Object.entries(servicesObj)
-    .filter(([key, value]) => 
-      !key.endsWith("_pricing") && 
-      typeof value === "string" && 
-      value !== "off" && 
-      value !== false
+    .filter(
+      ([key, value]) =>
+        !key.endsWith("_pricing") &&
+        typeof value === "string" &&
+        value !== "off" &&
+        value !== false,
     )
     .map(([key, value]) => ({
       key,
@@ -799,7 +808,18 @@ function BasketCard({
       serviceName: key.charAt(0).toUpperCase() + key.slice(1),
       value, // "basic", "premium", etc.
     }))
-    .filter(s => !["wash_cycles", "plastic_bags", "iron_weight_kg", "fold", "spin", "additional_dry_time_minutes", "additionalDryMinutes"].includes(s.key));
+    .filter(
+      (s) =>
+        ![
+          "wash_cycles",
+          "plastic_bags",
+          "iron_weight_kg",
+          "fold",
+          "spin",
+          "additional_dry_time_minutes",
+          "additionalDryMinutes",
+        ].includes(s.key),
+    );
 
   // Calculate subtotal from pricing snapshots
   const servicesSubtotal = servicePricings.reduce(
@@ -844,7 +864,8 @@ function BasketCard({
                   className="text-xs text-gray-700 grid grid-cols-[1fr_80px] gap-2"
                 >
                   <span className="font-medium truncate">
-                    {serviceName}{tier}
+                    {serviceName}
+                    {tier}
                   </span>
                   <span className="font-medium text-right">
                     ₱{(basePrice as number).toFixed(2)}

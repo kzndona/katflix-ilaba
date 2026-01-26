@@ -95,15 +95,18 @@ export async function GET(request: NextRequest) {
         breakdown: {
           items: breakdown.items || [],
           baskets: (breakdown.baskets || []).map((basket: any, basketIdx: number, basketsArr: any[]) => {
-            const servicesArray = Array.isArray(basket.services) ? basket.services : [];
-            // Calculate basket total from services if not provided
-            const servicesTotal = servicesArray.reduce(
-              (sum: number, service: any) => sum + (service.subtotal || 0),
-              0
-            );
-            let basketTotal = basket.total || servicesTotal;
+            // Services are stored as an object with pricing snapshots, not an array
+            const services = basket.services || {};
             
-            // If no total and no services, try to use proportional share of summary services
+            // Calculate basket total from services if not provided
+            // Look for pricing snapshots (wash_pricing, dry_pricing, etc.)
+            const pricingTotal = Object.entries(services)
+              .filter(([key]) => key.endsWith('_pricing'))
+              .reduce((sum: number, [_, pricing]: [string, any]) => sum + (pricing.base_price || 0), 0);
+            
+            let basketTotal = basket.total || pricingTotal;
+            
+            // If no total and no services pricing, try to use proportional share of summary services
             if (basketTotal === 0 && summary.subtotal_services) {
               const basketCount = basketsArr.length || 1;
               basketTotal = (summary.subtotal_services as number) / basketCount;
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
               basket_number: basket.basket_number || 0,
               weight: basket.weight || 0,
               basket_notes: basket.basket_notes || null,
-              services: servicesArray,
+              services: services,
               total: basketTotal,
             };
           }),

@@ -12,61 +12,62 @@ type StatusFilter =
   | "completed"
   | "cancelled";
 
-// Order type matching new JSONB schema
+// Order type matching updated schema
 type Order = {
   id: string;
+  source: "pos" | "mobile";
   customer_id: string;
+  cashier_id: string | null;
   status: string;
   total_amount: number;
-  source?: "store" | "app"; // Add source field
-  gcash_receipt_url?: string | null; // Add receipt URL
+  created_at: string;
+  gcash_receipt_url?: string | null;
   handling: {
+    service_type?: string;
+    handling_type?: string;
+    pickup_address?: string;
+    delivery_address?: string;
     pickup: {
       address: string;
       status: "pending" | "in_progress" | "completed" | "skipped";
       started_at?: string;
       completed_at?: string;
-      started_by?: string;
-      completed_by?: string;
     };
     delivery: {
       address: string;
       status: "pending" | "in_progress" | "completed" | "skipped";
       started_at?: string;
       completed_at?: string;
-      started_by?: string;
-      completed_by?: string;
     };
   };
   breakdown: {
+    items: Array<any>;
     baskets: Array<{
       basket_number: number;
       weight: number;
       basket_notes: string | null;
-      status: "pending" | "processing" | "completed";
+      total: number;
       services: Array<{
-        id: string;
-        service_id: string;
-        service_name: string;
-        is_premium: boolean;
-        multiplier: number;
-        rate_per_kg: number;
-        subtotal: number;
+        service_type: string;
         status: "pending" | "in_progress" | "completed" | "skipped";
         started_at?: string;
         completed_at?: string;
-        started_by?: string;
-        completed_by?: string;
+        notes?: string;
       }>;
-      total: number;
+      services_data?: Record<string, any>; // Pricing snapshots
     }>;
-    audit_log?: Array<any>;
+    summary?: Record<string, any>;
   };
   customers: {
     id: string;
     first_name: string;
     last_name: string;
     phone_number: string | null;
+  } | null;
+  staff?: {
+    id: string;
+    first_name: string;
+    last_name: string;
   } | null;
 };
 
@@ -168,12 +169,16 @@ export default function BasketsPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/orders/getOrdersWithBaskets");
+      const res = await fetch("/api/orders/withServiceStatus");
       if (!res.ok) throw new Error("Failed to load orders");
-      const data = await res.json();
+      const response = await res.json();
+      
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load orders");
+      }
 
       // Filter only non-completed processing orders
-      const processingOrders = data.filter(
+      const processingOrders = response.data.filter(
         (o: any) =>
           o.status !== "completed" &&
           (o.status === "pending" ||
@@ -233,10 +238,15 @@ export default function BasketsPage() {
   ): {
     label: string;
     action: "start" | "complete";
-    type: "pickup" | "service" | "delivery"; // what we're acting on
-    serviceIndex?: number;
+    type: "pickup" | "service" | "delivery";
+    serviceType?: string;
     basketNumber?: number;
   } | null => {
+    // Safety check: ensure handling data exists
+    if (!order.handling || !order.handling.pickup) {
+      return null;
+    }
+
     // STEP 1: Check if pickup is pending
     if (order.handling.pickup.status === "pending") {
       return {
@@ -254,31 +264,31 @@ export default function BasketsPage() {
       };
     }
 
-    // STEP 2: If pickup is done (completed/skipped), check basket services
+    // STEP 2: If pickup is done, check basket services
     const services = basket.services || [];
 
     // Check for in-progress service
-    const inProgressIndex = services.findIndex(
-      (s: any) => s.status === "in_progress",
+    const inProgressService = services.find(
+      (s: any) => s.status === "in_progress"
     );
-    if (inProgressIndex >= 0) {
+    if (inProgressService) {
       return {
-        label: `Complete ${services[inProgressIndex].service_name}`,
+        label: `Complete ${inProgressService.service_type.charAt(0).toUpperCase() + inProgressService.service_type.slice(1)}`,
         action: "complete",
         type: "service",
-        serviceIndex: inProgressIndex,
+        serviceType: inProgressService.service_type,
         basketNumber: basket.basket_number,
       };
     }
 
     // Check for pending service
-    const pendingIndex = services.findIndex((s: any) => s.status === "pending");
-    if (pendingIndex >= 0) {
+    const pendingService = services.find((s: any) => s.status === "pending");
+    if (pendingService) {
       return {
-        label: `Start ${services[pendingIndex].service_name}`,
+        label: `Start ${pendingService.service_type.charAt(0).toUpperCase() + pendingService.service_type.slice(1)}`,
         action: "start",
         type: "service",
-        serviceIndex: pendingIndex,
+        serviceType: pendingService.service_type,
         basketNumber: basket.basket_number,
       };
     }
@@ -309,36 +319,59 @@ export default function BasketsPage() {
     return null;
   };
 
-  // Unified API call for service/handling updates
+  // Service status update function
   async function updateServiceStatus(
     orderId: string,
     basketNumber: number | null,
     handlingType: string | null,
     action: string,
+    serviceType?: string,
   ) {
     setProcessingId(orderId);
     try {
-      const body: any = {
-        staffId: getStaffId(),
-        action,
-      };
+      if (serviceType && basketNumber !== null) {
+        // Service status update via new endpoint
+        const res = await fetch(
+          `/api/orders/${orderId}/basket/${basketNumber}/service`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              service_type: serviceType,
+              action: action,
+            }),
+          }
+        );
 
-      if (basketNumber !== null) {
-        body.basketId = basketNumber;
-      }
-      if (handlingType) {
-        body.handlingType = handlingType;
-      }
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Failed to update service");
+        }
+      } else {
+        // Handling (pickup/delivery) update via old endpoint
+        const body: any = {
+          staffId: getStaffId(),
+          action,
+        };
 
-      const res = await fetch(`/api/orders/${orderId}/serviceStatus`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+        if (basketNumber !== null) {
+          body.basketId = basketNumber;
+        }
+        if (handlingType) {
+          body.handlingType = handlingType;
+        }
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to update service");
+        const res = await fetch(`/api/orders/${orderId}/serviceStatus`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Failed to update service");
+        }
       }
 
       await load();
@@ -597,50 +630,46 @@ export default function BasketsPage() {
                         {/* Timeline */}
                         <div className="space-y-1.5 mb-3">
                           {/* PICKUP */}
-                          {(order.handling.pickup.status === "pending" ||
-                            order.handling.pickup.status === "in_progress" ||
-                            order.handling.pickup.status === "completed") && (
-                            <div
-                              className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
-                                order.handling.pickup.status === "completed"
-                                  ? "bg-green-100 text-green-900 border border-green-300"
-                                  : order.handling.pickup.status ===
-                                      "in_progress"
-                                    ? "bg-blue-100 text-blue-900 border border-blue-300"
-                                    : "bg-white text-gray-700 border border-gray-200"
-                              }`}
-                            >
-                              <span
-                                className={`text-lg font-bold ${
+                          {order.handling?.pickup && (
+                            (order.handling.pickup.status === "pending" ||
+                              order.handling.pickup.status === "in_progress" ||
+                              order.handling.pickup.status === "completed") && (
+                              <div
+                                className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
                                   order.handling.pickup.status === "completed"
-                                    ? "text-green-600"
+                                    ? "bg-green-100 text-green-900 border border-green-300"
                                     : order.handling.pickup.status ===
                                         "in_progress"
-                                      ? "text-blue-600 animate-pulse"
-                                      : "text-gray-400"
+                                      ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                      : "bg-white text-gray-700 border border-gray-200"
                                 }`}
                               >
-                                {order.handling.pickup.status === "completed"
-                                  ? "✓"
-                                  : order.handling.pickup.status ===
-                                      "in_progress"
-                                    ? "●"
-                                    : "○"}
-                              </span>
-                              <span>Pickup</span>
-                            </div>
+                                <span
+                                  className={`text-lg font-bold ${
+                                    order.handling.pickup.status === "completed"
+                                      ? "text-green-600"
+                                      : order.handling.pickup.status ===
+                                          "in_progress"
+                                        ? "text-blue-600 animate-pulse"
+                                        : "text-gray-400"
+                                  }`}
+                                >
+                                  {order.handling.pickup.status === "completed"
+                                    ? "✓"
+                                    : order.handling.pickup.status ===
+                                        "in_progress"
+                                      ? "●"
+                                      : "○"}
+                                </span>
+                                <span>Pickup</span>
+                              </div>
+                            )
                           )}
 
                           {/* SERVICES */}
-                          {basket.services
+                          {(basket.services || [])
                             .slice()
                             .sort((a: any, b: any) => {
-                              const aType = (
-                                a.service_name || ""
-                              ).toLowerCase();
-                              const bType = (
-                                b.service_name || ""
-                              ).toLowerCase();
                               const sequence = [
                                 "wash",
                                 "spin",
@@ -648,19 +677,9 @@ export default function BasketsPage() {
                                 "iron",
                                 "fold",
                               ];
-
-                              let aIndex = -1,
-                                bIndex = -1;
-                              for (const svc of sequence) {
-                                if (aIndex === -1 && aType.includes(svc))
-                                  aIndex = sequence.indexOf(svc);
-                                if (bIndex === -1 && bType.includes(svc))
-                                  bIndex = sequence.indexOf(svc);
-                              }
-
-                              if (aIndex === -1) aIndex = 999;
-                              if (bIndex === -1) bIndex = 999;
-                              return aIndex - bIndex;
+                              const aIndex = sequence.indexOf(a.service_type);
+                              const bIndex = sequence.indexOf(b.service_type);
+                              return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
                             })
                             .map((service, sIdx) => {
                               const isDone =
@@ -691,52 +710,50 @@ export default function BasketsPage() {
                                     {isDone ? "✓" : isActive ? "●" : "○"}
                                   </span>
                                   <span className="flex-1">
-                                    {service.service_name}
+                                    {service.service_type.charAt(0).toUpperCase() +
+                                      service.service_type.slice(1)}
                                   </span>
-                                  {service.is_premium && (
-                                    <span className="text-yellow-500 font-bold">
-                                      ★
-                                    </span>
-                                  )}
                                 </div>
                               );
                             })}
 
                           {/* DELIVERY */}
-                          {order.handling.delivery.address &&
-                            (order.handling.delivery.status === "pending" ||
-                              order.handling.delivery.status ===
-                                "in_progress") && (
-                              <div
-                                className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
-                                  order.handling.delivery.status ===
-                                  "in_progress"
-                                    ? "bg-purple-100 text-purple-900 border border-purple-300"
-                                    : "bg-white text-gray-700 border border-gray-200"
-                                }`}
-                              >
-                                <span
-                                  className={`text-lg font-bold ${
+                          {order.handling?.delivery?.address &&
+                            order.handling.delivery && (
+                              (order.handling.delivery.status === "pending" ||
+                                order.handling.delivery.status ===
+                                  "in_progress") && (
+                                <div
+                                  className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
                                     order.handling.delivery.status ===
                                     "in_progress"
-                                      ? "text-purple-600 animate-pulse"
-                                      : "text-gray-400"
+                                      ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                      : "bg-white text-gray-700 border border-gray-200"
                                   }`}
                                 >
-                                  {order.handling.delivery.status ===
-                                  "in_progress"
-                                    ? "●"
-                                    : "○"}
-                                </span>
-                                <span>Delivery</span>
-                              </div>
+                                  <span
+                                    className={`text-lg font-bold ${
+                                      order.handling.delivery.status ===
+                                      "in_progress"
+                                        ? "text-purple-600 animate-pulse"
+                                        : "text-gray-400"
+                                    }`}
+                                  >
+                                    {order.handling.delivery.status ===
+                                    "in_progress"
+                                      ? "●"
+                                      : "○"}
+                                  </span>
+                                  <span>Delivery</span>
+                                </div>
+                              )
                             )}
                         </div>
 
                         {/* Action Button */}
                         {nextAction ? (
                           <>
-                            {order.source === "app" &&
+                            {order.source === "mobile" &&
                             order.status === "pending" ? (
                               <button
                                 onClick={() => setMobileOrderModal(order)}
@@ -762,6 +779,7 @@ export default function BasketsPage() {
                                         basket.basket_number,
                                       null,
                                       nextAction.action,
+                                      nextAction.serviceType,
                                     );
                                   } else if (nextAction.type === "delivery") {
                                     updateServiceStatus(

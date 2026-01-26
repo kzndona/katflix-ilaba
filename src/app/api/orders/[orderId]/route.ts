@@ -32,17 +32,17 @@ async function verifyAuth(request: NextRequest) {
 }
 
 /**
- * GET /api/orders/:id
+ * GET /api/orders/:orderId
  * 
  * Retrieve order with all details (authenticated)
  */
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { orderId } = await params;
     
     // Authenticate user
     const authResult = await verifyAuth(request);
@@ -50,7 +50,6 @@ export async function GET(
       return authResult.error;
     }
 
-    const orderId = id;
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
