@@ -3,15 +3,18 @@
 ## Services Management
 
 ### New Fields Available
+
 - **Tier**: Basic or Premium designation
 - **Modifiers**: JSON object for admin-configurable add-ons (e.g., `{"dry_time": "30 min", "fold": "yes"}`)
 - **Sort Order**: Numeric value to control display order
 - **Image URL**: Direct link to service image
 
 ### Service Type Options
+
 - wash, spin, dry, iron, fold, pickup, delivery
 
 ### Example Service Data
+
 ```json
 {
   "id": "uuid",
@@ -36,9 +39,11 @@
 ## Products Management
 
 ### New Fields Available
+
 - **SKU**: Stock Keeping Unit - unique product identifier (e.g., PROD-001)
 
 ### Required Fields
+
 - Item Name
 - Unit Cost
 - Unit Price
@@ -46,6 +51,7 @@
 - Reorder Level
 
 ### Example Product Data
+
 ```json
 {
   "id": "uuid",
@@ -66,30 +72,32 @@
 
 ### Services
 
-| Endpoint | Method | Purpose | Response |
-|----------|--------|---------|----------|
-| `/api/manage/services/getServices` | GET | Fetch all services (sorted by sort_order) | `{success: true, data: []}` |
-| `/api/manage/services/saveService` | POST | Create or update service | `{success: true, data: {...}}` |
-| `/api/manage/services/removeService` | POST | Delete service | `{success: true}` |
+| Endpoint                             | Method | Purpose                                   | Response                       |
+| ------------------------------------ | ------ | ----------------------------------------- | ------------------------------ |
+| `/api/manage/services/getServices`   | GET    | Fetch all services (sorted by sort_order) | `{success: true, data: []}`    |
+| `/api/manage/services/saveService`   | POST   | Create or update service                  | `{success: true, data: {...}}` |
+| `/api/manage/services/removeService` | POST   | Delete service                            | `{success: true}`              |
 
 ### Products
 
-| Endpoint | Method | Purpose | Response |
-|----------|--------|---------|----------|
-| `/api/manage/products/getProducts` | GET | Fetch all active products (sorted by name) | `{success: true, data: []}` |
-| `/api/manage/products/saveProduct` | POST | Create or update product (+ optional image) | `{success: true, data: {...}}` |
-| `/api/manage/products/removeProduct` | POST | Delete product | `{success: true}` |
+| Endpoint                             | Method | Purpose                                     | Response                       |
+| ------------------------------------ | ------ | ------------------------------------------- | ------------------------------ |
+| `/api/manage/products/getProducts`   | GET    | Fetch all active products (sorted by name)  | `{success: true, data: []}`    |
+| `/api/manage/products/saveProduct`   | POST   | Create or update product (+ optional image) | `{success: true, data: {...}}` |
+| `/api/manage/products/removeProduct` | POST   | Delete product                              | `{success: true}`              |
 
 ---
 
 ## Integration with Order Creation
 
 ✅ **Services** are validated by `/api/pos/create`:
+
 - Checks service exists and is active
 - Uses service data for order breakdown
 - Applies modifier information if configured
 
 ✅ **Products** are validated by `/api/pos/create`:
+
 - Checks product exists and is active
 - Verifies stock availability
 - Deducts inventory on order creation
@@ -100,6 +108,7 @@
 ## Form Validation
 
 ### Services
+
 - `service_type` (required): Must be one of: wash, spin, dry, iron, fold, pickup, delivery
 - `name` (required): Service name
 - `tier` (optional): basic or premium
@@ -107,6 +116,7 @@
 - `sort_order`: Numeric, defaults to list length
 
 ### Products
+
 - `item_name` (required): Product name
 - `sku` (optional): Unique identifier
 - `unit_price` (required): Positive number
@@ -119,6 +129,7 @@
 ## Usage in Phase 2 POS UI
 
 ### Service Selector Component
+
 ```typescript
 // Fetch services with tier/modifier options
 const services = await fetch('/api/manage/services/getServices')
@@ -137,6 +148,7 @@ services.map(s => (
 ```
 
 ### Product Selector Component
+
 ```typescript
 // Fetch products with stock info
 const products = await fetch('/api/manage/products/getProducts')

@@ -77,7 +77,9 @@ export default function ServicesPage() {
           const cmp = aVal.localeCompare(String(bVal));
           return sortConfig.direction === "asc" ? cmp : -cmp;
         } else if (typeof aVal === "number") {
-          return sortConfig.direction === "asc" ? aVal - (bVal as number) : (bVal as number) - aVal;
+          return sortConfig.direction === "asc"
+            ? aVal - (bVal as number)
+            : (bVal as number) - aVal;
         }
         return 0;
       });
@@ -109,9 +111,13 @@ export default function ServicesPage() {
         modifiers: r.modifiers ?? null,
         sort_order: r.sort_order ?? 0,
         image_url: r.image_url ?? null,
-        base_price: r.base_price !== null && r.base_price !== undefined ? String(r.base_price) : null,
+        base_price:
+          r.base_price !== null && r.base_price !== undefined
+            ? String(r.base_price)
+            : null,
         base_duration_minutes:
-          r.base_duration_minutes !== null && r.base_duration_minutes !== undefined
+          r.base_duration_minutes !== null &&
+          r.base_duration_minutes !== undefined
             ? String(r.base_duration_minutes)
             : null,
         is_active: r.is_active ?? true,
@@ -215,7 +221,7 @@ export default function ServicesPage() {
   async function remove() {
     if (!editing?.id) return;
     if (!confirm("Are you sure you want to delete this service?")) return;
-    
+
     setErrorMsg(null);
     setSaving(true);
     try {
@@ -257,7 +263,8 @@ export default function ServicesPage() {
   };
 
   const SortIcon = ({ field }: { field: keyof Service }) => {
-    if (sortConfig.key !== field) return <span className="text-gray-300">⇅</span>;
+    if (sortConfig.key !== field)
+      return <span className="text-gray-300">⇅</span>;
     return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
   };
 
@@ -267,9 +274,12 @@ export default function ServicesPage() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Services Management</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Services Management
+            </h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              {filteredRows.length} service{filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length} service
+              {filteredRows.length !== 1 ? "s" : ""} found
             </p>
           </div>
           <button
@@ -301,10 +311,14 @@ export default function ServicesPage() {
         {/* Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading services...</div>
+            <div className="p-8 text-center text-gray-500">
+              Loading services...
+            </div>
           ) : paginatedRows.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {rows.length === 0 ? "No services yet. Create one to get started!" : "No results match your search."}
+              {rows.length === 0
+                ? "No services yet. Create one to get started!"
+                : "No results match your search."}
             </div>
           ) : (
             <>
@@ -404,19 +418,24 @@ export default function ServicesPage() {
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
                           {service.tier ? (
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              service.tier === "basic"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-purple-100 text-purple-800"
-                            }`}>
-                              {service.tier.charAt(0).toUpperCase() + service.tier.slice(1)}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                service.tier === "basic"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}
+                            >
+                              {service.tier.charAt(0).toUpperCase() +
+                                service.tier.slice(1)}
                             </span>
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}
                         </td>
                         <td className="px-4 py-2 text-sm font-semibold text-green-700">
-                          {service.base_price ? `₱${parseFloat(service.base_price).toFixed(2)}` : "—"}
+                          {service.base_price
+                            ? `₱${parseFloat(service.base_price).toFixed(2)}`
+                            : "—"}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
                           {service.base_duration_minutes
@@ -465,7 +484,8 @@ export default function ServicesPage() {
               {totalPages > 1 && (
                 <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
                   <div className="text-xs text-gray-600">
-                    Showing {startIdx + 1} to {Math.min(endIdx, filteredRows.length)} of{" "}
+                    Showing {startIdx + 1} to{" "}
+                    {Math.min(endIdx, filteredRows.length)} of{" "}
                     {filteredRows.length} services
                   </div>
                   <div className="flex gap-2">
@@ -499,7 +519,9 @@ export default function ServicesPage() {
                         </div>
                       ))}
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -530,7 +552,8 @@ export default function ServicesPage() {
         />
       )}
     </div>
-  );}
+  );
+}
 
 // Edit Modal Component
 function EditModal({
@@ -587,7 +610,9 @@ function EditModal({
           <div className="p-5 space-y-4">
             {errorMsg && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+                <div className="text-red-800 text-xs font-medium">
+                  {errorMsg}
+                </div>
               </div>
             )}
 
@@ -648,7 +673,7 @@ function EditModal({
                 onChange={(e) =>
                   updateField(
                     "tier",
-                    e.target.value === "" ? null : (e.target.value as any)
+                    e.target.value === "" ? null : (e.target.value as any),
                   )
                 }
                 className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -671,7 +696,7 @@ function EditModal({
                 onChange={(e) =>
                   updateField(
                     "base_price",
-                    e.target.value === "" ? "" : e.target.value
+                    e.target.value === "" ? "" : e.target.value,
                   )
                 }
                 className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -690,7 +715,7 @@ function EditModal({
                 onChange={(e) =>
                   updateField(
                     "base_duration_minutes",
-                    e.target.value === "" ? "" : e.target.value
+                    e.target.value === "" ? "" : e.target.value,
                   )
                 }
                 className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -737,7 +762,9 @@ function EditModal({
               </label>
               <textarea
                 value={
-                  service.modifiers ? JSON.stringify(service.modifiers, null, 2) : ""
+                  service.modifiers
+                    ? JSON.stringify(service.modifiers, null, 2)
+                    : ""
                 }
                 onChange={(e) => {
                   try {

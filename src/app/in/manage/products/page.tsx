@@ -77,7 +77,9 @@ export default function ProductsPage() {
           return sortConfig.direction === "asc" ? cmp : -cmp;
         } else if (typeof aVal === "number") {
           const numBVal = Number(bVal);
-          return sortConfig.direction === "asc" ? aVal - numBVal : numBVal - aVal;
+          return sortConfig.direction === "asc"
+            ? aVal - numBVal
+            : numBVal - aVal;
         }
         return 0;
       });
@@ -103,10 +105,22 @@ export default function ProductsPage() {
         id: r.id,
         item_name: r.item_name ?? "",
         sku: r.sku ?? null,
-        unit_price: r.unit_price !== null && r.unit_price !== undefined ? String(r.unit_price) : null,
-        unit_cost: r.unit_cost !== null && r.unit_cost !== undefined ? String(r.unit_cost) : null,
-        quantity: r.quantity !== null && r.quantity !== undefined ? String(Math.trunc(Number(r.quantity))) : "0",
-        reorder_level: r.reorder_level !== null && r.reorder_level !== undefined ? String(Math.trunc(Number(r.reorder_level))) : "0",
+        unit_price:
+          r.unit_price !== null && r.unit_price !== undefined
+            ? String(r.unit_price)
+            : null,
+        unit_cost:
+          r.unit_cost !== null && r.unit_cost !== undefined
+            ? String(r.unit_cost)
+            : null,
+        quantity:
+          r.quantity !== null && r.quantity !== undefined
+            ? String(Math.trunc(Number(r.quantity)))
+            : "0",
+        reorder_level:
+          r.reorder_level !== null && r.reorder_level !== undefined
+            ? String(Math.trunc(Number(r.reorder_level)))
+            : "0",
         is_active: r.is_active ?? true,
         image_url: r.image_url ?? null,
         created_at: r.created_at ?? undefined,
@@ -169,7 +183,8 @@ export default function ProductsPage() {
         ...(editing.id ? { id: editing.id } : {}),
         item_name: editing.item_name.trim(),
         sku: editing.sku?.trim() || null,
-        unit_price: editing.unit_price === "" ? null : Number(editing.unit_price),
+        unit_price:
+          editing.unit_price === "" ? null : Number(editing.unit_price),
         unit_cost: editing.unit_cost === "" ? null : Number(editing.unit_cost),
         quantity: Number(Math.trunc(Number(editing.quantity))),
         reorder_level: Number(Math.trunc(Number(editing.reorder_level))),
@@ -200,7 +215,7 @@ export default function ProductsPage() {
   async function remove() {
     if (!editing?.id) return;
     if (!confirm("Are you sure you want to delete this product?")) return;
-    
+
     setErrorMsg(null);
     setSaving(true);
     try {
@@ -242,7 +257,8 @@ export default function ProductsPage() {
   };
 
   const SortIcon = ({ field }: { field: keyof Product }) => {
-    if (sortConfig.key !== field) return <span className="text-gray-300">⇅</span>;
+    if (sortConfig.key !== field)
+      return <span className="text-gray-300">⇅</span>;
     return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
   };
 
@@ -252,9 +268,12 @@ export default function ProductsPage() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Products Management</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Products Management
+            </h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              {filteredRows.length} product{filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length} product
+              {filteredRows.length !== 1 ? "s" : ""} found
             </p>
           </div>
           <button
@@ -286,10 +305,14 @@ export default function ProductsPage() {
         {/* Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading products...</div>
+            <div className="p-8 text-center text-gray-500">
+              Loading products...
+            </div>
           ) : paginatedRows.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {rows.length === 0 ? "No products yet. Create one to get started!" : "No results match your search."}
+              {rows.length === 0
+                ? "No products yet. Create one to get started!"
+                : "No results match your search."}
             </div>
           ) : (
             <>
@@ -396,10 +419,14 @@ export default function ProductsPage() {
                           {product.sku || "—"}
                         </td>
                         <td className="px-4 py-2 text-sm font-semibold text-blue-700">
-                          {product.unit_cost ? `₱${parseFloat(product.unit_cost).toFixed(2)}` : "—"}
+                          {product.unit_cost
+                            ? `₱${parseFloat(product.unit_cost).toFixed(2)}`
+                            : "—"}
                         </td>
                         <td className="px-4 py-2 text-sm font-semibold text-green-700">
-                          {product.unit_price ? `₱${parseFloat(product.unit_price).toFixed(2)}` : "—"}
+                          {product.unit_price
+                            ? `₱${parseFloat(product.unit_price).toFixed(2)}`
+                            : "—"}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
                           {product.quantity}
@@ -449,7 +476,8 @@ export default function ProductsPage() {
               {totalPages > 1 && (
                 <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
                   <div className="text-xs text-gray-600">
-                    Showing {startIdx + 1} to {Math.min(endIdx, filteredRows.length)} of{" "}
+                    Showing {startIdx + 1} to{" "}
+                    {Math.min(endIdx, filteredRows.length)} of{" "}
                     {filteredRows.length} products
                   </div>
                   <div className="flex gap-2">
@@ -483,7 +511,9 @@ export default function ProductsPage() {
                         </div>
                       ))}
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -562,7 +592,9 @@ function EditModal({
           <div className="p-5 space-y-4">
             {errorMsg && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+                <div className="text-red-800 text-xs font-medium">
+                  {errorMsg}
+                </div>
               </div>
             )}
 
@@ -607,7 +639,7 @@ function EditModal({
                   onChange={(e) =>
                     updateField(
                       "unit_cost",
-                      e.target.value === "" ? "" : e.target.value
+                      e.target.value === "" ? "" : e.target.value,
                     )
                   }
                   className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -625,7 +657,7 @@ function EditModal({
                   onChange={(e) =>
                     updateField(
                       "unit_price",
-                      e.target.value === "" ? "" : e.target.value
+                      e.target.value === "" ? "" : e.target.value,
                     )
                   }
                   className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -647,7 +679,7 @@ function EditModal({
                   onChange={(e) =>
                     updateField(
                       "quantity",
-                      e.target.value === "" ? "0" : e.target.value
+                      e.target.value === "" ? "0" : e.target.value,
                     )
                   }
                   className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -665,7 +697,7 @@ function EditModal({
                   onChange={(e) =>
                     updateField(
                       "reorder_level",
-                      e.target.value === "" ? "0" : e.target.value
+                      e.target.value === "" ? "0" : e.target.value,
                     )
                   }
                   className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -675,7 +707,11 @@ function EditModal({
             </div>
 
             {/* Image Upload */}
-            <ImageUploadField product={product} updateField={updateField} saving={saving} />
+            <ImageUploadField
+              product={product}
+              updateField={updateField}
+              saving={saving}
+            />
 
             {/* Active Checkbox */}
             <div className="flex items-center space-x-2 py-1">
@@ -743,7 +779,7 @@ function ImageUploadField({
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ""
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
   );
 
   const handleFileSelect = async (file: File) => {
@@ -763,7 +799,7 @@ function ImageUploadField({
     try {
       const timestamp = Date.now();
       const filename = `${product.id}-${timestamp}`;
-      
+
       const { data, error } = await supabase.storage
         .from("product-images")
         .upload(filename, file, { upsert: true });
@@ -783,7 +819,7 @@ function ImageUploadField({
 
   const handleDelete = async () => {
     if (!product.image_url) return;
-    
+
     setUploadError(null);
     setUploading(true);
 

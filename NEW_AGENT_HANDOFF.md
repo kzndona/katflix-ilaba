@@ -2,7 +2,7 @@
 
 **Date:** January 27, 2026  
 **Status:** Ready for Implementation Phase 2 & 3  
-**Previous Work:** Database schema clarification completed, UI/Services/Products pages polished  
+**Previous Work:** Database schema clarification completed, UI/Services/Products pages polished
 
 ---
 
@@ -11,6 +11,7 @@
 A laundry POS system is being overhauled from legacy code. The UI for **Services** and **Products** management pages are **COMPLETE** ✅. You're now starting the **NEW POS ORDER CREATION** interface (Step 1-6 workflow).
 
 **Key Facts:**
+
 - Stack: Next.js 13+, TypeScript, Tailwind CSS, Supabase
 - Architecture: Client-side + API routes
 - Status: Requirements clarified, ready to build UI + APIs
@@ -114,21 +115,21 @@ Example:
 
 ```typescript
 // 1. Service Fee (staff-service only)
-service_fee: baskets.some(b => b.staffService) ? 40 : 0
+service_fee: baskets.some((b) => b.staffService) ? 40 : 0;
 
 // 2. Drop-off Service
-drop_off_fee: staffService ? 40 : 0  // Same as service fee, now conditional
+drop_off_fee: staffService ? 40 : 0; // Same as service fee, now conditional
 
 // 3. Delivery Fee
-delivery_fee: handling.deliver ? (override || 50) : 0
+delivery_fee: handling.deliver ? override || 50 : 0;
 // Cashier can override but not below 50
 
 // 4. VAT
-vat: (subtotal) * 0.12  // 12% INCLUSIVE in total
+vat: subtotal * 0.12; // 12% INCLUSIVE in total
 // This means VAT is pre-calculated into service prices
 
 // 5. Loyalty Discount
-discount: breakdown.useLoyaltyDiscount ? (loyaltyPoints / 100) : 0
+discount: breakdown.useLoyaltyDiscount ? loyaltyPoints / 100 : 0;
 ```
 
 ### ✅ LOCKED - Workflow (6 Steps)
@@ -185,7 +186,7 @@ Step 6: Payment Modal
       total_price: number
     }
   ],
-  
+
   baskets: [
     {
       basket_number: number
@@ -204,13 +205,13 @@ Step 6: Payment Modal
       subtotal: number
     }
   ],
-  
+
   fees: [
     { type: "service_fee", amount: 40, description: "Staff service" },
     { type: "delivery_fee", amount: 50, description: "Delivery to address" },
     { type: "plastic_bag", amount: 3, quantity: 5, description: "Plastic bags" }
   ],
-  
+
   summary: {
     subtotal: number
     service_fee: number
@@ -260,6 +261,7 @@ Step 6: Payment Modal
 ## 📊 Database Schema (LOCKED)
 
 ### Services Table
+
 ```sql
 CREATE TABLE services (
   id UUID PRIMARY KEY,
@@ -277,6 +279,7 @@ CREATE TABLE services (
 ```
 
 ### Products Table
+
 ```sql
 CREATE TABLE products (
   id UUID PRIMARY KEY,
@@ -295,6 +298,7 @@ CREATE TABLE products (
 ```
 
 ### Orders Table (Already Exists)
+
 ```sql
 CREATE TABLE orders (
   id UUID PRIMARY KEY,
@@ -334,10 +338,12 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ## 🛠 What's Already Built (Don't Duplicate)
 
 ### ✅ Management Pages (Reference These)
+
 - [Services Page](src/app/in/manage/services/page.tsx) - **COMPLETE**, polished UI
 - [Products Page](src/app/in/manage/products/page.tsx) - **COMPLETE**, table-based, image upload
 
 **What to learn:**
+
 - Professional table layout with sorting/pagination
 - Modal editing patterns (right-slide modal)
 - Financial formatting
@@ -346,10 +352,12 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 - Error handling
 
 ### ✅ API Routes for Image Upload
+
 - `POST /api/products/upload-image` - Uses service key, bypasses RLS
 - **Key Learning:** Server-side Supabase client with service key for privileged operations
 
 ### ✅ Supabase Client Setup
+
 - `.env.local` has `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 - Server routes use service key
 - Client routes use public key
@@ -361,6 +369,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ### Phase 1: UI Components (3-4 days)
 
 #### 1. Main POS Layout ([src/app/in/pos/page.tsx](src/app/in/pos/page.tsx))
+
 - Left side: Step-by-step form (scrollable)
 - Right side: Order summary (sticky, real-time updates)
 - Professional layout matching services/products style
@@ -369,12 +378,14 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 #### 2. Components (In src/app/in/pos/components/)
 
 **ServiceTypeSelector.tsx**
+
 ```typescript
 // Radio: Self-service vs Staff-service
 // Affects: Service fee (40 PHP if staff)
 ```
 
 **BasketConfigurator.tsx**
+
 ```typescript
 // Add baskets with services
 // Wash: Off/Basic/Premium
@@ -390,6 +401,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **ProductSelector.tsx**
+
 ```typescript
 // Grid or list of products
 // Show: Image, Name, Price, Quantity in stock
@@ -398,6 +410,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **CustomerLookup.tsx**
+
 ```typescript
 // Search input (debounced 300ms)
 // Results dropdown (first 10)
@@ -406,6 +419,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **DeliveryHandler.tsx**
+
 ```typescript
 // Pickup OR Delivery (radio)
 // If delivery: Address field + Fee field (default 50, min 50)
@@ -413,6 +427,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **OrderSummary.tsx** (Right sidebar - sticky)
+
 ```typescript
 // Real-time updates as you add items
 // Baskets breakdown (weight, services, subtotal)
@@ -423,6 +438,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **PaymentModal.tsx**
+
 ```typescript
 // Modal overlay
 // MOP: Cash or GCash (radio)
@@ -433,6 +449,7 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 ```
 
 **ReceiptModal.tsx**
+
 ```typescript
 // Show after successful creation
 // Order ID, Date, Customer, Items, Total
@@ -443,14 +460,15 @@ Status badges: px-2 py-0.5, rounded-full, text-xs, font-semibold
 #### 3. Logic Hooks (In src/app/in/pos/logic/)
 
 **usePOSState.ts**
+
 ```typescript
 // Main state management
-const [serviceType, setServiceType] = useState('self_service')
-const [baskets, setBaskets] = useState([])
-const [products, setProducts] = useState([])
-const [customer, setCustomer] = useState(null)
-const [handling, setHandling] = useState({})
-const [payment, setPayment] = useState({})
+const [serviceType, setServiceType] = useState("self_service");
+const [baskets, setBaskets] = useState([]);
+const [products, setProducts] = useState([]);
+const [customer, setCustomer] = useState(null);
+const [handling, setHandling] = useState({});
+const [payment, setPayment] = useState({});
 
 // Methods: addBasket, updateBasket, deleteBasket
 //          addProduct, removeProduct
@@ -458,6 +476,7 @@ const [payment, setPayment] = useState({})
 ```
 
 **posTypes.ts**
+
 ```typescript
 // TypeScript types for all POS structures
 type Basket = { ... }
@@ -467,6 +486,7 @@ type OrderHandling = { ... }
 ```
 
 **posHelpers.ts**
+
 ```typescript
 // Calculation functions
 calculateBasketSubtotal(basket: Basket): number
@@ -476,6 +496,7 @@ validateDeliveryFee(fee: number): boolean
 ```
 
 **breakdownBuilder.ts**
+
 ```typescript
 // Build JSONB structures
 buildBreakdown(baskets, products, ...): OrderBreakdown
@@ -487,6 +508,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ### Phase 2: API Endpoints (2-3 days)
 
 #### 1. Support Endpoints (Already Exist - Use These)
+
 - `GET /api/services` - ✅ DONE
 - `GET /api/products` - ✅ DONE (includes images, stock)
 - `GET /api/customers/search?q=` - Check if exists, else create
@@ -533,6 +555,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ## 🔗 API Data Shapes (Reference)
 
 ### GET /api/services
+
 ```json
 [
   {
@@ -548,6 +571,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ```
 
 ### GET /api/products
+
 ```json
 [
   {
@@ -564,6 +588,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ```
 
 ### GET /api/customers/search?q=John
+
 ```json
 [
   {
@@ -581,6 +606,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ## 📝 Testing Checklist
 
 ### UI Testing
+
 - [ ] All 6 steps render correctly
 - [ ] Back/forward navigation works
 - [ ] Form validation (required fields)
@@ -589,6 +615,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 - [ ] Error messages clear and helpful
 
 ### API Testing
+
 - [ ] POST /api/orders/pos/create with valid payload succeeds
 - [ ] Creates customer if doesn't exist
 - [ ] Deducts inventory correctly
@@ -596,6 +623,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 - [ ] Transaction rolls back on failure
 
 ### Edge Cases
+
 - [ ] Basket > 8kg auto-creates new basket ✓
 - [ ] Iron minimum 2kg enforced ✓
 - [ ] Delivery fee not below 50 ✓
@@ -608,20 +636,23 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ## 🎓 Code Examples to Reference
 
 ### Services Table - How to format financial values
+
 ```typescript
 // In products/services pages
-`₱${parseFloat(service.base_price).toFixed(2)}`
+`₱${parseFloat(service.base_price).toFixed(2)}`;
 
 // Apply same everywhere in POS
 ```
 
 ### Products Page - Modal pattern
+
 ```typescript
 // Right-slide modal from products/page.tsx
 // Use same EditModal architecture for payment modal
 ```
 
 ### Image Display - From products
+
 ```typescript
 // Already tested, use same pattern for product images in ProductSelector
 <img src={product.image_url} className="w-full h-32 object-cover rounded" />
@@ -647,6 +678,7 @@ buildHandling(customer, delivery, payment, ...): OrderHandling
 ## 📱 Responsive Design Notes
 
 POS terminals are typically:
+
 - Wide (1024px minimum, often 1280px+)
 - Use 2-column layout (form left, summary right)
 - Summary should be sticky (stays in view while scrolling form)
@@ -711,6 +743,7 @@ When complete, you should be able to:
 ## 📞 Questions Before Starting?
 
 If anything is unclear:
+
 - Reference `POS_OVERHAUL_CRITICAL_REVIEW_ANSWERS.md` for business logic Q&A
 - Reference `IMPLEMENTATION_GAMEPLAN.md` for phased approach
 - Reference services/products pages for code patterns
