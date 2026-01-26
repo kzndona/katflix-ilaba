@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
+// Helper functions
+function notFound(message: string) {
+  return NextResponse.json({ error: message }, { status: 404 });
+}
+
+function serverError(message: string) {
+  return NextResponse.json({ error: message }, { status: 500 });
+}
+
+async function verifyAuth(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return {
+        success: false,
+        error: NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        ),
+      };
+    }
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: serverError('Authentication failed'),
+    };
+  }
+}
+
 /**
  * GET /api/orders/:id
  * 
@@ -21,7 +51,7 @@ export async function GET(
     const orderId = params.id;
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         cookies: {
           getAll() {
