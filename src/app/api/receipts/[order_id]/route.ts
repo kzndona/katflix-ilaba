@@ -22,10 +22,11 @@ function serverError(message: string) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { order_id: string } }
+  { params }: { params: Promise<{ order_id: string }> }
 ) {
   try {
-    const orderId = params.order_id;
+    const { order_id } = await params;
+    const orderId = order_id;
 
     // TODO: Implement receipt generation logic
     // For now, return placeholder response

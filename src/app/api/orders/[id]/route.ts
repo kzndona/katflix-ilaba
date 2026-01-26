@@ -39,16 +39,18 @@ async function verifyAuth(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     // Authenticate user
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
       return authResult.error;
     }
 
-    const orderId = params.id;
+    const orderId = id;
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
