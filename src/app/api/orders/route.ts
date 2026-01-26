@@ -46,6 +46,11 @@ export async function GET(request: NextRequest) {
           last_name,
           phone_number,
           email_address
+        ),
+        staff:cashier_id(
+          id,
+          first_name,
+          last_name
         )
       `)
       .order('created_at', { ascending: false });
@@ -62,16 +67,18 @@ export async function GET(request: NextRequest) {
     const transformedOrders = (orders || []).map((order: any) => {
       const breakdown = order.breakdown || {};
       const handling = order.handling || {};
+      const summary = breakdown.summary || {};
       
       return {
         id: order.id,
         source: order.source || 'pos', // 'pos' or 'mobile'
         customer_id: order.customer_id,
+        cashier_id: order.cashier_id,
         status: order.status,
         total_amount: order.total_amount,
         order_note: breakdown.order_note || null,
         created_at: order.created_at,
-        completed_at: order.updated_at, // Use updated_at as completed timestamp
+        completed_at: order.updated_at,
         handling: {
           pickup: {
             address: handling.handling_type === 'pickup' ? (handling.pickup_address || '') : '',
@@ -83,16 +90,40 @@ export async function GET(request: NextRequest) {
             status: order.status === 'completed' ? 'completed' : 'pending',
             notes: handling.delivery_notes || null,
           },
+          payment_method: handling.payment_method || 'cash',
         },
         breakdown: {
           items: breakdown.items || [],
-          baskets: breakdown.baskets || [],
-          summary: breakdown.summary || {
-            subtotal_products: breakdown.subtotal_products || null,
-            subtotal_services: breakdown.subtotal_services || null,
-            handling: breakdown.handling_fee || null,
-            service_fee: breakdown.service_fee || null,
-            grand_total: order.total_amount,
+          baskets: (breakdown.baskets || []).map((basket: any, basketIdx: number, basketsArr: any[]) => {
+            const servicesArray = Array.isArray(basket.services) ? basket.services : [];
+            // Calculate basket total from services if not provided
+            const servicesTotal = servicesArray.reduce(
+              (sum: number, service: any) => sum + (service.subtotal || 0),
+              0
+            );
+            let basketTotal = basket.total || servicesTotal;
+            
+            // If no total and no services, try to use proportional share of summary services
+            if (basketTotal === 0 && summary.subtotal_services) {
+              const basketCount = basketsArr.length || 1;
+              basketTotal = (summary.subtotal_services as number) / basketCount;
+            }
+            
+            return {
+              basket_number: basket.basket_number || 0,
+              weight: basket.weight || 0,
+              basket_notes: basket.basket_notes || null,
+              services: servicesArray,
+              total: basketTotal,
+            };
+          }),
+          summary: {
+            subtotal_products: summary.subtotal_products ?? null,
+            subtotal_services: summary.subtotal_services ?? null,
+            staff_service_fee: summary.staff_service_fee ?? null,
+            delivery_fee: summary.delivery_fee ?? null,
+            vat_amount: summary.vat_amount ?? null,
+            total: summary.total ?? order.total_amount,
           },
           payment: breakdown.payment || {
             method: handling.payment_method || 'cash',
@@ -102,6 +133,7 @@ export async function GET(request: NextRequest) {
           },
         },
         customers: order.customers,
+        staff: order.staff,
       };
     });
 

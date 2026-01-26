@@ -15,6 +15,8 @@ type Order = {
   id: string;
   source: string;
   customer_id: string | null;
+  cashier_id: string | null;
+  cashier_name?: string; // For display
   status: string;
   total_amount: number;
   order_note: string | null;
@@ -31,6 +33,7 @@ type Order = {
       status: "pending" | "in_progress" | "completed" | "skipped";
       notes: string | null;
     };
+    payment_method?: "cash" | "gcash";
   };
   breakdown: {
     items: Array<{
@@ -60,9 +63,10 @@ type Order = {
     summary: {
       subtotal_products: number | null;
       subtotal_services: number | null;
-      handling: number | null;
-      service_fee: number | null;
-      grand_total: number;
+      staff_service_fee: number | null;
+      delivery_fee: number | null;
+      vat_amount: number | null;
+      total: number;
     };
     payment: {
       method: "cash" | "gcash";
@@ -72,6 +76,11 @@ type Order = {
     };
   };
   customers: Customer | null;
+  staff?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
 };
 
 type SortConfig = {
@@ -122,6 +131,7 @@ export default function OrdersPage() {
         throw new Error(body?.error || `Server responded ${res.status}`);
       }
       const data = await res.json();
+      console.log("[Orders API Response]", data);
       setRows(data || []);
     } catch (err) {
       console.error(err);
@@ -545,6 +555,20 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
             />
           </div>
 
+          {/* Cashier Info */}
+          {(order.staff || order.cashier_id) && (
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
+              <DetailField
+                label="Cashier"
+                value={
+                  order.staff
+                    ? `${order.staff.first_name} ${order.staff.last_name}`
+                    : `ID: ${order.cashier_id?.slice(0, 8)}`
+                }
+              />
+            </div>
+          )}
+
           {/* Customer Contact */}
           {order.customers && (
             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
@@ -594,9 +618,10 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Products:</span>
                       <span className="font-medium">
-                        ₱{(order.breakdown.summary.subtotal_products as number).toFixed(
-                          2,
-                        )}
+                        ₱
+                        {(
+                          order.breakdown.summary.subtotal_products as number
+                        ).toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -605,27 +630,48 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Services:</span>
                       <span className="font-medium">
-                        ₱{(order.breakdown.summary.subtotal_services as number).toFixed(
-                          2,
-                        )}
+                        ₱
+                        {(
+                          order.breakdown.summary.subtotal_services as number
+                        ).toFixed(2)}
                       </span>
                     </div>
                   )}
-                {order.breakdown.summary.handling !== null &&
-                  order.breakdown.summary.handling !== undefined && (
+                {order.breakdown.summary.staff_service_fee !== null &&
+                  order.breakdown.summary.staff_service_fee !== undefined &&
+                  (order.breakdown.summary.staff_service_fee as number) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Handling:</span>
+                      <span className="text-gray-600">Staff Service Fee:</span>
                       <span className="font-medium">
-                        ₱{(order.breakdown.summary.handling as number).toFixed(2)}
+                        ₱
+                        {(
+                          order.breakdown.summary.staff_service_fee as number
+                        ).toFixed(2)}
                       </span>
                     </div>
                   )}
-                {order.breakdown.summary.service_fee !== null &&
-                  order.breakdown.summary.service_fee !== undefined && (
+                {order.breakdown.summary.delivery_fee !== null &&
+                  order.breakdown.summary.delivery_fee !== undefined &&
+                  (order.breakdown.summary.delivery_fee as number) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Service Fee:</span>
+                      <span className="text-gray-600">Delivery Fee:</span>
                       <span className="font-medium">
-                        ₱{(order.breakdown.summary.service_fee as number).toFixed(2)}
+                        ₱
+                        {(
+                          order.breakdown.summary.delivery_fee as number
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                {order.breakdown.summary.vat_amount !== null &&
+                  order.breakdown.summary.vat_amount !== undefined && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>VAT (12% inclusive):</span>
+                      <span>
+                        ₱
+                        {(
+                          order.breakdown.summary.vat_amount as number
+                        ).toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -682,7 +728,7 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
               </h4>
               <div className="space-y-3">
                 {order.breakdown.baskets.map((basket, idx) => (
-                  <BasketCard key={idx} basket={basket} />
+                  <BasketCard key={idx} basket={basket} breakdownSummary={order.breakdown.summary} />
                 ))}
               </div>
             </div>
@@ -712,19 +758,34 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BasketCard({ basket }: { basket: Order["breakdown"]["baskets"][0] }) {
+function BasketCard({ basket, breakdownSummary }: { basket: Order["breakdown"]["baskets"][0]; breakdownSummary?: Order["breakdown"]["summary"] }) {
+  const basketNumber = basket?.basket_number || 0;
+  const total = basket?.total || 0;
+
+  // Safely extract services array - handle both array and non-array cases
+  const servicesArray = Array.isArray(basket?.services) ? basket.services : [];
+  
+  // Calculate subtotal from services if not provided
+  const servicesSubtotal = servicesArray.reduce(
+    (sum, service) => sum + (service?.subtotal || 0),
+    0
+  );
+  
+  // If we have no total and no services data, use the summary services if available
+  // This handles cases where services are calculated but not stored as array
+  const displayTotal = total > 0 ? total : (servicesSubtotal > 0 ? servicesSubtotal : 0);
+
   return (
     <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">
       <div className="flex justify-between items-start mb-2">
         <div>
           <h5 className="font-semibold text-sm">
-            Basket #{basket.basket_number}
+            Basket #{basketNumber}
           </h5>
-          <p className="text-xs text-gray-600">Weight: {basket.weight} kg</p>
         </div>
         <div className="text-right">
-          <div className="text-sm font-semibold">
-            ₱{basket.total.toFixed(2)}
+          <div className="text-sm font-semibold text-gray-900">
+            ₱{(displayTotal as number).toFixed(2)}
           </div>
         </div>
       </div>
@@ -735,27 +796,40 @@ function BasketCard({ basket }: { basket: Order["breakdown"]["baskets"][0] }) {
         </p>
       )}
 
-      {basket.services && basket.services.length > 0 && (
+      {servicesArray.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
           <div className="space-y-1">
-            {basket.services.map((service) => (
-              <div
-                key={service.id}
-                className="text-xs text-gray-700 grid grid-cols-[1fr_70px_80px] gap-2"
-              >
-                <span className="font-medium truncate">
-                  {service.service_name}
-                  {service.is_premium && " (Premium)"}
-                </span>
-                <span className="text-gray-600 text-right">
-                  ×{service.multiplier}
-                </span>
-                <span className="font-medium text-right">
-                  ₱{service.subtotal.toFixed(2)}
-                </span>
-              </div>
-            ))}
+            {servicesArray.map((service, idx) => {
+              const serviceMultiplier = service?.multiplier || 0;
+              const serviceSubtotal = service?.subtotal || 0;
+
+              return (
+                <div
+                  key={service?.id || `service-${idx}`}
+                  className="text-xs text-gray-700 grid grid-cols-[1fr_70px_80px] gap-2"
+                >
+                  <span className="font-medium truncate">
+                    {service?.service_name || "Unknown Service"}
+                    {service?.is_premium && " (Premium)"}
+                  </span>
+                  <span className="text-gray-600 text-right">
+                    ×{serviceMultiplier}
+                  </span>
+                  <span className="font-medium text-right">
+                    ₱{(serviceSubtotal as number).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+        </div>
+      )}
+
+      {servicesArray.length === 0 && breakdownSummary?.subtotal_services && (breakdownSummary.subtotal_services as number) > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
+          <p className="text-xs text-gray-500 italic">
+            Services included in basket (₱{(breakdownSummary.subtotal_services as number).toFixed(2)} total)
+          </p>
         </div>
       )}
     </div>

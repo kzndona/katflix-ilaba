@@ -1,24 +1,24 @@
 /**
- * POST /api/orders/pos/create
+ * POST /api/orders/mobile/create
  * 
- * Transactional POS Order Creation
+ * Mobile App Order Creation
  * - Creates/updates customer (if needed)
  * - Creates order with breakdown and handling JSONB
  * - Deducts product inventory
  * - Awards loyalty points
- * - Generates receipt
  * 
- * All-or-nothing: Single failure rolls back entire transaction
- * 
- * Authenticated: Requires valid Supabase session (staff user)
+ * Similar to POS but:
+ * - NO cashier_id (mobile orders are self-service)
+ * - source='mobile'
+ * - Can be called without authentication (optional)
+ * - Customer data is required (mobile must provide customer info)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
 
-interface CreateOrderRequest {
-  customer_id?: string | null;
-  customer_data?: {
+interface CreateMobileOrderRequest {
+  customer_data: {
     first_name: string;
     last_name: string;
     phone_number: string;
@@ -32,37 +32,8 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
   try {
-    // === AUTHENTICATE ===
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Get staff record
-    const { data: staffData, error: staffError } = await supabase
-      .from("staff")
-      .select("id")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (staffError || !staffData) {
-      return NextResponse.json(
-        { success: false, error: "Staff record not found" },
-        { status: 401 }
-      );
-    }
-
-    const cashierId = staffData.id;
-
     // === PARSE REQUEST ===
-    const body: CreateOrderRequest = await request.json();
+    const body: CreateMobileOrderRequest = await request.json();
 
     // === HELPER: Enrich services with pricing snapshots ===
     async function enrichServicesWithPricing(breakdown: any) {
@@ -137,12 +108,29 @@ export async function POST(request: NextRequest) {
       return enrichedBreakdown;
     }
 
-    const cashierId = staffData.id;
-
     // === VALIDATE INPUT ===
     if (!body.breakdown || !body.handling) {
       return NextResponse.json(
         { success: false, error: "Missing breakdown or handling data" },
+        { status: 400 }
+      );
+    }
+
+    // Customer data is required for mobile orders
+    if (!body.customer_data) {
+      return NextResponse.json(
+        { success: false, error: "Customer data required for mobile orders" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !body.customer_data.first_name?.trim() ||
+      !body.customer_data.last_name?.trim() ||
+      !body.customer_data.phone_number?.trim()
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Customer first/last name and phone required" },
         { status: 400 }
       );
     }
@@ -160,44 +148,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Customer validation
-    if (!body.customer_id && !body.customer_data) {
-      return NextResponse.json(
-        { success: false, error: "Customer ID or customer data required" },
-        { status: 400 }
-      );
-    }
-
-    if (body.customer_data) {
-      if (
-        !body.customer_data.first_name?.trim() ||
-        !body.customer_data.last_name?.trim() ||
-        !body.customer_data.phone_number?.trim()
-      ) {
-        return NextResponse.json(
-          { success: false, error: "Customer first/last name and phone required" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // === TRANSACTION BEGIN ===
-    // For Supabase, we use RLS with service role key to bypass
-    // For atomicity, we'll use a single INSERT with dependencies
+    // === STEP 1: Create or get customer ===
+    // First check if customer exists by phone number
+    const { data: existingCustomer } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("phone_number", body.customer_data.phone_number)
+      .single();
 
     let customerId: string;
 
-    // STEP 1: Create or get customer
-    if (body.customer_id) {
-      customerId = body.customer_id;
+    if (existingCustomer) {
+      customerId = existingCustomer.id;
     } else {
       const { data: newCustomer, error: customerError } = await supabase
         .from("customers")
         .insert({
-          first_name: body.customer_data!.first_name,
-          last_name: body.customer_data!.last_name,
-          phone_number: body.customer_data!.phone_number,
-          email_address: body.customer_data!.email || null,
+          first_name: body.customer_data.first_name,
+          last_name: body.customer_data.last_name,
+          phone_number: body.customer_data.phone_number,
+          email_address: body.customer_data.email || null,
           loyalty_points: 0,
         })
         .select("id")
@@ -214,8 +184,7 @@ export async function POST(request: NextRequest) {
       customerId = newCustomer.id;
     }
 
-    // STEP 2: Validate inventory before creating order
-    // First, ensure plastic bags from baskets are included in items
+    // === STEP 2: Validate inventory and handle plastic bags ===
     const itemsToValidate = [...(body.breakdown.items || [])];
     
     // Collect plastic bags from all baskets
@@ -316,16 +285,16 @@ export async function POST(request: NextRequest) {
     // Update breakdown items to include plastic bags
     body.breakdown.items = itemsToValidate;
 
-    // === STEP 3A: Enrich services with pricing snapshots ===
+    // === STEP 2A: Enrich services with pricing snapshots ===
     body.breakdown = await enrichServicesWithPricing(body.breakdown);
 
-    // STEP 3: Create order
+    // === STEP 3: Create order (mobile: no cashier_id, source='mobile') ===
     const { data: newOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
         customer_id: customerId,
-        cashier_id: cashierId,
-        source: "pos", // POS orders always have source='pos'
+        cashier_id: null, // Mobile orders have no cashier
+        source: "mobile", // Mark as mobile order
         breakdown: body.breakdown,
         handling: body.handling,
         status: "pending",
@@ -345,8 +314,8 @@ export async function POST(request: NextRequest) {
 
     const orderId = newOrder.id;
 
-    // STEP 4: Deduct inventory (product_transactions)
-    for (const item of body.breakdown.items || []) {
+    // === STEP 4: Deduct inventory (product_transactions) ===
+    for (const item of itemsToValidate) {
       // 4a. Create product transaction record
       const { error: txError } = await supabase
         .from("product_transactions")
@@ -355,7 +324,7 @@ export async function POST(request: NextRequest) {
           order_id: orderId,
           quantity_change: -item.quantity, // Negative = deduction
           transaction_type: "order",
-          notes: `POS order ${orderId}`,
+          notes: `Mobile order ${orderId}`,
           created_at: new Date().toISOString(),
         });
 
@@ -386,7 +355,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 4c. Update product stock (direct SQL update)
+      // 4c. Update product stock
       const newQuantity = currentProduct.quantity - item.quantity;
       const { error: updateError } = await supabase
         .from("products")
@@ -404,14 +373,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 5: Award loyalty points (optional)
-    // For now, we'll skip this - can be added later
-    // Total order amount / 100 = loyalty points awarded
-
-    // STEP 6: Generate receipt data
+    // === STEP 5: Generate receipt data ===
     const receiptData = {
       order_id: orderId,
-      customer_name: `${body.customer_data?.first_name || "Customer"} ${body.customer_data?.last_name || ""}`.trim(),
+      customer_name: `${body.customer_data.first_name} ${body.customer_data.last_name}`.trim(),
       items: body.breakdown.items || [],
       baskets: body.breakdown.baskets || [],
       total: body.breakdown.summary.total,
@@ -432,7 +397,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("POS create order error:", error);
+    console.error("Mobile create order error:", error);
     return NextResponse.json(
       {
         success: false,
