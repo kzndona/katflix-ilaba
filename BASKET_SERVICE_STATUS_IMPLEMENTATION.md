@@ -1,14 +1,17 @@
 # Basket Service Status System - Implementation Summary
 
 ## Overview
+
 Completed implementation of a dedicated basket service status tracking system that separates immutable pricing data (in `breakdown` JSONB) from operational workflow data (in `basket_service_status` table).
 
 ## What Has Been Implemented
 
 ### 1. Database Schema
+
 **File:** `MIGRATION_BASKET_SERVICE_STATUS.sql`
 
 Creates `basket_service_status` table with:
+
 - `order_id`, `basket_number`, `service_type` (composite primary key)
 - `status` field: pending → in_progress → completed/skipped
 - Timestamps: `started_at`, `completed_at`
@@ -21,9 +24,11 @@ Creates `basket_service_status` table with:
 ### 2. API Endpoints
 
 #### GET `/api/orders/withServiceStatus`
+
 **File:** `src/app/api/orders/withServiceStatus/route.ts`
 
 Purpose: Fetch active orders with service status progression data
+
 - Joins orders with basket_service_status records
 - Returns baskets with two data sources:
   - `services`: Array of {service_type, status, timestamps} (operational)
@@ -34,9 +39,11 @@ Purpose: Fetch active orders with service status progression data
 **Status:** ✅ Complete and deployed
 
 #### PATCH `/api/orders/{orderId}/basket/{basketNumber}/service`
+
 **File:** `src/app/api/orders/[orderId]/basket/[basketNumber]/service/route.ts`
 
 Purpose: Update individual basket service status
+
 - Request body: `{service_type: "wash", action: "start"|"complete"|"skip", notes?: string}`
 - Maps actions to statuses:
   - "start" → in_progress
@@ -53,6 +60,7 @@ Purpose: Update individual basket service status
 #### Baskets Page (`src/app/in/baskets/page.tsx`)
 
 **Order Type Definition:**
+
 ```typescript
 type Order = {
   // ... existing fields ...
@@ -73,16 +81,19 @@ type Order = {
 ```
 
 **Data Loading:**
+
 - Changed from `/api/orders/getOrdersWithBaskets` to `/api/orders/withServiceStatus`
 - Properly parses `response.success` field
 - Filters active orders only
 
 **Service Status Display:**
+
 - Timeline shows services sorted in sequence: wash → spin → dry → iron → fold
 - Status indicators: ○ (pending), ● (in_progress with pulse), ✓ (completed/skipped)
 - Color coding: gray (pending), blue (in_progress), green (completed)
 
 **Service Status Updates:**
+
 - Single unified `updateServiceStatus()` function
 - Routes service updates to new endpoint: PATCH `/api/orders/{orderId}/basket/{basketNumber}/service`
 - Routes handling (pickup/delivery) updates to legacy endpoint: PATCH `/api/orders/{orderId}/serviceStatus`
@@ -90,6 +101,7 @@ type Order = {
 - Auto-refreshes order list after update
 
 **Timeline Logic:**
+
 - Updated `getTimelineNextAction()` to use `service_type` from service status array
 - Properly sequences services based on SERVICE_SEQUENCE array
 - Correctly identifies pending and in-progress services
@@ -99,6 +111,7 @@ type Order = {
 ## Data Flow
 
 ### Creating an Order (POS)
+
 1. User clicks "Complete Order" in POS interface
 2. POST `/api/orders/pos/create` with order data
 3. API runs `enrichServicesWithPricing()` to capture current pricing
@@ -107,6 +120,7 @@ type Order = {
 6. Response: `{success: true, order_id: "uuid", receipt: {...}}`
 
 ### Retrieving Orders (Baskets)
+
 1. Staff navigates to baskets page
 2. Calls GET `/api/orders/withServiceStatus`
 3. API fetches orders + basket_service_status records
@@ -115,6 +129,7 @@ type Order = {
 6. UI still has access to pricing via `services_data` field
 
 ### Updating Service Status (Baskets)
+
 1. Staff clicks "Start Wash" button
 2. Calls PATCH `/api/orders/{orderId}/basket/{basketNumber}/service`
 3. Request: `{service_type: "wash", action: "start"}`
@@ -129,6 +144,7 @@ type Order = {
 ## Important Separation of Concerns
 
 ### Breakdown JSONB (Immutable)
+
 - Items, products, pricing snapshots, service preferences
 - Stored at order creation and never modified
 - Used for:
@@ -138,6 +154,7 @@ type Order = {
   - Service recommendations
 
 ### Service Status Table (Operational)
+
 - Current workflow state per basket/service
 - Created independently from order creation
 - Tracks progression: pending → in_progress → completed
@@ -150,6 +167,7 @@ type Order = {
 ## Next Steps (Deployment Checklist)
 
 ### CRITICAL - BLOCKING
+
 1. **Run Migration in Supabase**
    - Execute `MIGRATION_BASKET_SERVICE_STATUS.sql` in Supabase SQL editor
    - Verify table created with RLS policies
@@ -157,6 +175,7 @@ type Order = {
    - Time: 2-3 minutes
 
 ### HIGH PRIORITY
+
 2. **Test Baskets Page Workflow**
    - Create test order via POS
    - Navigate to baskets page (confirm it loads)
@@ -177,6 +196,7 @@ type Order = {
    - Time: 10 minutes
 
 ### MEDIUM PRIORITY
+
 4. **Optionally Migrate Existing Orders**
    - Write SQL to populate basket_service_status for past orders
    - Set all services as "completed" for historical orders
@@ -191,6 +211,7 @@ type Order = {
    - Time: 1-2 hours if doing this
 
 ### FINAL
+
 6. **Production Readiness**
    - Remove/minimize console logging (currently has [SERVICE UPDATE] prefixes)
    - Add error boundaries for better UX
@@ -199,6 +220,7 @@ type Order = {
    - Time: 2-4 hours
 
 ## Code Quality
+
 - ✅ No TypeScript errors in baskets page
 - ✅ All API endpoints deployed and functional
 - ✅ Proper error handling with try-catch blocks
@@ -226,11 +248,13 @@ SELECT * FROM basket_service_status WHERE order_id = 'uuid-here';
 ## Files Modified/Created
 
 ### Created:
+
 - `MIGRATION_BASKET_SERVICE_STATUS.sql` - Database schema
 - `src/app/api/orders/withServiceStatus/route.ts` - GET endpoint
 - `src/app/api/orders/[orderId]/basket/[basketNumber]/service/route.ts` - PATCH endpoint
 
 ### Modified:
+
 - `src/app/in/baskets/page.tsx` - Frontend integration
   - Updated Order type
   - Updated load() function

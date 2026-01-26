@@ -1,7 +1,9 @@
 # Data Structure Undefined Error - Fixed
 
 ## Issue Summary
+
 Runtime error on baskets page:
+
 ```
 can't access property "status", order.handling.pickup is undefined
 ```
@@ -9,7 +11,9 @@ can't access property "status", order.handling.pickup is undefined
 Error occurred in `getTimelineNextAction()` function when trying to access `order.handling.pickup.status`.
 
 ## Root Cause
+
 The `handling` object from the API was either:
+
 1. Completely undefined/null
 2. Missing the `pickup` and `delivery` properties
 3. Not properly initialized with default values
@@ -19,21 +23,26 @@ This happened because the API endpoint wasn't ensuring proper default structures
 ## Solution Applied
 
 ### 1. Added Safety Checks in Frontend
+
 **File: `src/app/in/baskets/page.tsx`**
 
 #### In `getTimelineNextAction()` function:
+
 - Added null check: `if (!order.handling || !order.handling.pickup) return null;`
 - Prevents accessing undefined properties before using them
 
 #### In Timeline Rendering:
+
 - Changed `order.handling.pickup.status` to `order.handling?.pickup?.status` (optional chaining)
 - Changed `basket.services` to `(basket.services || [])` to handle undefined arrays
 - Added safety check before accessing delivery: `order.handling?.delivery?.address && order.handling.delivery`
 
 ### 2. Fixed API Response Structure
+
 **File: `src/app/api/orders/withServiceStatus/route.ts`**
 
 Added proper default structure initialization:
+
 ```typescript
 const handling = order.handling || {};
 const safeHandling = {
@@ -53,18 +62,21 @@ const safeHandling = {
 ```
 
 Now every order returned by the API is guaranteed to have:
+
 - `handling.pickup` with `address` and `status`
 - `handling.delivery` with `address` and `status`
 
 ## Changes Made
 
 ### Frontend (`src/app/in/baskets/page.tsx`)
+
 1. Added null safety check at start of `getTimelineNextAction()`
 2. Added optional chaining for all `order.handling` accesses
 3. Added fallback empty array for `basket.services`
 4. Fixed delivery section to check handling.delivery exists before accessing
 
 ### Backend (`src/app/api/orders/withServiceStatus/route.ts`)
+
 1. Creates default handling structure if missing
 2. Ensures pickup has address and status
 3. Ensures delivery has address and status
@@ -73,6 +85,7 @@ Now every order returned by the API is guaranteed to have:
 ## Testing
 
 ✅ **Development Server**: Running successfully
+
 - No TypeScript errors
 - No runtime errors
 - Ready for testing
@@ -95,6 +108,7 @@ Now every order returned by the API is guaranteed to have:
 ## Backward Compatibility
 
 ✅ Works with both:
+
 - Old orders with incomplete handling data
 - New orders with full handling structure
 - Orders with mixed/partial handling data
@@ -102,6 +116,7 @@ Now every order returned by the API is guaranteed to have:
 All old data is preserved while defaults fill in missing pieces.
 
 ## Files Modified
+
 - `src/app/in/baskets/page.tsx` (3 sections updated)
 - `src/app/api/orders/withServiceStatus/route.ts` (1 section updated)
 

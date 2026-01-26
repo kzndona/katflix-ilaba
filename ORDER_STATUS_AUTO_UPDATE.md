@@ -1,7 +1,9 @@
 # Order Status Auto-Update - Fixed
 
 ## Issue Summary
+
 Basket cards showed "pending" status even though all services were completed (showing ✓):
+
 ```
 Neil Ivan Dona
 09763599557
@@ -17,7 +19,9 @@ Basket #1
 The order status wasn't updating based on service progression.
 
 ## Root Cause
+
 When services were updated via the API:
+
 1. `basket_service_status` records were created/updated ✓
 2. But the `orders.status` field in the database was never updated ✗
 3. Frontend fetched stale order status
@@ -27,17 +31,20 @@ The order status remained "pending" even though all services were complete.
 ## Solution Applied
 
 ### 1. Service Update Endpoint
+
 **File: `src/app/api/orders/[orderId]/basket/[basketNumber]/service/route.ts`**
 
 Added automatic order status updates:
+
 - When **first service starts**: `pending` → `processing`
 - When **all services complete/skip**: `processing` → `for_pick-up`
 
 Logic:
+
 ```typescript
 // Check if all services are complete
 const allServicesComplete = allServiceStatuses.every(
-  (s: any) => s.status === "completed" || s.status === "skipped"
+  (s: any) => s.status === "completed" || s.status === "skipped",
 );
 
 if (allServicesComplete) {
@@ -57,13 +64,16 @@ if (allServicesComplete) {
 ```
 
 ### 2. Handling Update Endpoint
+
 **File: `src/app/api/orders/[orderId]/serviceStatus/route.ts`**
 
 Added automatic order status updates for pickup/delivery:
+
 - When **delivery completes**: `processing` → `completed`
 - When **pickup starts**: `for_pick-up` → `processing`
 
 Logic:
+
 ```typescript
 if (handlingType === "delivery" && status === "completed") {
   // Order is complete
@@ -113,6 +123,7 @@ completed
 ## Frontend Behavior
 
 No frontend changes needed! Because:
+
 - After each update, frontend calls `load()`
 - `load()` fetches fresh data from API
 - `withServiceStatus` endpoint returns updated order status
@@ -131,6 +142,7 @@ No frontend changes needed! Because:
 ✅ Dev server running successfully
 ✅ No TypeScript errors
 ✅ Console logs show automatic status updates:
+
 ```
 [Order Status Update] Order updated to processing
 [Order Status Update] Order updated to for_pick-up
@@ -145,6 +157,7 @@ No frontend changes needed! Because:
    - Added order status auto-update logic after handling updates
 
 Both changes are safe:
+
 - Only update when appropriate conditions are met
 - Check current status before updating
 - Include error handling and logging

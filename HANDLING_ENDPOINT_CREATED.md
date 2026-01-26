@@ -1,14 +1,17 @@
 # Handling Status Endpoint - Created
 
 ## Issue Summary
+
 The baskets page was calling `/api/orders/{orderId}/serviceStatus` endpoint for handling (pickup/delivery) status updates, but it returned **404 Not Found**.
 
 ## Root Cause
+
 The endpoint didn't exist. The baskets page code expected it but the API route was never created.
 
 ## Solution Applied
 
 ### Created New Endpoint
+
 **File: `src/app/api/orders/[orderId]/serviceStatus/route.ts`**
 
 A new PATCH endpoint that handles pickup and delivery status updates:
@@ -18,6 +21,7 @@ PATCH /api/orders/{orderId}/serviceStatus
 ```
 
 #### Request Body
+
 ```json
 {
   "staffId": "uuid",
@@ -28,6 +32,7 @@ PATCH /api/orders/{orderId}/serviceStatus
 ```
 
 #### Response
+
 ```json
 {
   "success": true,
@@ -36,6 +41,7 @@ PATCH /api/orders/{orderId}/serviceStatus
 ```
 
 ### Functionality
+
 - Updates `handling.pickup.status` or `handling.delivery.status` in order JSON
 - Maps actions to statuses:
   - "start" → "in_progress"
@@ -44,6 +50,7 @@ PATCH /api/orders/{orderId}/serviceStatus
 - Preserves existing handling data while updating specific status
 
 ### Error Handling
+
 - 401 Unauthorized - User not authenticated
 - 400 Bad Request - Missing required fields
 - 404 Not Found - Order doesn't exist
@@ -54,6 +61,7 @@ PATCH /api/orders/{orderId}/serviceStatus
 ✅ **Endpoint working perfectly**
 
 Console logs show successful updates:
+
 ```
 [HANDLING UPDATE] Success: {
   order_id: '5800416c-f6f2-4992-9f79-d48abb70cbee',
@@ -67,6 +75,7 @@ PATCH /api/orders/5800416c-f6f2-4992-9f79-d48abb70cbee/serviceStatus 200
 ## API Integration
 
 The baskets page now correctly routes updates:
+
 - **Service updates** → `/api/orders/{orderId}/basket/{basketNumber}/service` (PATCH)
 - **Handling updates** → `/api/orders/{orderId}/serviceStatus` (PATCH)
 
@@ -85,6 +94,7 @@ The baskets page now correctly routes updates:
 6. Page displays updated status
 
 ## Files Modified
+
 - `src/app/api/orders/[orderId]/serviceStatus/route.ts` (newly created)
 
 ## Architecture
@@ -100,12 +110,14 @@ Baskets Page
 ```
 
 Both endpoints are:
+
 - ✅ Authenticated
 - ✅ Type-safe
 - ✅ Error-handled
 - ✅ Properly logged
 
 ## Current Status
+
 ✅ **All endpoints working**
 ✅ **No 404 errors**
 ✅ **Ready for production**

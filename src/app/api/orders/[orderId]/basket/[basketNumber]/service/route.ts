@@ -79,6 +79,49 @@ export async function PATCH(
       );
     }
 
+    // === FETCH ORDER DATA ===
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("handling")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      return NextResponse.json(
+        { success: false, error: "Order not found" },
+        { status: 404 }
+      );
+    }
+
+    // === AUTO-SKIP PICKUP IF IN-STORE ===
+    // If pickup address is "In-store", auto-mark pickup as skipped on first service action
+    const isInStorePickup = order.handling?.pickup?.address?.toLowerCase() === "in-store";
+    if (isInStorePickup && order.handling?.pickup?.status === "pending") {
+      console.log(`[In-Store Pickup] Order ${orderId} - Auto-skipping pickup phase`);
+      
+      // Update the order's handling to mark pickup as skipped
+      const updatedHandling = {
+        ...order.handling,
+        pickup: {
+          ...order.handling.pickup,
+          status: "skipped",
+          completed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: handlingError } = await supabase
+        .from("orders")
+        .update({ handling: updatedHandling })
+        .eq("id", orderId);
+
+      if (handlingError) {
+        console.warn("[In-Store Pickup] Failed to auto-skip pickup:", handlingError);
+        // Don't fail - continue with service update
+      } else {
+        console.log(`[In-Store Pickup] Order ${orderId} pickup marked as skipped`);
+      }
+    }
+
     // === UPSERT SERVICE STATUS ===
     const statusMap = {
       start: "in_progress",
