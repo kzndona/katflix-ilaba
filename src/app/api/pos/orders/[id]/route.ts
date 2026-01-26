@@ -10,9 +10,10 @@ import { createClient } from '@/src/app/utils/supabase/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Authenticate
@@ -28,7 +29,7 @@ export async function GET(
       );
     }
 
-    const orderId = params.id;
+    const orderId = id;
 
     const { data: order, error } = await supabase
       .from('orders')
