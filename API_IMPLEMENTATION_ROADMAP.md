@@ -36,6 +36,7 @@
 4. `POST/PUT /api/customers` - **May not exist, needs verification**
 
 **What to do:**
+
 - [ ] Check if customer endpoints exist
 - [ ] If not, create them (simple CRUD)
 - [ ] Ensure all endpoints return proper data shapes
@@ -57,6 +58,7 @@
 ```
 
 **Requirements:**
+
 - All services structure (wash, dry, spin, iron, etc.)
 - Pricing calculations
 - Fee structures
@@ -82,6 +84,7 @@
 ```
 
 **Requirements:**
+
 - Exact price calculations matching UI
 - Proper JSONB structure per schema
 - Error handling for edge cases
@@ -108,6 +111,7 @@
 ```
 
 **Requirements:**
+
 - All validation rules from guide
 - Clear error messages
 - Server-side validation (never trust client)
@@ -210,7 +214,7 @@
       - customer_id
       - status: 'pending'
       - created_at: now()
-   
+
 5. DEDUCT INVENTORY
    └─ INSERT into product_transactions table
       - order_id
@@ -218,7 +222,7 @@
       - qty_deducted (negative)
       - type: 'order'
       - reference: order_id
-   
+
    └─ UPDATE products table
       - quantity -= sum(qty_deducted)
 
@@ -233,6 +237,7 @@ ON ERROR (any step):
 ```
 
 **Key Requirements:**
+
 - Use database transactions (BEGIN/COMMIT/ROLLBACK)
 - Use Supabase service key (server-side only)
 - Atomic: All or nothing
@@ -246,30 +251,36 @@ ON ERROR (any step):
 **Modifications to `src/app/in/pos/page.tsx`:**
 
 1. Extract state to custom hook (optional but cleaner):
+
    ```typescript
-   const pos = usePOSState();  // Instead of useState scattered
+   const pos = usePOSState(); // Instead of useState scattered
    ```
 
 2. Add submit handler:
+
    ```typescript
    const handleCheckout = async () => {
      try {
-       const breakdown = buildBreakdown(pos.baskets, pos.selectedProducts, pos.serviceType);
+       const breakdown = buildBreakdown(
+         pos.baskets,
+         pos.selectedProducts,
+         pos.serviceType,
+       );
        const handling = buildHandling(pos.customer, pos.handling, pos.payment);
-       
-       const response = await fetch('/api/orders/pos/create', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
+
+       const response = await fetch("/api/orders/pos/create", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
          body: JSON.stringify({
            breakdown,
            handling,
            customer_id: pos.customer?.id || null,
-           customer_data: pos.newCustomer || null
-         })
+           customer_data: pos.newCustomer || null,
+         }),
        });
-       
+
        if (!response.ok) throw new Error(await response.text());
-       
+
        const { receipt } = await response.json();
        showReceiptModal(receipt);
      } catch (error) {
@@ -374,18 +385,18 @@ UPDATE products SET quantity = quantity - ? WHERE id = ?;
 
 ```typescript
 // posValidation.test.ts
-test('validateDeliveryFee rejects < 50', () => {
+test("validateDeliveryFee rejects < 50", () => {
   expect(() => validateDeliveryFee(40)).toThrow();
 });
 
-test('validateOrderBreakdown rejects OOS products', () => {
-  const breakdown = { items: [{ product_id: 'xyz', qty: 10 }] };
+test("validateOrderBreakdown rejects OOS products", () => {
+  const breakdown = { items: [{ product_id: "xyz", qty: 10 }] };
   expect(() => validateOrderBreakdown(breakdown, mockProducts)).toThrow();
 });
 
 // breakdownBuilder.test.ts
-test('buildBreakdown calculates correct VAT', () => {
-  const bd = buildBreakdown(baskets, products, 'self_service');
+test("buildBreakdown calculates correct VAT", () => {
+  const bd = buildBreakdown(baskets, products, "self_service");
   expect(bd.summary.vat).toBe(subtotal * 0.12);
 });
 ```
@@ -394,26 +405,26 @@ test('buildBreakdown calculates correct VAT', () => {
 
 ```typescript
 // POST /api/orders/pos/create
-test('201 - Valid order creates successfully', async () => {
+test("201 - Valid order creates successfully", async () => {
   const res = await POST_create(validPayload);
   expect(res.status).toBe(200);
   expect(res.body.order_id).toBeDefined();
 });
 
-test('400 - Missing customer throws validation error', async () => {
+test("400 - Missing customer throws validation error", async () => {
   const res = await POST_create({ ...validPayload, customer_id: null });
   expect(res.status).toBe(400);
 });
 
-test('402 - Insufficient stock blocked', async () => {
+test("402 - Insufficient stock blocked", async () => {
   const res = await POST_create(outOfStockPayload);
   expect(res.status).toBe(402);
 });
 
-test('Inventory deducted correctly', async () => {
-  const before = await getProductQty('product-1');
+test("Inventory deducted correctly", async () => {
+  const before = await getProductQty("product-1");
   await POST_create(validPayload);
-  const after = await getProductQty('product-1');
+  const after = await getProductQty("product-1");
   expect(after).toBe(before - 5);
 });
 ```

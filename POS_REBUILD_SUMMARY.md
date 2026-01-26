@@ -46,24 +46,25 @@
 
 ### Per Your Specifications:
 
-| Requirement | Implementation | Status |
-|---|---|---|
-| **Staff Service Fee** | ₱40 per ORDER (not per basket) | ✅ |
-| **Basket Auto-Creation** | 8kg limit, auto-create new basket | ✅ |
-| **Iron Weight** | Min 2kg, skip if < 2kg | ✅ |
-| **Service Pricing** | Flat per basket (not rate_per_kg) | ✅ |
-| **Delivery Fee** | ₱50 default, min 50, override allowed | ✅ |
-| **VAT** | 12% inclusive (not added on top) | ✅ |
-| **6-Step Workflow** | Service type → Baskets → Products → Customer → Delivery → Review → Payment | ✅ |
-| **Order Summary** | Real-time updates, sticky sidebar | ✅ |
-| **Transactional API** | All-or-nothing, inventory deduction | ✅ |
-| **Receipt** | Order ID + details | ✅ |
+| Requirement              | Implementation                                                             | Status |
+| ------------------------ | -------------------------------------------------------------------------- | ------ |
+| **Staff Service Fee**    | ₱40 per ORDER (not per basket)                                             | ✅     |
+| **Basket Auto-Creation** | 8kg limit, auto-create new basket                                          | ✅     |
+| **Iron Weight**          | Min 2kg, skip if < 2kg                                                     | ✅     |
+| **Service Pricing**      | Flat per basket (not rate_per_kg)                                          | ✅     |
+| **Delivery Fee**         | ₱50 default, min 50, override allowed                                      | ✅     |
+| **VAT**                  | 12% inclusive (not added on top)                                           | ✅     |
+| **6-Step Workflow**      | Service type → Baskets → Products → Customer → Delivery → Review → Payment | ✅     |
+| **Order Summary**        | Real-time updates, sticky sidebar                                          | ✅     |
+| **Transactional API**    | All-or-nothing, inventory deduction                                        | ✅     |
+| **Receipt**              | Order ID + details                                                         | ✅     |
 
 ---
 
 ## 📁 Files Created/Modified
 
 ### Created (NEW):
+
 ```
 src/app/in/pos/logic/
   ├── posTypes.ts              (400 lines) - Clean types
@@ -81,12 +82,14 @@ POS_TESTING_GUIDE.md           - Testing procedures
 ```
 
 ### Modified:
+
 ```
 src/app/in/pos/
   └── page.tsx                 (→ 1,050 lines) - Complete redesign
 ```
 
 ### Archived (OLD - can be deleted):
+
 ```
 src/app/in/pos/
   ├── components/ (pane-based)
@@ -128,6 +131,7 @@ src/app/in/pos/
 **Service Type:** Staff-Service (₱40 fee)
 
 **Baskets:**
+
 - Basket 1: 5kg
   - Wash Premium: ₱80
   - Dry Basic: ₱65
@@ -136,11 +140,13 @@ src/app/in/pos/
   - **Basket Subtotal: ₱180**
 
 **Products:**
+
 - Plastic Bag × 3: ₱3 × 3 = ₱9
 - Detergent × 1: ₱45 × 1 = ₱45
 - **Products Subtotal: ₱54**
 
 **Fees & Tax:**
+
 - Staff Service Fee: ₱40 (per order, staff-service selected)
 - Delivery Fee: ₱50 (delivery address provided)
 - **Subtotal before VAT: ₱324** (180 + 54 + 40 + 50)
@@ -148,6 +154,7 @@ src/app/in/pos/
 - **TOTAL: ₱324.00**
 
 **Payment:**
+
 - Cash: Customer pays ₱350 → Change: ₱26
 - GCash: Reference number (₱0 change)
 
@@ -159,7 +166,7 @@ src/app/in/pos/
 ✅ **UI Layout** - All 6 steps render correctly  
 ✅ **State Management** - Hook exports all needed functions  
 ✅ **Calculations** - Helper functions are pure, testable  
-✅ **API Structure** - Endpoint accepts correct payload format  
+✅ **API Structure** - Endpoint accepts correct payload format
 
 ---
 
@@ -168,6 +175,7 @@ src/app/in/pos/
 ### Immediate (Before Deployment)
 
 1. **Run Dev Server**
+
    ```bash
    npm run dev
    ```
@@ -209,7 +217,7 @@ src/app/in/pos/
 - **[POS_overhaul_guide.txt](./POS_overhaul_guide.txt)** - Business workflow (from professor)
 - **[REBUILD_COMPLETE.md](./REBUILD_COMPLETE.md)** - Detailed rebuild documentation
 - **[POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md)** - Step-by-step testing procedures
-- **[_LEGACY_POS_ARCHIVE/](c:\Users\kizen\Projects\katflix_ilaba\_LEGACY_POS_ARCHIVE)** - Previous implementation (for reference)
+- **[\_LEGACY_POS_ARCHIVE/](c:\Users\kizen\Projects\katflix_ilaba_LEGACY_POS_ARCHIVE)** - Previous implementation (for reference)
 
 ---
 
@@ -254,6 +262,7 @@ This overhaul completely changes the laundry POS system for your professor's req
 ## ✨ Summary
 
 **Your POS system is now:**
+
 - ✅ Spec-compliant (per NEW_AGENT_HANDOFF.md)
 - ✅ Feature-complete (all 6 steps + API)
 - ✅ Business-logic-correct (pricing, fees, VAT)

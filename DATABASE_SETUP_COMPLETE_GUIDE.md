@@ -5,7 +5,7 @@
 ### ⚠️ IMPORTANT: Create in this order!
 
 1. **customers** (if not exists)
-2. **products** (if not exists)  
+2. **products** (if not exists)
 3. **orders** ← CREATE THIS FIRST
 4. **product_transactions** ← CREATE THIS SECOND
 
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS product_transactions (
   transaction_type TEXT NOT NULL DEFAULT 'adjustment',
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
+
   CONSTRAINT valid_transaction_type CHECK (
     transaction_type IN ('order', 'adjustment', 'return', 'restock', 'damage')
   )
@@ -92,6 +92,7 @@ After creating both tables:
 ## Table Structure Summary
 
 ### orders
+
 ```
 id (UUID)
 ├─ customer_id → references customers
@@ -115,6 +116,7 @@ id (UUID)
 ```
 
 ### product_transactions
+
 ```
 id (UUID)
 ├─ product_id → references products
@@ -130,14 +132,18 @@ id (UUID)
 ## What Each Field Means
 
 ### orders.breakdown
+
 This JSONB contains **everything about the laundry order**:
+
 - Which services (wash, dry, iron) per basket
 - How many baskets
 - What products ordered
 - Final totals with fees and VAT
 
 ### orders.handling
+
 This JSONB contains **how the order is handled**:
+
 - Is it staff service or customer self-service?
 - Is it pickup or delivery?
 - What's the delivery address?
@@ -145,7 +151,9 @@ This JSONB contains **how the order is handled**:
 - How much they paid
 
 ### product_transactions
+
 This table tracks **every inventory change**:
+
 - When 5 items sold → `-5` quantity_change, type='order'
 - When 50 items restocked → `+50` quantity_change, type='restock'
 - When 3 items damaged → `-3` quantity_change, type='damage'
@@ -155,6 +163,7 @@ This table tracks **every inventory change**:
 ## Example Data
 
 ### Sample Order (breakdown JSONB)
+
 ```json
 {
   "items": [
@@ -162,8 +171,8 @@ This table tracks **every inventory change**:
       "product_id": "uuid-123",
       "product_name": "Plastic Bags",
       "quantity": 2,
-      "unit_price": 5.00,
-      "total_price": 10.00
+      "unit_price": 5.0,
+      "total_price": 10.0
     }
   ],
   "baskets": [
@@ -180,36 +189,38 @@ This table tracks **every inventory change**:
     }
   ],
   "fees": [
-    { "type": "staff_service_fee", "amount": 40.00 },
-    { "type": "delivery_fee", "amount": 50.00 },
-    { "type": "vat", "amount": 18.40 }
+    { "type": "staff_service_fee", "amount": 40.0 },
+    { "type": "delivery_fee", "amount": 50.0 },
+    { "type": "vat", "amount": 18.4 }
   ],
   "summary": {
-    "subtotal_products": 10.00,
-    "subtotal_services": 210.00,
-    "staff_service_fee": 40.00,
-    "delivery_fee": 50.00,
-    "subtotal_before_vat": 310.00,
-    "vat_amount": 37.20,
-    "total": 347.20
+    "subtotal_products": 10.0,
+    "subtotal_services": 210.0,
+    "staff_service_fee": 40.0,
+    "delivery_fee": 50.0,
+    "subtotal_before_vat": 310.0,
+    "vat_amount": 37.2,
+    "total": 347.2
   }
 }
 ```
 
 ### Sample Order (handling JSONB)
+
 ```json
 {
   "service_type": "staff_service",
   "handling_type": "delivery",
   "delivery_address": "123 Main St, Apt 4B",
-  "delivery_fee_override": 50.00,
+  "delivery_fee_override": 50.0,
   "special_instructions": "Please fold carefully",
   "payment_method": "cash",
-  "amount_paid": 350.00
+  "amount_paid": 350.0
 }
 ```
 
 ### Sample Transaction
+
 ```
 product_id: uuid-123
 order_id: uuid-order-456
@@ -224,6 +235,7 @@ created_at: 2026-01-27 10:30:00
 ## Ready! 🎉
 
 Now you have:
+
 - ✅ orders table (stores complete order data)
 - ✅ product_transactions table (tracks inventory changes)
 - ✅ Both have proper indexes for performance

@@ -59,13 +59,13 @@
 
 ## Database Tables Verified
 
-| Table | Verified | Data Pulled | Status |
-|-------|----------|-------------|--------|
-| `services` | ✅ | Yes | All fields accessible |
-| `products` | ✅ | Yes | Quantities accurate |
-| `customers` | ✅ | Yes | Search & CRUD working |
-| `orders` | ✅ | Yes | Insert/select working |
-| `product_transactions` | ✅ | Yes | Insert working |
+| Table                  | Verified | Data Pulled | Status                |
+| ---------------------- | -------- | ----------- | --------------------- |
+| `services`             | ✅       | Yes         | All fields accessible |
+| `products`             | ✅       | Yes         | Quantities accurate   |
+| `customers`            | ✅       | Yes         | Search & CRUD working |
+| `orders`               | ✅       | Yes         | Insert/select working |
+| `product_transactions` | ✅       | Yes         | Insert working        |
 
 ---
 
@@ -74,18 +74,21 @@
 ### Available APIs for Frontend
 
 **Service Selection Step:**
+
 ```typescript
 GET /api/manage/services/getServices
 → Returns: [{ id, name, service_type, base_price, ... }]
 ```
 
 **Product Selection Step:**
+
 ```typescript
 GET /api/manage/products/getProducts
 → Returns: [{ id, item_name, unit_price, quantity, image_url, ... }]
 ```
 
 **Customer Lookup Step:**
+
 ```typescript
 GET /api/pos/customers/search?query=John
 → Returns: [{ id, first_name, last_name, phone_number, ... }]
@@ -96,6 +99,7 @@ POST /api/pos/customers
 ```
 
 **Order Creation:**
+
 ```typescript
 POST /api/orders/pos/create
 → Body: { customer_id, breakdown, handling }
@@ -107,6 +111,7 @@ POST /api/orders/pos/create
 ## What Each Endpoint Pulls From DB
 
 ### GET /api/manage/services/getServices
+
 ```
 Database Query:
   SELECT * FROM services
@@ -117,13 +122,14 @@ Actual Tables Queried:
 
 Field Names Used by Frontend:
   - id (string)
-  - name (string) 
+  - name (string)
   - service_type (string)
   - base_price (number)
   - base_duration_minutes (number)
 ```
 
 ### GET /api/manage/products/getProducts
+
 ```
 Database Query:
   SELECT * FROM products
@@ -143,6 +149,7 @@ Field Names Used by Frontend:
 ```
 
 ### GET /api/pos/customers/search?query=
+
 ```
 Database Query:
   SELECT * FROM customers
@@ -164,6 +171,7 @@ Field Names Used by Frontend:
 ```
 
 ### POST /api/pos/customers
+
 ```
 Database Operations:
   IF id provided:
@@ -183,6 +191,7 @@ Field Names Expected by Frontend:
 ```
 
 ### POST /api/orders/pos/create
+
 ```
 Database Operations:
   1. INSERT INTO orders (breakdown JSONB, handling JSONB, ...)
@@ -286,6 +295,7 @@ Validates Against:
 3. **posValidation.ts** - Validate inputs before submission
 
 These will:
+
 - Handle all calculations
 - Format data for API submission
 - Validate before sending to backend

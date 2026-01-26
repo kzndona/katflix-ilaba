@@ -3,6 +3,7 @@
 ## Quick Setup
 
 ### Step 1: Open Supabase SQL Editor
+
 1. Go to your Supabase project
 2. Click **"SQL Editor"** in the left sidebar
 3. Click **"New Query"**
@@ -43,7 +44,7 @@ CREATE POLICY "Staff can create transactions"
   WITH CHECK (auth.role() = 'authenticated');
 
 CREATE OR REPLACE VIEW product_stock_summary AS
-SELECT 
+SELECT
   p.id,
   p.item_name,
   p.quantity AS current_stock,
@@ -73,16 +74,16 @@ Go to **"Table Editor"** → You should see `product_transactions` table listed
 
 ### Columns
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key |
-| `product_id` | UUID | Foreign key to products table |
-| `order_id` | UUID | Foreign key to orders table (optional) |
-| `quantity_change` | INTEGER | Positive: stock added, Negative: stock deducted |
-| `transaction_type` | TEXT | Type: order, adjustment, return, restock, damage |
-| `notes` | TEXT | Optional reason/reference |
-| `created_at` | TIMESTAMP | When transaction occurred |
-| `created_by` | UUID | Which user created it |
+| Column             | Type      | Description                                      |
+| ------------------ | --------- | ------------------------------------------------ |
+| `id`               | UUID      | Primary key                                      |
+| `product_id`       | UUID      | Foreign key to products table                    |
+| `order_id`         | UUID      | Foreign key to orders table (optional)           |
+| `quantity_change`  | INTEGER   | Positive: stock added, Negative: stock deducted  |
+| `transaction_type` | TEXT      | Type: order, adjustment, return, restock, damage |
+| `notes`            | TEXT      | Optional reason/reference                        |
+| `created_at`       | TIMESTAMP | When transaction occurred                        |
+| `created_by`       | UUID      | Which user created it                            |
 
 ### Indexes
 
@@ -107,13 +108,13 @@ Go to **"Table Editor"** → You should see `product_transactions` table listed
 
 ## Transaction Types
 
-| Type | Meaning | Quantity | Example |
-|------|---------|----------|---------|
-| `order` | Stock deducted for order | Negative | -5 (order for 5 items) |
-| `adjustment` | Manual stock correction | ±Any | +3 (count discrepancy) |
-| `return` | Stock returned by customer | Positive | +2 (return 2 items) |
-| `restock` | New stock received | Positive | +50 (new shipment) |
-| `damage` | Stock damaged/lost | Negative | -1 (damaged item) |
+| Type         | Meaning                    | Quantity | Example                |
+| ------------ | -------------------------- | -------- | ---------------------- |
+| `order`      | Stock deducted for order   | Negative | -5 (order for 5 items) |
+| `adjustment` | Manual stock correction    | ±Any     | +3 (count discrepancy) |
+| `return`     | Stock returned by customer | Positive | +2 (return 2 items)    |
+| `restock`    | New stock received         | Positive | +50 (new shipment)     |
+| `damage`     | Stock damaged/lost         | Negative | -1 (damaged item)      |
 
 ---
 
@@ -154,16 +155,18 @@ VALUES (
 ## Query Examples
 
 ### Get transaction history for a product
+
 ```sql
-SELECT * 
-FROM product_transactions 
+SELECT *
+FROM product_transactions
 WHERE product_id = 'your-product-id'
 ORDER BY created_at DESC;
 ```
 
 ### Get total deducted for orders
+
 ```sql
-SELECT 
+SELECT
   product_id,
   SUM(quantity_change) as total_deducted
 FROM product_transactions
@@ -172,14 +175,16 @@ GROUP BY product_id;
 ```
 
 ### Get summary for all products
+
 ```sql
 SELECT * FROM product_stock_summary;
 ```
 
 ### Get transactions in date range
+
 ```sql
-SELECT * 
-FROM product_transactions 
+SELECT *
+FROM product_transactions
 WHERE created_at >= '2026-01-01' AND created_at <= '2026-01-31'
 ORDER BY created_at DESC;
 ```
@@ -201,13 +206,16 @@ After creating the table, test the inventory management page:
 ## Troubleshooting
 
 **"Table already exists" error?**
+
 - Table is already created ✅
 
 **"Permission denied" error?**
+
 - Make sure you're logged into Supabase with admin account
 - Check RLS policies are set correctly
 
 **Can't see transactions in inventory page?**
+
 - Verify `product_id` exists in products table
 - Check browser console for errors
 

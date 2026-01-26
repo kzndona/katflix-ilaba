@@ -181,9 +181,7 @@ export default function OrdersPage() {
         return sortConfig.direction === "asc" ? cmp : -cmp;
       } else if (typeof aVal === "number") {
         const numBVal = Number(bVal);
-        return sortConfig.direction === "asc"
-          ? aVal - numBVal
-          : numBVal - aVal;
+        return sortConfig.direction === "asc" ? aVal - numBVal : numBVal - aVal;
       }
       return 0;
     });
@@ -218,8 +216,7 @@ export default function OrdersPage() {
     (o) => o.status === "for_delivery",
   );
   const otherOrders = filteredRows.filter(
-    (o) =>
-      !["processing", "for_pick-up", "for_delivery"].includes(o.status),
+    (o) => !["processing", "for_pick-up", "for_delivery"].includes(o.status),
   );
 
   // Combine all grouped orders for pagination
@@ -244,7 +241,7 @@ export default function OrdersPage() {
       for_delivery: "bg-purple-100 text-purple-700",
       completed: "bg-green-100 text-green-700",
       cancelled: "bg-red-100 text-red-700",
-    }[status] || "bg-gray-100 text-gray-700");
+    })[status] || "bg-gray-100 text-gray-700";
 
   const getStatusLabel = (status: string) =>
     ({
@@ -255,7 +252,7 @@ export default function OrdersPage() {
       for_delivery: "Delivery",
       completed: "Completed",
       cancelled: "Cancelled",
-    }[status] || status);
+    })[status] || status;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
@@ -337,7 +334,9 @@ export default function OrdersPage() {
                     <tr className="bg-gray-100 border-b border-gray-200">
                       <th className="px-4 py-2 text-left">
                         <button
-                          onClick={() => handleSort("total_amount" as keyof Order)}
+                          onClick={() =>
+                            handleSort("total_amount" as keyof Order)
+                          }
                           className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
                         >
                           Customer <SortIcon field="total_amount" />
@@ -374,7 +373,9 @@ export default function OrdersPage() {
                       </th>
                       <th className="px-4 py-2 text-left">
                         <button
-                          onClick={() => handleSort("created_at" as keyof Order)}
+                          onClick={() =>
+                            handleSort("created_at" as keyof Order)
+                          }
                           className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
                         >
                           Created <SortIcon field="created_at" />
@@ -492,10 +493,7 @@ export default function OrdersPage() {
 
       {/* View Modal - Centered */}
       {viewing && (
-        <ViewModal
-          order={viewing}
-          onClose={() => setViewing(null)}
-        />
+        <ViewModal order={viewing} onClose={() => setViewing(null)} />
       )}
     </div>
   );
@@ -511,9 +509,7 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
       >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 flex justify-between items-center shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">
-            Order Details
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900">Order Details</h2>
           <button
             onClick={onClose}
             className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
@@ -544,7 +540,10 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
               label="Total Amount"
               value={`₱${order.total_amount.toFixed(2)}`}
             />
-            <DetailField label="Created" value={formatToPST(order.created_at)} />
+            <DetailField
+              label="Created"
+              value={formatToPST(order.created_at)}
+            />
           </div>
 
           {/* Customer Contact */}

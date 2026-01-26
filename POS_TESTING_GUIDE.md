@@ -3,18 +3,22 @@
 ## 🎯 Start Testing
 
 ### 1. Run Dev Server
+
 ```bash
 npm run dev
 ```
+
 Visit: http://localhost:3000/in/pos
 
 ### 2. Test Flow (Step-by-Step)
 
 #### Step 0: Service Type
+
 - [ ] Select "Self-Service" → click Next
 - [ ] Go Back → Select "Staff-Service" (₱40 fee mentioned) → click Next
 
 #### Step 1: Basket Configurator
+
 - [ ] Enter weight: 5kg
 - [ ] Select Wash: Premium (₱80)
 - [ ] Select Dry: Basic (₱65)
@@ -28,6 +32,7 @@ Visit: http://localhost:3000/in/pos
 - [ ] Click Next
 
 #### Step 2: Product Selector
+
 - [ ] See products with images and prices
 - [ ] Click "Add to Order" on Plastic Bag (₱3)
 - [ ] Increase quantity to 3
@@ -36,6 +41,7 @@ Visit: http://localhost:3000/in/pos
 - [ ] Click Next
 
 #### Step 3: Customer Lookup
+
 - [ ] Type in search box → Should show debounced results (300ms delay)
 - [ ] Select existing customer (if any)
 - [ ] OR toggle "+ Create New Customer"
@@ -47,6 +53,7 @@ Visit: http://localhost:3000/in/pos
 - [ ] Click Next
 
 #### Step 4: Delivery Handler
+
 - [ ] Select "Pickup in Store" → No address field shown
 - [ ] Switch to "Delivery to Address" → Address field appears
 - [ ] Enter fake address: "123 Main St, Manila"
@@ -56,11 +63,13 @@ Visit: http://localhost:3000/in/pos
 - [ ] Click Next
 
 #### Step 5: Order Review
+
 - [ ] Review all baskets, products, customer, delivery shown
 - [ ] Verify totals in right sidebar match review
 - [ ] Click Next
 
 #### Step 6: Payment Modal
+
 - [ ] Total shown in yellow banner
 - [ ] Select "Cash"
 - [ ] Enter amount paid: Total + 20 (to test change)
@@ -71,12 +80,14 @@ Visit: http://localhost:3000/in/pos
 - [ ] Click "Create Order"
 
 #### Receipt Modal
+
 - [ ] Should show order ID
 - [ ] Should show receipt content (or at least order ID)
 - [ ] Click "Print" (or "Close")
 - [ ] Should reset form for new order
 
 ### 3. Order Summary Sidebar (throughout all steps)
+
 - [ ] Check it updates real-time as you change values
 - [ ] Verify ₱ formatting (₱X.XX)
 - [ ] Check step indicator at bottom (Step 1 of 6, etc.)
@@ -89,6 +100,7 @@ Visit: http://localhost:3000/in/pos
   - TOTAL = final amount
 
 ### 4. Edge Cases
+
 - [ ] No baskets, only products → Should still calculate
 - [ ] Multiple baskets (5kg + 6kg + 2kg) → Auto-created
 - [ ] Iron at 1.5kg → Should skip (= 0)
@@ -98,7 +110,9 @@ Visit: http://localhost:3000/in/pos
 - [ ] GCash without reference → Button disabled
 
 ### 5. Database Validation (if available)
+
 After successful order creation:
+
 ```sql
 -- Check order was created
 SELECT id, customer_id, status, total_amount, breakdown, handling
@@ -159,24 +173,24 @@ LIMIT 5;
 
 ## 📊 Test Report Template
 
-**Date:** ___________  
-**Tester:** ___________
+**Date:** ****\_\_\_****  
+**Tester:** ****\_\_\_****
 
-| Step | Feature | Status | Notes |
-|------|---------|--------|-------|
-| 0 | Service Type | ✅/❌ | |
-| 1 | Basket Config | ✅/❌ | |
-| 1 | Auto-basket (8kg) | ✅/❌ | |
-| 2 | Products | ✅/❌ | |
-| 3 | Customer Search | ✅/❌ | |
-| 3 | Create Customer | ✅/❌ | |
-| 4 | Pickup/Delivery | ✅/❌ | |
-| 4 | Delivery Fee | ✅/❌ | |
-| 5 | Order Review | ✅/❌ | |
-| 6 | Payment (Cash) | ✅/❌ | |
-| 6 | Payment (GCash) | ✅/❌ | |
-| API | Order Creation | ✅/❌ | |
-| DB | Inventory Deducted | ✅/❌ | |
+| Step | Feature            | Status | Notes |
+| ---- | ------------------ | ------ | ----- |
+| 0    | Service Type       | ✅/❌  |       |
+| 1    | Basket Config      | ✅/❌  |       |
+| 1    | Auto-basket (8kg)  | ✅/❌  |       |
+| 2    | Products           | ✅/❌  |       |
+| 3    | Customer Search    | ✅/❌  |       |
+| 3    | Create Customer    | ✅/❌  |       |
+| 4    | Pickup/Delivery    | ✅/❌  |       |
+| 4    | Delivery Fee       | ✅/❌  |       |
+| 5    | Order Review       | ✅/❌  |       |
+| 6    | Payment (Cash)     | ✅/❌  |       |
+| 6    | Payment (GCash)    | ✅/❌  |       |
+| API  | Order Creation     | ✅/❌  |       |
+| DB   | Inventory Deducted | ✅/❌  |       |
 
 ---
 

@@ -29,11 +29,13 @@
 ## ✅ Features Implemented
 
 ### Step 0: Service Type Selector
+
 - [x] Self-service option
 - [x] Staff-service option (with ₱40 fee mention)
 - [x] Next button proceeds to Step 1
 
 ### Step 1: Basket Configurator
+
 - [x] Multiple basket tabs
 - [x] Weight input (0-8kg per basket)
 - [x] Auto-create new basket when weight > 8kg
@@ -51,6 +53,7 @@
 - [x] Back/Next navigation
 
 ### Step 2: Product Selector
+
 - [x] Product grid with images
 - [x] Product name, price, stock quantity display
 - [x] Low stock warning (reorder level indicator)
@@ -59,6 +62,7 @@
 - [x] Back/Next navigation
 
 ### Step 3: Customer Lookup
+
 - [x] Search input (debounced 300ms)
 - [x] Customer suggestions dropdown
 - [x] Click to select existing customer
@@ -69,6 +73,7 @@
 - [x] Back/Next navigation (Next disabled without customer)
 
 ### Step 4: Delivery Handler
+
 - [x] Pickup option (no fee)
 - [x] Delivery option
 - [x] Conditional address field (if delivery selected)
@@ -79,6 +84,7 @@
 - [x] Back/Next navigation (Next disabled if delivery but no address)
 
 ### Step 5: Order Review
+
 - [x] Basket summary with weights and prices
 - [x] Product summary with quantities and prices
 - [x] Customer information display
@@ -86,6 +92,7 @@
 - [x] Back/Next navigation
 
 ### Step 6: Payment Modal
+
 - [x] Total due displayed prominently
 - [x] Cash option
 - [x] Cash: Amount received input
@@ -96,6 +103,7 @@
 - [x] Create Order button disabled until payment valid
 
 ### Order Summary Sidebar (all steps)
+
 - [x] Real-time basket summary
 - [x] Real-time product summary
 - [x] Fee breakdown (staff service, delivery, VAT)
@@ -105,6 +113,7 @@
 - [x] Sticky positioning (stays in view while scrolling)
 
 ### Receipt Modal
+
 - [x] Modal overlay
 - [x] Order ID display
 - [x] Receipt content display
@@ -282,13 +291,14 @@
 4. Check that services/products exist in database
 5. Refer to [POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md)
 6. Refer to [REBUILD_COMPLETE.md](./REBUILD_COMPLETE.md)
-7. Check [_LEGACY_POS_ARCHIVE/](./c:\Users\kizen\Projects\katflix_ilaba\_LEGACY_POS_ARCHIVE) for original implementation reference
+7. Check [\_LEGACY_POS_ARCHIVE/](./c:\Users\kizen\Projects\katflix_ilaba_LEGACY_POS_ARCHIVE) for original implementation reference
 
 ---
 
 ## 🎓 For Your Professor
 
 This rebuild demonstrates:
+
 - ✅ Understanding of POS business logic (laundry pricing, basket management)
 - ✅ Clean architecture (types → helpers → UI → API)
 - ✅ TypeScript proficiency (strict types, interfaces)
@@ -302,6 +312,7 @@ This rebuild demonstrates:
 ## ✨ Final Status
 
 **Total Implementation:**
+
 - 2,510+ lines of new code
 - 5 documentation files
 - 0 TypeScript errors
@@ -318,6 +329,6 @@ This rebuild demonstrates:
 
 ---
 
-*Delivered by GitHub Copilot*  
-*Date: January 27, 2026*  
-*Project: Katflix Ilaba POS Overhaul*
+_Delivered by GitHub Copilot_  
+_Date: January 27, 2026_  
+_Project: Katflix Ilaba POS Overhaul_

@@ -18,16 +18,19 @@
 ### ⚙️ Fixed Critical Issues in Create Order Endpoint
 
 **Issue 1: RPC Fallback Pattern**
+
 - **Problem:** Code tried to use `supabase.rpc()` for inventory deduction, with fallback to manual update
 - **Risk:** If RPC fails, fallback inconsistency could corrupt inventory
 - **Fix:** Removed RPC call entirely, using direct SQL update with proper error handling
 
 **Issue 2: No Error Rollback**
+
 - **Problem:** If inventory update failed after order creation, order would exist with no inventory deduction
 - **Risk:** Inventory inconsistency, orders with no matching transactions
 - **Fix:** Added rollback logic - if any inventory operation fails, delete the entire order
 
 **Issue 3: Incomplete Transaction Handling**
+
 - **Problem:** Error handling was minimal, no proper sequencing
 - **Fix:** Proper error flow with immediate rollback on any failure
 
@@ -38,14 +41,19 @@
 **Changes Made:**
 
 1. **Simplified inventory update** (removed RPC):
+
    ```typescript
    // Before: supabase.rpc("subtract_quantity", {...})
    // After: Direct calculation with error handling
    const newQuantity = currentProduct.quantity - item.quantity;
-   await supabase.from("products").update({ quantity: newQuantity }).eq("id", item.product_id);
+   await supabase
+     .from("products")
+     .update({ quantity: newQuantity })
+     .eq("id", item.product_id);
    ```
 
 2. **Added order rollback on error**:
+
    ```typescript
    if (txError) {
      await supabase.from("orders").delete().eq("id", orderId);
@@ -55,20 +63,20 @@
 
 3. **Proper error sequencing**:
    - Fetch current quantity → Check for errors
-   - Update quantity → Check for errors  
+   - Update quantity → Check for errors
    - On any error → Rollback & return error
 
 ---
 
 ## 📊 Current Endpoint Status
 
-| Endpoint | Method | Status | Data Source | Notes |
-|----------|--------|--------|-------------|-------|
-| /api/manage/services/getServices | GET | ✅ Working | DB `services` table | Returns all active services |
-| /api/manage/products/getProducts | GET | ✅ Working | DB `products` table | Only active products, includes stock qty |
-| /api/pos/customers/search | GET | ✅ Working | DB `customers` table | Case-insensitive, limit 10 |
-| /api/pos/customers | POST | ✅ Working | DB `customers` table | Create/update with validation |
-| /api/orders/pos/create | POST | ✅ Fixed | DB `orders`, `product_transactions`, `products` | Transactional with rollback |
+| Endpoint                         | Method | Status     | Data Source                                     | Notes                                    |
+| -------------------------------- | ------ | ---------- | ----------------------------------------------- | ---------------------------------------- |
+| /api/manage/services/getServices | GET    | ✅ Working | DB `services` table                             | Returns all active services              |
+| /api/manage/products/getProducts | GET    | ✅ Working | DB `products` table                             | Only active products, includes stock qty |
+| /api/pos/customers/search        | GET    | ✅ Working | DB `customers` table                            | Case-insensitive, limit 10               |
+| /api/pos/customers               | POST   | ✅ Working | DB `customers` table                            | Create/update with validation            |
+| /api/orders/pos/create           | POST   | ✅ Fixed   | DB `orders`, `product_transactions`, `products` | Transactional with rollback              |
 
 ---
 

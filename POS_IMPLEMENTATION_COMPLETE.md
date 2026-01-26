@@ -8,15 +8,15 @@ This document confirms that all 7 database integration requirements have been fu
 
 ## 📋 Quick Reference
 
-| # | Requirement | Status | File | Lines |
-|---|-------------|--------|------|-------|
-| 1 | Service name/rate/description from DB | ✅ | page.tsx | 76-87, 144-233 |
-| 2 | Product info from DB | ✅ | page.tsx, usePOSState.ts | 430-525, 47-51 |
-| 3 | Inventory deduction on order | ✅ | pos/create/route.ts | 144-235 |
-| 4 | Customer pulling from DB | ✅ | page.tsx, usePOSState.ts | 630-665, 58-66 |
-| 5 | Existing customer edits NOT saved | ✅ | page.tsx | 680-765 |
-| 6 | New customer creation + email | ✅ | page.tsx, /api/pos/customers | 566-620, route.ts |
-| 7 | Delivery fee from services table | ✅ | page.tsx | 800-880 |
+| #   | Requirement                           | Status | File                         | Lines             |
+| --- | ------------------------------------- | ------ | ---------------------------- | ----------------- |
+| 1   | Service name/rate/description from DB | ✅     | page.tsx                     | 76-87, 144-233    |
+| 2   | Product info from DB                  | ✅     | page.tsx, usePOSState.ts     | 430-525, 47-51    |
+| 3   | Inventory deduction on order          | ✅     | pos/create/route.ts          | 144-235           |
+| 4   | Customer pulling from DB              | ✅     | page.tsx, usePOSState.ts     | 630-665, 58-66    |
+| 5   | Existing customer edits NOT saved     | ✅     | page.tsx                     | 680-765           |
+| 6   | New customer creation + email         | ✅     | page.tsx, /api/pos/customers | 566-620, route.ts |
+| 7   | Delivery fee from services table      | ✅     | page.tsx                     | 800-880           |
 
 ---
 
@@ -27,28 +27,34 @@ This document confirms that all 7 database integration requirements have been fu
 **What it does:** Services (wash, dry, spin, iron, additional dry time) display prices from the `services` table instead of hardcoded values.
 
 **How it works:**
+
 ```typescript
 // Helper function in Step2Baskets
 const getServiceInfo = (serviceType: string, tier?: string) => {
-  const matching = pos.services.filter((s: any) => s.service_type === serviceType);
+  const matching = pos.services.filter(
+    (s: any) => s.service_type === serviceType,
+  );
   if (!matching.length) return { name: "", price: 0, description: "" };
-  
-  const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+
+  const service =
+    matching.find((s: any) => !tier || s.tier === tier) || matching[0];
   return {
     name: service.name || "",
     price: service.base_price || 0,
-    description: service.description || ""
+    description: service.description || "",
   };
 };
 ```
 
 **Database Query:**
+
 ```sql
 -- Executed on POS page load
 SELECT * FROM services WHERE is_active = true;
 ```
 
 **Display Example:**
+
 ```
 🧺 Wash - Basic: ₱[base_price from DB]/basket
 💨 Dry - Premium: ₱[base_price from DB]/basket
@@ -58,6 +64,7 @@ SELECT * FROM services WHERE is_active = true;
 ```
 
 **Testing:**
+
 1. Navigate to Step 2 (Baskets)
 2. Check that prices match the `services` table base_price values
 3. Change a service price in the DB
@@ -70,6 +77,7 @@ SELECT * FROM services WHERE is_active = true;
 **What it does:** Products listed in Step 3 show real data from the `products` table with current pricing, images, and stock levels.
 
 **How it works:**
+
 ```typescript
 // Loaded in usePOSState hook
 const { data: productsData } = await supabase
@@ -78,17 +86,20 @@ const { data: productsData } = await supabase
   .eq("is_active", true)
   .order("item_name");
 
-setProducts(productsData?.map(p => ({
-  id: p.id,
-  item_name: p.item_name,
-  unit_price: p.unit_price,
-  quantity_in_stock: p.quantity,
-  image_url: p.image_url,
-  reorder_level: p.reorder_level
-})) || []);
+setProducts(
+  productsData?.map((p) => ({
+    id: p.id,
+    item_name: p.item_name,
+    unit_price: p.unit_price,
+    quantity_in_stock: p.quantity,
+    image_url: p.image_url,
+    reorder_level: p.reorder_level,
+  })) || [],
+);
 ```
 
 **Display:**
+
 - Product image (from image_url)
 - Product name (from item_name)
 - Price (from unit_price)
@@ -96,6 +107,7 @@ setProducts(productsData?.map(p => ({
 - Add/remove quantity buttons
 
 **Testing:**
+
 1. Go to Step 3 (Products)
 2. Verify products shown match the `products` table
 3. Check prices match unit_price values
@@ -111,6 +123,7 @@ setProducts(productsData?.map(p => ({
 **How it works:**
 
 **Step 1 - Pre-Order Inventory Check:**
+
 ```typescript
 // Validate stock exists
 for (const item of body.breakdown.items || []) {
@@ -127,6 +140,7 @@ for (const item of body.breakdown.items || []) {
 ```
 
 **Step 2 - Create Order:**
+
 ```typescript
 const { data: newOrder } = await supabase
   .from("orders")
@@ -134,28 +148,28 @@ const { data: newOrder } = await supabase
     customer_id: customerId,
     breakdown: body.breakdown,
     handling: body.handling,
-    status: "pending"
+    status: "pending",
   })
   .select("id")
   .single();
 ```
 
 **Step 3 - Create Inventory Transaction Record:**
+
 ```typescript
 for (const item of body.breakdown.items || []) {
-  await supabase
-    .from("product_transactions")
-    .insert({
-      product_id: item.product_id,
-      order_id: orderId,
-      quantity_change: -item.quantity,  // Negative = deduction
-      transaction_type: "order",
-      notes: `POS order ${orderId}`
-    });
+  await supabase.from("product_transactions").insert({
+    product_id: item.product_id,
+    order_id: orderId,
+    quantity_change: -item.quantity, // Negative = deduction
+    transaction_type: "order",
+    notes: `POS order ${orderId}`,
+  });
 }
 ```
 
 **Step 4 - Update Product Quantity:**
+
 ```typescript
 for (const item of body.breakdown.items || []) {
   const { data: product } = await supabase
@@ -163,7 +177,7 @@ for (const item of body.breakdown.items || []) {
     .select("quantity")
     .eq("id", item.product_id)
     .single();
-  
+
   const newQty = Math.max(0, product.quantity - item.quantity);
   await supabase
     .from("products")
@@ -173,12 +187,14 @@ for (const item of body.breakdown.items || []) {
 ```
 
 **Safety Features:**
+
 - ✅ Stock validated BEFORE order created
 - ✅ Transaction record creates audit trail
 - ✅ If anything fails, order is rolled back
 - ✅ All updates atomic (success or nothing)
 
 **Testing:**
+
 1. Note current product quantity in DB
 2. Create order with that product
 3. Check `products` table → quantity decreased
@@ -193,6 +209,7 @@ for (const item of body.breakdown.items || []) {
 **How it works:**
 
 **Debounced Search:**
+
 ```typescript
 useEffect(() => {
   const timer = setTimeout(async () => {
@@ -200,22 +217,28 @@ useEffect(() => {
     const query = customerSearch.toLowerCase();
     const { data } = await supabase
       .from("customers")
-      .select("id, first_name, last_name, phone_number, email_address, loyalty_points")
-      .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
+      .select(
+        "id, first_name, last_name, phone_number, email_address, loyalty_points",
+      )
+      .or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`,
+      )
       .limit(5);
-    
+
     setCustomerSuggestions(data || []);
-  }, 300);  // Wait 300ms after user stops typing
+  }, 300); // Wait 300ms after user stops typing
 }, [customerSearch]);
 ```
 
 **Display:**
+
 - Customer name (first_name + last_name)
 - Phone number
 - Search across: first_name, last_name, phone_number
 - Shows up to 5 results
 
 **Testing:**
+
 1. In Step 4 (Customer), type in search box
 2. Verify results match customers in DB
 3. Click a result → customer selected
@@ -230,6 +253,7 @@ useEffect(() => {
 **How it works:**
 
 **Selected Customer View:**
+
 ```tsx
 {pos.customer ? (
   <div className="space-y-2">
@@ -253,6 +277,7 @@ useEffect(() => {
 ```
 
 **Safety:**
+
 - ✅ Input fields are disabled (can't edit)
 - ✅ No onChange handlers → no API calls
 - ✅ No state sync to DB
@@ -260,6 +285,7 @@ useEffect(() => {
 - ✅ Easy to change customer without corrupting DB
 
 **Testing:**
+
 1. Search and select an existing customer
 2. Try to edit phone field → should be disabled
 3. Try to edit email field → should be disabled
@@ -275,6 +301,7 @@ useEffect(() => {
 **How it works:**
 
 **Step 1 - User Fills Form:**
+
 ```tsx
 <input placeholder="First Name" value={pos.newCustomerForm.first_name} />
 <input placeholder="Last Name" value={pos.newCustomerForm.last_name} />
@@ -284,14 +311,25 @@ useEffect(() => {
 ```
 
 **Step 2 - Validation:**
+
 ```typescript
-if (!firstName) { setError("First name required"); return; }
-if (!lastName) { setError("Last name required"); return; }
-if (!phone) { setError("Phone required"); return; }
+if (!firstName) {
+  setError("First name required");
+  return;
+}
+if (!lastName) {
+  setError("Last name required");
+  return;
+}
+if (!phone) {
+  setError("Phone required");
+  return;
+}
 // Email is optional
 ```
 
 **Step 3 - Create Customer in DB:**
+
 ```typescript
 const response = await fetch("/api/pos/customers", {
   method: "POST",
@@ -299,15 +337,16 @@ const response = await fetch("/api/pos/customers", {
     first_name: firstName,
     last_name: lastName,
     phone_number: phone,
-    email_address: email || null
-  })
+    email_address: email || null,
+  }),
 });
 
 const { customer } = await response.json();
-pos.selectCustomer(customer);  // Auto-select created customer
+pos.selectCustomer(customer); // Auto-select created customer
 ```
 
 **Step 4 - Send Invitation Email (if email provided):**
+
 ```typescript
 if (email) {
   await fetch("/api/email/send-invitation", {
@@ -315,13 +354,14 @@ if (email) {
     body: JSON.stringify({
       customer_id: customer.id,
       email: email,
-      first_name: firstName
-    })
+      first_name: firstName,
+    }),
   });
 }
 ```
 
 **Email Content:**
+
 ```
 Subject: Welcome to Our Laundry Service, [First Name]!
 
@@ -339,6 +379,7 @@ The Laundry Team
 ```
 
 **Database Update:**
+
 ```typescript
 // In /api/pos/customers
 INSERT INTO customers (first_name, last_name, phone_number, email_address, loyalty_points)
@@ -347,6 +388,7 @@ RETURNING id, first_name, last_name, ...
 ```
 
 **Testing:**
+
 1. In Step 4, leave "Search customer" empty
 2. Fill: First Name, Last Name, Phone, Email
 3. Click "Create Customer"
@@ -363,16 +405,20 @@ RETURNING id, first_name, last_name, ...
 **How it works:**
 
 **Load Delivery Fee from DB:**
+
 ```typescript
 const getDeliveryFeeDefault = () => {
-  const deliveryService = pos.services.find((s: any) => s.service_type === "delivery");
-  return deliveryService?.base_price || 50;  // Fallback to 50 if not found
+  const deliveryService = pos.services.find(
+    (s: any) => s.service_type === "delivery",
+  );
+  return deliveryService?.base_price || 50; // Fallback to 50 if not found
 };
 
 const deliveryFeeDefault = getDeliveryFeeDefault();
 ```
 
 **Display with Minimum Enforcement:**
+
 ```tsx
 <div className="space-y-1">
   <label className="text-xs font-semibold text-slate-700">
@@ -394,12 +440,14 @@ const deliveryFeeDefault = getDeliveryFeeDefault();
 ```
 
 **Features:**
+
 - ✅ Fee pulled from services table
 - ✅ Minimum enforcement (user can't go below DB value)
 - ✅ User can increase fee above minimum
 - ✅ Fallback to 50 if no delivery service configured
 
 **Testing:**
+
 1. Go to Step 5 (Handling)
 2. Click "Deliver to customer"
 3. Check delivery fee → should match services table base_price for service_type='delivery'
@@ -411,6 +459,7 @@ const deliveryFeeDefault = getDeliveryFeeDefault();
 ## 🗄️ Database Schema Reference
 
 ### services table
+
 ```sql
 CREATE TABLE services (
   id UUID PRIMARY KEY,
@@ -425,6 +474,7 @@ CREATE TABLE services (
 ```
 
 ### products table
+
 ```sql
 CREATE TABLE products (
   id UUID PRIMARY KEY,
@@ -439,6 +489,7 @@ CREATE TABLE products (
 ```
 
 ### customers table
+
 ```sql
 CREATE TABLE customers (
   id UUID PRIMARY KEY,
@@ -454,6 +505,7 @@ CREATE TABLE customers (
 ```
 
 ### orders table
+
 ```sql
 CREATE TABLE orders (
   id UUID PRIMARY KEY,
@@ -468,6 +520,7 @@ CREATE TABLE orders (
 ```
 
 ### product_transactions table
+
 ```sql
 CREATE TABLE product_transactions (
   id UUID PRIMARY KEY,
@@ -485,6 +538,7 @@ CREATE TABLE product_transactions (
 ## 🧪 Complete Testing Workflow
 
 ### Pre-Test Setup
+
 1. Ensure you have test data in all tables (services, products, customers)
 2. Note some baseline values (prices, stock quantities)
 3. Have email configured (or check logs for email endpoint calls)
@@ -492,6 +546,7 @@ CREATE TABLE product_transactions (
 ### Test Sequence
 
 #### Test 1: Service Pricing (Requirement 1)
+
 ```
 1. Load POS page
 2. Go to Step 2 (Baskets)
@@ -502,6 +557,7 @@ Result: ✅ Service prices dynamic from DB
 ```
 
 #### Test 2: Product Display (Requirement 2)
+
 ```
 1. Go to Step 3 (Products)
 2. Verify all products shown match products table
@@ -512,6 +568,7 @@ Result: ✅ Products pull from DB with current prices
 ```
 
 #### Test 3: Inventory Deduction (Requirement 3)
+
 ```
 1. Note a product quantity in DB (e.g., 10)
 2. Create order with that product (qty 3)
@@ -522,6 +579,7 @@ Result: ✅ Inventory deducted correctly with audit trail
 ```
 
 #### Test 4: Customer Search (Requirement 4)
+
 ```
 1. Insert test customers in customers table
 2. Go to Step 4 (Customer)
@@ -532,6 +590,7 @@ Result: ✅ Customer search pulls from DB correctly
 ```
 
 #### Test 5: Existing Customer Edit Safety (Requirement 5)
+
 ```
 1. Select an existing customer in Step 4
 2. Try to edit first name → DISABLED ✅
@@ -543,6 +602,7 @@ Result: ✅ Existing customer edits safe, not saved to DB
 ```
 
 #### Test 6: New Customer Creation + Email (Requirement 6)
+
 ```
 1. Leave customer search empty (no selection)
 2. Fill form: First Name, Last Name, Phone, Email
@@ -554,6 +614,7 @@ Result: ✅ Customer created, saved to DB, email sent
 ```
 
 #### Test 7: Delivery Fee from Services (Requirement 7)
+
 ```
 1. Go to Step 5 (Handling)
 2. Click "Deliver to customer"
@@ -577,20 +638,20 @@ All 7 requirements are **COMPLETE** when:
 ✅ Customers pull from DB search  
 ✅ Existing customer edits don't save to DB  
 ✅ New customers created & saved with email invitation  
-✅ Delivery fee from services table  
+✅ Delivery fee from services table
 
 ---
 
 ## 📝 Implementation Files Summary
 
-| File | Purpose | Key Changes |
-|------|---------|-------------|
-| `src/app/in/pos/page.tsx` | Main POS UI (1331 lines) | Service helpers, product display, customer form, delivery fee |
-| `src/app/in/pos/logic/usePOSState.ts` | State management (229 lines) | Load services/products, customer search, order creation |
-| `src/app/api/pos/customers/route.ts` | Customer API | Create/update customers in DB |
-| `src/app/api/pos/customers/search/route.ts` | Search API | Search customers from DB |
-| `src/app/api/orders/pos/create/route.ts` | Order API | Create order, deduct inventory, rollback on error |
-| `src/app/api/email/send-invitation/route.ts` | Email API | Send invitation to new customer ✅ CREATED |
+| File                                         | Purpose                      | Key Changes                                                   |
+| -------------------------------------------- | ---------------------------- | ------------------------------------------------------------- |
+| `src/app/in/pos/page.tsx`                    | Main POS UI (1331 lines)     | Service helpers, product display, customer form, delivery fee |
+| `src/app/in/pos/logic/usePOSState.ts`        | State management (229 lines) | Load services/products, customer search, order creation       |
+| `src/app/api/pos/customers/route.ts`         | Customer API                 | Create/update customers in DB                                 |
+| `src/app/api/pos/customers/search/route.ts`  | Search API                   | Search customers from DB                                      |
+| `src/app/api/orders/pos/create/route.ts`     | Order API                    | Create order, deduct inventory, rollback on error             |
+| `src/app/api/email/send-invitation/route.ts` | Email API                    | Send invitation to new customer ✅ CREATED                    |
 
 ---
 

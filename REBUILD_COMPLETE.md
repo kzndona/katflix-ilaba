@@ -11,6 +11,7 @@
 ### Clean Architecture (From Scratch)
 
 #### 1. **Type Definitions** (`src/app/in/pos/logic/posTypes.ts`)
+
 - `OrderBreakdown` - JSONB structure for order items, baskets, fees, summary
 - `OrderHandling` - JSONB structure for delivery/pickup, payment, instructions
 - `Basket` - Per-basket services (wash, dry, spin, iron, fold, additional dry time)
@@ -18,6 +19,7 @@
 - Clear separation: service types, payment methods, handling types
 
 **Key Design:**
+
 - Per-ORDER staff service fee (₱40) - not per basket
 - Flat service pricing (not rate_per_kg)
 - Iron: minimum 2kg, skip if < 2kg
@@ -25,6 +27,7 @@
 - 12% VAT inclusive
 
 #### 2. **Helper Functions** (`src/app/in/pos/logic/posHelpers.ts`)
+
 - `calculateBasketSubtotal()` - Services pricing
 - `calculateBasketDuration()` - Time estimates
 - `buildOrderBreakdown()` - Complete order summary
@@ -35,6 +38,7 @@
 - `normalizeIronWeight()` - Min 2kg enforcement
 
 #### 3. **State Management** (`src/app/in/pos/logic/usePOSState.ts`)
+
 - Central `usePOSState()` hook managing:
   - Workflow step (0-6)
   - Global service type (self/staff)
@@ -49,7 +53,9 @@
 - Receipt modal management
 
 #### 4. **UI Components** (`src/app/in/pos/page.tsx`)
+
 **6-Step Workflow:**
+
 - **Step 0:** Service Type Selector (self-service vs staff-service)
 - **Step 1:** Basket Configurator (weight, services, notes)
 - **Step 2:** Product Selector (grid with images, quantity controls)
@@ -59,11 +65,13 @@
 - **Step 6:** Payment Modal (cash amount + change, or GCash ref)
 
 **Layout:**
+
 - Left: Scrollable form (steps 0-6)
 - Right: Sticky order summary (real-time updates, ₱ formatting)
 - Receipt modal (after successful order)
 
 **UI Standards (from services/products pages):**
+
 - Headers: `text-2xl font-bold mb-4`
 - Labels: `text-xs font-semibold mb-1`
 - Inputs: `px-3 py-2 border border-gray-300 rounded`
@@ -71,9 +79,11 @@
 - Financial: `₱${value.toFixed(2)}`
 
 #### 5. **API Endpoint** (`src/app/api/orders/pos/create/route.ts`)
+
 **POST /api/orders/pos/create**
 
 **Request:**
+
 ```typescript
 {
   customer_id?: string;
@@ -89,6 +99,7 @@
 ```
 
 **Response:**
+
 ```typescript
 {
   success: boolean;
@@ -106,6 +117,7 @@
 ```
 
 **Logic:**
+
 1. Authenticate user (staff)
 2. Validate input (customer, breakdown, handling)
 3. Create/get customer
@@ -116,6 +128,7 @@
 8. Return order ID + receipt
 
 **Error Handling:**
+
 - 401: Unauthorized / Staff not found
 - 400: Missing/invalid input
 - 404: Product not found
@@ -144,6 +157,7 @@ src/app/api/orders/pos/create/
 ## 📦 Archived Files
 
 Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
+
 - `usePOSState.tsx` (767 lines, pane-based)
 - `orderTypes.ts` (303 lines, complex)
 - Old components (paneBaskets, paneCustomer, etc.)
@@ -155,6 +169,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 ## ✅ Business Logic Implementation
 
 ### ✅ Service Pricing (CORRECT NOW)
+
 - **Wash Basic:** ₱65 per basket
 - **Wash Premium:** ₱80 per basket
 - **Dry Basic:** ₱65 per basket
@@ -165,11 +180,13 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 - **Additional Dry Time:** ₱15 per 8-min level (0, 8, 16, 24 min)
 
 ### ✅ Fees
+
 - **Staff Service Fee:** ₱40 per ORDER (if staff_service selected)
 - **Delivery Fee:** ₱50 default, min ₱50, cashier can override
 - **VAT:** 12% inclusive (not added on top)
 
 ### ✅ Basket Management
+
 - Max weight: 8kg
 - Exceeding 8kg auto-creates new basket
 - Iron: min 2kg (skip if < 2kg)
@@ -177,6 +194,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 - Per-basket notes
 
 ### ✅ Workflow
+
 - Step 0: Service type (global choice)
 - Step 1: Baskets with services
 - Step 2: Products from inventory
@@ -186,6 +204,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 - Step 6: Cash (amount + change) or GCash (reference)
 
 ### ✅ Order Creation
+
 - Creates customer if new
 - Creates order with JSONB breakdown & handling
 - Deducts inventory atomically
@@ -197,6 +216,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 ## 🚀 What's Next (Testing Phase)
 
 ### Unit Tests
+
 - [ ] Basket auto-creation (8kg limit)
 - [ ] Iron weight normalization (skip < 2kg)
 - [ ] Delivery fee validation (min 50)
@@ -205,6 +225,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 - [ ] Change calculation (cash)
 
 ### Integration Tests
+
 - [ ] Full 6-step flow
 - [ ] Customer creation
 - [ ] Inventory deduction
@@ -212,6 +233,7 @@ Old implementation saved in `_LEGACY_POS_ARCHIVE/`:
 - [ ] Error handling (insufficient stock, etc.)
 
 ### Manual Testing
+
 - [ ] UI responsiveness
 - [ ] Form validation
 - [ ] Back/forward navigation

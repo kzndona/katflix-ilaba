@@ -12,19 +12,26 @@ This document maps all API endpoints used in the POS system and how they integra
 
 **Purpose:** Real-time customer search from the database
 
-**Called From:** 
+**Called From:**
+
 - [src/app/in/pos/logic/usePOSState.ts](src/app/in/pos/logic/usePOSState.ts#L58-L66) (Line 58-66)
 
 **Request:**
+
 ```typescript
 const { data } = await supabase
   .from("customers")
-  .select("id, first_name, last_name, phone_number, email_address, loyalty_points")
-  .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
+  .select(
+    "id, first_name, last_name, phone_number, email_address, loyalty_points",
+  )
+  .or(
+    `first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`,
+  )
   .limit(5);
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -39,6 +46,7 @@ const { data } = await supabase
 ```
 
 **Behavior:**
+
 - ✅ Debounced 300ms (waits for user to stop typing)
 - ✅ Case-insensitive search
 - ✅ Searches: first_name, last_name, phone_number
@@ -52,9 +60,11 @@ const { data } = await supabase
 **Purpose:** Create new customer record in database
 
 **Called From:**
+
 - [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L587-L615) (Step4Customer, validateAndCreate function)
 
 **Request:**
+
 ```typescript
 const response = await fetch("/api/pos/customers", {
   method: "POST",
@@ -63,12 +73,13 @@ const response = await fetch("/api/pos/customers", {
     first_name: firstName,
     last_name: lastName,
     phone_number: phone,
-    email_address: email_address || null
-  })
+    email_address: email_address || null,
+  }),
 });
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -84,6 +95,7 @@ const response = await fetch("/api/pos/customers", {
 ```
 
 **Behavior:**
+
 - ✅ Validates first_name, last_name, phone_number required
 - ✅ Email is optional
 - ✅ Returns created customer with ID
@@ -92,6 +104,7 @@ const response = await fetch("/api/pos/customers", {
 - ✅ Shows error if validation fails
 
 **Implementation Location:**
+
 - API Route: [src/app/api/pos/customers/route.ts](src/app/api/pos/customers/route.ts)
 
 ---
@@ -101,9 +114,11 @@ const response = await fetch("/api/pos/customers", {
 **Purpose:** Send welcome email to newly created customer
 
 **Called From:**
+
 - [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L609-L616) (Step4Customer, after customer creation if email provided)
 
 **Request:**
+
 ```typescript
 if (pos.newCustomerForm.email_address) {
   await fetch("/api/email/send-invitation", {
@@ -111,13 +126,14 @@ if (pos.newCustomerForm.email_address) {
     body: JSON.stringify({
       customer_id: data.customer.id,
       email: data.customer.email_address,
-      first_name: data.customer.first_name
-    })
+      first_name: data.customer.first_name,
+    }),
   });
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -127,6 +143,7 @@ if (pos.newCustomerForm.email_address) {
 ```
 
 **Email Content:**
+
 ```
 Subject: Welcome to Our Laundry Service, Jane!
 
@@ -144,6 +161,7 @@ The Laundry Team
 ```
 
 **Behavior:**
+
 - ✅ Only called if customer email provided
 - ✅ Email is optional
 - ✅ Async (doesn't block UI)
@@ -151,6 +169,7 @@ The Laundry Team
 - ✅ Ready for SendGrid/AWS SES/Resend integration
 
 **Implementation Location:**
+
 - API Route: [src/app/api/email/send-invitation/route.ts](src/app/api/email/send-invitation/route.ts) ✅ CREATED
 
 ---
@@ -160,9 +179,11 @@ The Laundry Team
 **Purpose:** Create order with transactional inventory deduction
 
 **Called From:**
+
 - [src/app/in/pos/logic/usePOSState.ts](src/app/in/pos/logic/usePOSState.ts#L158-L205) (createOrder function)
 
 **Request:**
+
 ```typescript
 // In page.tsx Step6Receipt, on checkout
 await pos.createOrder();
@@ -190,6 +211,7 @@ const response = await fetch("/api/orders/pos/create", {
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -206,6 +228,7 @@ const response = await fetch("/api/orders/pos/create", {
 ```
 
 **Behavior:**
+
 - ✅ Validates inventory BEFORE creating order
 - ✅ Creates order record
 - ✅ Creates product_transactions for audit trail
@@ -215,6 +238,7 @@ const response = await fetch("/api/orders/pos/create", {
 - ✅ Requires authentication (staff user)
 
 **Error Handling:**
+
 ```json
 {
   "success": false,
@@ -224,6 +248,7 @@ const response = await fetch("/api/orders/pos/create", {
 ```
 
 **Implementation Location:**
+
 - API Route: [src/app/api/orders/pos/create/route.ts](src/app/api/orders/pos/create/route.ts)
 
 ---
@@ -278,6 +303,7 @@ ORDER COMPLETE
 These queries are made directly through the Supabase client in the frontend:
 
 ### Load Services on Mount
+
 ```typescript
 // usePOSState.ts - Line 47-51
 const { data: servicesData } = await supabase
@@ -287,6 +313,7 @@ const { data: servicesData } = await supabase
 ```
 
 ### Load Products on Mount
+
 ```typescript
 // usePOSState.ts - Line 52-58
 const { data: productsData } = await supabase
@@ -297,12 +324,17 @@ const { data: productsData } = await supabase
 ```
 
 ### Search Customers (Debounced)
+
 ```typescript
 // usePOSState.ts - Line 58-66
 const { data } = await supabase
   .from("customers")
-  .select("id, first_name, last_name, phone_number, email_address, loyalty_points")
-  .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
+  .select(
+    "id, first_name, last_name, phone_number, email_address, loyalty_points",
+  )
+  .or(
+    `first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`,
+  )
   .limit(5);
 ```
 
@@ -310,28 +342,31 @@ const { data } = await supabase
 
 ## 📊 API Call Frequency
 
-| API | Called When | Frequency | Purpose |
-|-----|-------------|-----------|---------|
-| GET /api/pos/customers/search | User types in search | 300ms debounced | Find customers |
-| POST /api/pos/customers | Click "Create Customer" | Once per new customer | Save new customer |
-| POST /api/email/send-invitation | After new customer created | If email provided | Send welcome email |
-| POST /api/orders/pos/create | Click "Checkout" | Once per order | Create order, deduct inventory |
-| Load services | Page load | Once | Get all services |
-| Load products | Page load | Once | Get all products |
+| API                             | Called When                | Frequency             | Purpose                        |
+| ------------------------------- | -------------------------- | --------------------- | ------------------------------ |
+| GET /api/pos/customers/search   | User types in search       | 300ms debounced       | Find customers                 |
+| POST /api/pos/customers         | Click "Create Customer"    | Once per new customer | Save new customer              |
+| POST /api/email/send-invitation | After new customer created | If email provided     | Send welcome email             |
+| POST /api/orders/pos/create     | Click "Checkout"           | Once per order        | Create order, deduct inventory |
+| Load services                   | Page load                  | Once                  | Get all services               |
+| Load products                   | Page load                  | Once                  | Get all products               |
 
 ---
 
 ## 🔐 Authentication
 
 ### Public Endpoints (No Auth Required)
+
 - ❌ None - All POS endpoints require staff authentication
 
 ### Authenticated Endpoints (Staff Only)
+
 - ✅ POST /api/pos/customers - Create customer
 - ✅ POST /api/email/send-invitation - Send email
 - ✅ POST /api/orders/pos/create - Create order
 
 **Authentication Method:**
+
 - Requires valid Supabase auth session (staff user)
 - Checked via: `supabase.auth.getUser()`
 - Staff record verified: `supabase.from("staff").select("id").eq("auth_id", user.id)`
@@ -341,6 +376,7 @@ const { data } = await supabase
 ## 🧪 Testing API Endpoints
 
 ### Test Customer Creation
+
 ```bash
 curl -X POST http://localhost:3001/api/pos/customers \
   -H "Content-Type: application/json" \
@@ -353,11 +389,13 @@ curl -X POST http://localhost:3001/api/pos/customers \
 ```
 
 ### Test Customer Search
+
 ```bash
 curl http://localhost:3001/api/pos/customers/search?q=john
 ```
 
 ### Test Email Invitation
+
 ```bash
 curl -X POST http://localhost:3001/api/email/send-invitation \
   -H "Content-Type: application/json" \
@@ -369,6 +407,7 @@ curl -X POST http://localhost:3001/api/email/send-invitation \
 ```
 
 ### Test Order Creation
+
 ```bash
 curl -X POST http://localhost:3001/api/orders/pos/create \
   -H "Content-Type: application/json" \
@@ -394,6 +433,7 @@ curl -X POST http://localhost:3001/api/orders/pos/create \
 ## 📝 Error Handling
 
 ### Customer Creation Errors
+
 ```json
 {
   "success": false,
@@ -402,6 +442,7 @@ curl -X POST http://localhost:3001/api/orders/pos/create \
 ```
 
 ### Order Creation Errors
+
 ```json
 {
   "success": false,
@@ -411,6 +452,7 @@ curl -X POST http://localhost:3001/api/orders/pos/create \
 ```
 
 ### General Errors
+
 ```json
 {
   "success": false,

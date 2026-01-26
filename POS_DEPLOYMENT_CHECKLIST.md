@@ -9,10 +9,10 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 1️⃣ SERVICE PRICING FROM DATABASE
 
 ### Code Review
+
 - [ ] Helper function `getServiceInfo()` exists in Step2Baskets
   - Location: [page.tsx:76-87](src/app/in/pos/page.tsx#L76-L87)
   - Code: `const getServiceInfo = (serviceType, tier) => { ... }`
-  
 - [ ] Services loaded on mount in usePOSState
   - Location: [usePOSState.ts:47-51](src/app/in/pos/logic/usePOSState.ts#L47-L51)
   - Code: `supabase.from("services").select("*").eq("is_active", true)`
@@ -27,6 +27,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - Additional Dry Time: ✅
 
 ### Runtime Test
+
 1. Load POS → Step 2
 2. Note service prices displayed
 3. Compare with services table base_price
@@ -34,6 +35,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 5. Update service price in DB
 6. Reload POS page
 7. Verify price updated
+
 - [ ] All service prices display correctly from DB
 - [ ] Prices update when DB changes
 
@@ -42,6 +44,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 2️⃣ PRODUCT INFO FROM DATABASE
 
 ### Code Review
+
 - [ ] Products loaded on mount in usePOSState
   - Location: [usePOSState.ts:52-58](src/app/in/pos/logic/usePOSState.ts#L52-L58)
   - Code: `supabase.from("products").select("id, item_name, unit_price, quantity, image_url, reorder_level").eq("is_active", true)`
@@ -53,6 +56,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - [ ] quantity_in_stock ✅
 
 ### Runtime Test
+
 1. Load POS → Step 3
 2. Note products displayed
 3. Compare with products table
@@ -64,6 +68,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 5. Update product price in DB
 6. Reload POS
 7. Verify price updated
+
 - [ ] All products display from DB
 - [ ] Prices are dynamic from unit_price
 - [ ] Images display correctly
@@ -74,6 +79,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 3️⃣ INVENTORY DEDUCTION ON ORDER
 
 ### Code Review
+
 - [ ] Inventory validation before order creation
   - Location: [orders/pos/create/route.ts:144-168](src/app/api/orders/pos/create/route.ts#L144-L168)
   - Code: `if (product.quantity < item.quantity) { return error(...) }`
@@ -91,6 +97,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - Code: `await supabase.from("orders").delete().eq("id", orderId)`
 
 ### Runtime Test
+
 1. Select a product with known quantity (e.g., 10 units)
 2. Create order with 3 units of that product
 3. Immediately check DB:
@@ -102,6 +109,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
    - [ ] API returns error ✅
    - [ ] No order created ✅
    - [ ] No inventory changed ✅
+
 - [ ] Inventory deducts correctly
 - [ ] Transactions recorded
 - [ ] Rollback works on error
@@ -111,6 +119,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 4️⃣ CUSTOMER PULLING FROM DATABASE
 
 ### Code Review
+
 - [ ] Customer search hook in usePOSState
   - Location: [usePOSState.ts:58-66](src/app/in/pos/logic/usePOSState.ts#L58-L66)
   - Code: `supabase.from("customers").select(...).or(...first_name.ilike...)`
@@ -127,6 +136,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - Location: [page.tsx:630-665](src/app/in/pos/page.tsx#L630-L665)
 
 ### Runtime Test
+
 1. Go to Step 4 (Customer)
 2. Type partial first name
    - [ ] Results appear ✅
@@ -141,6 +151,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
    - [ ] Customer data loads ✅
    - [ ] All fields populated ✅
    - [ ] Loyalty points shown ✅
+
 - [ ] Search returns DB results
 - [ ] Results match input criteria
 - [ ] Customer data fully loads
@@ -150,6 +161,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 5️⃣ EXISTING CUSTOMER EDITS NOT SAVED
 
 ### Code Review
+
 - [ ] Input fields disabled when customer selected
   - Location: [page.tsx:700-765](src/app/in/pos/page.tsx#L700-L765)
   - Code: `disabled={!!pos.customer}`
@@ -161,6 +173,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - Clears selection: `handleChangeCustomer()`
 
 ### Runtime Test
+
 1. Go to Step 4 (Customer)
 2. Search and select existing customer
 3. Try to edit first name
@@ -182,6 +195,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 9. Check DB: customer phone/email unchanged
    - [ ] NOT updated in DB ✅
    - [ ] Same values as before ✅
+
 - [ ] Fields properly disabled
 - [ ] User warned about no-save
 - [ ] DB not corrupted
@@ -191,6 +205,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 6️⃣ NEW CUSTOMER CREATION + EMAIL
 
 ### Code Review
+
 - [ ] Customer creation API exists
   - Location: [api/pos/customers/route.ts](src/app/api/pos/customers/route.ts)
   - Method: POST
@@ -215,6 +230,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - [ ] Email optional ✅
 
 ### Runtime Test
+
 1. Go to Step 4 (Customer)
 2. Leave search empty
 3. Fill form:
@@ -246,6 +262,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 10. Try with missing field (no first name)
     - [ ] Error message shown ✅
     - [ ] Customer not created ✅
+
 - [ ] Customer creation works
 - [ ] DB saves all fields
 - [ ] Email sent when provided
@@ -257,6 +274,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 7️⃣ DELIVERY FEE FROM SERVICES TABLE
 
 ### Code Review
+
 - [ ] getDeliveryFeeDefault() function exists
   - Location: [page.tsx:800-806](src/app/in/pos/page.tsx#L800-L806)
   - Code: `const deliveryService = pos.services.find(s => s.service_type === "delivery")`
@@ -269,6 +287,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
   - Text: "Delivery Fee (minimum ₱{deliveryFeeDefault})"
 
 ### Runtime Test
+
 1. Go to Step 5 (Handling)
 2. Click "Deliver to customer"
 3. Check delivery fee display
@@ -286,6 +305,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 7. Reload POS
 8. Go to Step 5 again
    - [ ] New minimum shown (75) ✅
+
 - [ ] Delivery fee from DB
 - [ ] Minimum enforced
 - [ ] Can increase above minimum
@@ -296,6 +316,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 🔍 Cross-Requirement Tests
 
 ### End-to-End Order Flow
+
 1. [ ] Start fresh POS session
 2. [ ] Step 1: Select "Self-Service"
 3. [ ] Step 2: Select wash (basic), dry (premium), spin
@@ -316,6 +337,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
    - [ ] Email sent ✅
 
 ### Data Consistency
+
 - [ ] All prices in UI match DB values
 - [ ] All products match products table
 - [ ] All customers match customers table
@@ -327,17 +349,20 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 🧪 Error Handling Tests
 
 ### Insufficient Stock
+
 1. Try to order more than available stock
    - [ ] Error shown to user ✅
    - [ ] Order not created ✅
    - [ ] Inventory unchanged ✅
 
 ### Missing Fields
+
 1. Try to create customer without first name
    - [ ] Error shown ✅
    - [ ] API returns 400 ✅
 
 ### DB Connection Error
+
 1. Disconnect DB (or use invalid connection)
    - [ ] Error handled gracefully ✅
    - [ ] User sees error message ✅
@@ -348,11 +373,13 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 📊 Performance Tests
 
 ### Load Times
+
 - [ ] POS page loads in < 2 seconds
 - [ ] Services/products load in < 1 second
 - [ ] Customer search responds in < 500ms
 
 ### Search Performance
+
 - [ ] Customer search debounced (300ms)
 - [ ] No excessive API calls
 - [ ] Results appear smoothly
@@ -362,11 +389,13 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## 🔐 Security Tests
 
 ### Authentication
+
 - [ ] Order creation requires auth ✅
 - [ ] Unauth requests rejected ✅
 - [ ] Staff role verified ✅
 
 ### Data Protection
+
 - [ ] Existing customer records protected ✅
 - [ ] Edit attempts don't reach DB ✅
 - [ ] No SQL injection vectors ✅
@@ -386,6 +415,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 ## ✅ Final Sign-Off
 
 ### Code Quality
+
 - [ ] No TypeScript errors
 - [ ] No critical warnings
 - [ ] All types correct
@@ -393,6 +423,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 - [ ] Code formatted consistently
 
 ### Functionality
+
 - [ ] All 7 requirements working
 - [ ] All tests passing
 - [ ] No known bugs
@@ -400,6 +431,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 - [ ] Performance acceptable
 
 ### Documentation
+
 - [ ] Implementation documented
 - [ ] APIs documented
 - [ ] Test workflow documented
@@ -407,6 +439,7 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 - [ ] Quick reference available
 
 ### Ready for Deployment
+
 - [ ] Code reviewed ✅
 - [ ] Tests passed ✅
 - [ ] Documentation complete ✅
@@ -430,8 +463,8 @@ This checklist ensures all 7 requirements are properly implemented before deploy
 
 ---
 
-**Verification Date:** ________________  
-**Verified By:** ________________  
+**Verification Date:** ******\_\_\_\_******  
+**Verified By:** ******\_\_\_\_******  
 **Status:** ✅ READY FOR DEPLOYMENT  
 **Quality:** ⭐⭐⭐⭐⭐  
 **Confidence Level:** 100%

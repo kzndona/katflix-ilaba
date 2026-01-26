@@ -78,11 +78,11 @@ export default function InventoryPage() {
         {
           transaction_type: adjustmentType,
           notes: adjustmentNotes || undefined,
-        }
+        },
       );
 
       setSuccess(
-        `Stock adjusted: ${selectedProduct.item_name} (${adjustmentQty > 0 ? "+" : ""}${adjustmentQty}) - New stock: ${result.new_quantity}`
+        `Stock adjusted: ${selectedProduct.item_name} (${adjustmentQty > 0 ? "+" : ""}${adjustmentQty}) - New stock: ${result.new_quantity}`,
       );
 
       // Reset form
@@ -108,14 +108,17 @@ export default function InventoryPage() {
     }
   };
 
-  const summary = selectedProduct && transactions.length > 0 
-    ? getTransactionSummary(transactions)
-    : null;
+  const summary =
+    selectedProduct && transactions.length > 0
+      ? getTransactionSummary(transactions)
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-slate-900">📦 Inventory Management</h1>
+        <h1 className="text-3xl font-bold text-slate-900">
+          📦 Inventory Management
+        </h1>
 
         <div className="grid grid-cols-2 gap-6">
           {/* LEFT: Product Selection & Adjustment */}
@@ -124,7 +127,9 @@ export default function InventoryPage() {
 
             {/* Product Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Product</label>
+              <label className="text-sm font-bold text-slate-700">
+                Product
+              </label>
               <select
                 value={selectedProduct?.id || ""}
                 onChange={(e) => {
@@ -146,7 +151,9 @@ export default function InventoryPage() {
               <>
                 {/* Current Stock Display */}
                 <div className="bg-blue-50 border border-blue-300 rounded p-4">
-                  <div className="text-sm text-blue-600 font-semibold">Current Stock</div>
+                  <div className="text-sm text-blue-600 font-semibold">
+                    Current Stock
+                  </div>
                   <div className="text-3xl font-bold text-blue-900">
                     {selectedProduct.quantity}
                   </div>
@@ -163,16 +170,22 @@ export default function InventoryPage() {
                     onChange={(e) => setAdjustmentType(e.target.value)}
                     className="w-full border border-slate-300 rounded px-3 py-2"
                   >
-                    <option value={TRANSACTION_TYPES.ADJUSTMENT}>Adjustment</option>
+                    <option value={TRANSACTION_TYPES.ADJUSTMENT}>
+                      Adjustment
+                    </option>
                     <option value={TRANSACTION_TYPES.RESTOCK}>Restock</option>
-                    <option value={TRANSACTION_TYPES.DAMAGE}>Damage Loss</option>
+                    <option value={TRANSACTION_TYPES.DAMAGE}>
+                      Damage Loss
+                    </option>
                     <option value={TRANSACTION_TYPES.RETURN}>Return</option>
                   </select>
                 </div>
 
                 {/* Quantity Adjustment */}
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Quantity Change</label>
+                  <label className="text-sm font-bold text-slate-700">
+                    Quantity Change
+                  </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setAdjustmentQty(adjustmentQty - 1)}
@@ -183,7 +196,9 @@ export default function InventoryPage() {
                     <input
                       type="number"
                       value={adjustmentQty}
-                      onChange={(e) => setAdjustmentQty(parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setAdjustmentQty(parseInt(e.target.value) || 0)
+                      }
                       className="flex-1 border border-slate-300 rounded px-3 py-2 text-center font-bold text-lg"
                     />
                     <button
@@ -197,7 +212,9 @@ export default function InventoryPage() {
 
                 {/* Notes */}
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Notes</label>
+                  <label className="text-sm font-bold text-slate-700">
+                    Notes
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g., Received from supplier, stock count discrepancy"
@@ -233,14 +250,18 @@ export default function InventoryPage() {
 
           {/* RIGHT: Transaction History */}
           <div className="space-y-6 bg-white rounded-lg border border-slate-300 p-6">
-            <h2 className="text-xl font-bold text-slate-900">Transaction History</h2>
+            <h2 className="text-xl font-bold text-slate-900">
+              Transaction History
+            </h2>
 
             {selectedProduct ? (
               <>
                 {/* Summary */}
                 {summary && (
                   <div className="bg-slate-100 rounded p-4 space-y-2">
-                    <div className="text-sm font-bold text-slate-600">Summary</div>
+                    <div className="text-sm font-bold text-slate-600">
+                      Summary
+                    </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <div className="text-slate-600">Deducted</div>
@@ -256,8 +277,11 @@ export default function InventoryPage() {
                       </div>
                       <div>
                         <div className="text-slate-600">Net Change</div>
-                        <div className={`font-bold ${summary.net_change >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {summary.net_change > 0 ? "+" : ""}{summary.net_change}
+                        <div
+                          className={`font-bold ${summary.net_change >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {summary.net_change > 0 ? "+" : ""}
+                          {summary.net_change}
                         </div>
                       </div>
                       <div>
@@ -283,10 +307,15 @@ export default function InventoryPage() {
                             <div className="font-bold text-slate-900">
                               {tx.transaction_type.toUpperCase()}
                             </div>
-                            <div className={`text-sm font-bold ${
-                              tx.quantity_change > 0 ? "text-green-600" : "text-red-600"
-                            }`}>
-                              {tx.quantity_change > 0 ? "+" : ""}{tx.quantity_change}
+                            <div
+                              className={`text-sm font-bold ${
+                                tx.quantity_change > 0
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {tx.quantity_change > 0 ? "+" : ""}
+                              {tx.quantity_change}
                             </div>
                           </div>
                           <div className="text-right">

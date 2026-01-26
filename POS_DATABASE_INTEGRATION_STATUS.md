@@ -9,6 +9,7 @@
 **Requirement:** "Make sure that the service name, rate, and description used in baskets tab is pulled from DB"
 
 **Implementation:**
+
 - Location: [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L76-L87)
 - Helper function: `getServiceInfo(serviceType: string, tier?: string)`
 - Queries: `pos.services` array (loaded from DB on mount in usePOSState)
@@ -21,6 +22,7 @@
   - ✅ Iron - price from DB, maintains min/max logic
 
 **Database Tables Used:**
+
 - `services` table: service_type, name, base_price, tier, is_active, description
 
 ---
@@ -30,6 +32,7 @@
 **Requirement:** "Make sure we are pulling actual product info from db"
 
 **Implementation:**
+
 - Location: [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L430-L525) (Step3Products)
 - Data source: `pos.products` array
 - Loaded in: [usePOSState.ts](src/app/in/pos/logic/usePOSState.ts#L47-L51)
@@ -41,6 +44,7 @@
   - ✅ Product ID for tracking
 
 **Database Tables Used:**
+
 - `products` table: id, item_name, unit_price, quantity, image_url, reorder_level, is_active
 
 ---
@@ -50,6 +54,7 @@
 **Requirement:** "Make sure if we are ordering an item, we deduct from inventory"
 
 **Implementation:**
+
 - Location: [src/app/api/orders/pos/create/route.ts](src/app/api/orders/pos/create/route.ts#L174-L215)
 - Mechanism:
   1. Validates inventory exists before order creation (lines 144-168)
@@ -59,6 +64,7 @@
   5. Rolls back on failure (lines 212-215)
 
 **Safety Features:**
+
 - ✅ Stock check before order created
 - ✅ Transaction record created for audit trail
 - ✅ Direct quantity update in products table
@@ -66,6 +72,7 @@
 - ✅ All-or-nothing atomicity
 
 **Database Tables Used:**
+
 - `product_transactions` table: product_id, order_id, quantity_change, transaction_type, notes
 - `products` table: quantity field
 
@@ -76,8 +83,9 @@
 **Requirement:** "Make sure we are pulling customers from db correctly"
 
 **Implementation:**
+
 - Location: [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L630-L665)
-- Search mechanism: 
+- Search mechanism:
   - Debounced API call to `/api/pos/customers/search`
   - Case-insensitive search across first_name, last_name, phone_number
   - Limit 10 results
@@ -85,12 +93,14 @@
 - Display: First name, last name, phone number, loyalty points
 
 **Features:**
+
 - ✅ Real-time search as user types
 - ✅ Customer suggestions from DB
 - ✅ Full customer record available for order creation
 - ✅ Loyalty points tracking
 
 **Database Tables Used:**
+
 - `customers` table: id, first_name, last_name, phone_number, email_address, loyalty_points
 
 ---
@@ -100,6 +110,7 @@
 **Requirement:** "If we select an existing customer and edit their phone/number, don't save it to db"
 
 **Implementation:**
+
 - Location: [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L700-L765)
 - Behavior:
   1. When customer selected: form fields are DISABLED
@@ -109,12 +120,14 @@
   5. Button to "Change Customer" clears selection
 
 **Safety:**
+
 - ✅ Disabled input fields when customer selected
 - ✅ No API calls on phone/email edit
 - ✅ User aware (info banner)
 - ✅ Easy to change customer without corrupting DB
 
 **Code Example:**
+
 ```tsx
 disabled={!!pos.customer}  // Disabled if customer selected
 // No onChange handler → no DB sync
@@ -127,10 +140,12 @@ disabled={!!pos.customer}  // Disabled if customer selected
 **Requirement:** "If we create a new customer record, ensure we properly save it to db AND send an invitation email if they input their email"
 
 **Implementation:**
+
 - API Endpoint: [POST /api/pos/customers](src/app/api/pos/customers/route.ts)
 - Email Endpoint: [POST /api/email/send-invitation](src/app/api/email/send-invitation/route.ts) ✅ Created
 
 **Flow:**
+
 1. User fills out: first_name, last_name, phone_number, email_address (optional)
 2. Click "Create Customer"
 3. Validates all required fields
@@ -140,6 +155,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 7. Email sent with welcome message
 
 **Features:**
+
 - ✅ Validation of required fields
 - ✅ Database persistence
 - ✅ Email invitation sent if email provided
@@ -148,9 +164,11 @@ disabled={!!pos.customer}  // Disabled if customer selected
 - ✅ Fresh customer data returned to UI
 
 **Database Tables Updated:**
+
 - `customers` table: Creates new record with all fields
 
 **Email Invitation:**
+
 - Subject: "Welcome to Our Laundry Service, [First Name]!"
 - Contains: Loyalty program info, account welcome
 - Opt-in: Only sent if customer provides email
@@ -162,12 +180,14 @@ disabled={!!pos.customer}  // Disabled if customer selected
 **Requirement:** "Ensure that delivery fee in handling tab is pulling its price from services table"
 
 **Implementation:**
+
 - Location: [src/app/in/pos/page.tsx](src/app/in/pos/page.tsx#L800-L880)
 - Helper function: `getDeliveryFeeDefault()`
 - Queries: `pos.services.find(s => s.service_type === "delivery")`
 - Returns: `service.base_price || 50` (50 as fallback)
 
 **Features:**
+
 - ✅ Delivery fee pulled from services table
 - ✅ Minimum enforcement: `Math.max(userInput, deliveryFeeDefault)`
 - ✅ UI shows: "Delivery Fee (minimum ₱{default})"
@@ -175,6 +195,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 - ✅ Fallback to 50 if no delivery service in DB
 
 **Database Tables Used:**
+
 - `services` table: Queries for service_type = "delivery"
 
 ---
@@ -182,6 +203,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ## Database Tables Summary
 
 ### services
+
 ```
 - id (UUID)
 - service_type (string: wash, dry, spin, iron, delivery, additional_dry_time)
@@ -193,6 +215,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ```
 
 ### products
+
 ```
 - id (UUID)
 - item_name (string)
@@ -204,6 +227,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ```
 
 ### customers
+
 ```
 - id (UUID)
 - first_name (string)
@@ -216,6 +240,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ```
 
 ### orders
+
 ```
 - id (UUID)
 - customer_id (UUID)
@@ -228,6 +253,7 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ```
 
 ### product_transactions
+
 ```
 - id (UUID)
 - product_id (UUID)
@@ -243,21 +269,25 @@ disabled={!!pos.customer}  // Disabled if customer selected
 ## API Endpoints Verified
 
 ### GET /api/pos/customers/search
+
 - Query: `q` parameter with search string
 - Returns: Array of matching customer records
 - Search fields: first_name, last_name, phone_number
 
 ### POST /api/pos/customers
+
 - Body: { first_name, last_name, phone_number, email_address }
 - Returns: Created customer record with ID
 - Validation: first_name, last_name, phone_number required
 
 ### POST /api/email/send-invitation
+
 - Body: { customer_id, email, first_name }
 - Returns: { success: true, message, email }
 - Action: Sends welcome email to new customer
 
 ### POST /api/orders/pos/create
+
 - Fully integrated in usePOSState hook
 - Creates order with inventory deduction
 - Transactional with rollback on error

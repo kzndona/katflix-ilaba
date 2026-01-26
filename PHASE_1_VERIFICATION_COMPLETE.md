@@ -10,6 +10,7 @@
 **Good News:** All required support endpoints already exist and are properly pulling data from actual database tables. The infrastructure is solid.
 
 **What Needs Attention:**
+
 1. Standardize endpoint paths (some use `/api/manage/`, some use `/api/pos/`)
 2. Verify field names match frontend expectations
 3. Test that data structures match POS requirements
@@ -24,6 +25,7 @@
 **Path:** `src/app/api/manage/services/getServices/route.ts`
 
 **Database Query:**
+
 ```typescript
 const { data, error } = await supabase
   .from("services")
@@ -32,11 +34,13 @@ const { data, error } = await supabase
 ```
 
 **What It Returns:**
+
 - All fields from `services` table
 - Sorted by sort_order
 - Includes: id, service_type, name, base_price, base_duration_minutes, etc.
 
 **Field Verification Needed:**
+
 ```
 ✓ id - UUID primary key
 ✓ service_type - 'wash', 'dry', 'spin', 'iron', 'fold'
@@ -48,13 +52,17 @@ const { data, error } = await supabase
 ```
 
 **Action Required:**
+
 - [ ] Verify `services` table has all expected columns
 - [ ] Check if `tier` column exists
 - [ ] Consider filtering by `is_active = true`
 
 **Frontend Usage:**
+
 ```typescript
-const services = await fetch('/api/manage/services/getServices').then(r => r.json());
+const services = await fetch("/api/manage/services/getServices").then((r) =>
+  r.json(),
+);
 ```
 
 ---
@@ -65,6 +73,7 @@ const services = await fetch('/api/manage/services/getServices').then(r => r.jso
 **Path:** `src/app/api/manage/products/getProducts/route.ts`
 
 **Database Query:**
+
 ```typescript
 const { data, error } = await supabase
   .from("products")
@@ -74,11 +83,13 @@ const { data, error } = await supabase
 ```
 
 **What It Returns:**
+
 - All active products
 - Sorted by name
 - Includes: id, item_name, sku, unit_price, quantity, reorder_level, image_url, is_active
 
 **Field Verification Needed:**
+
 ```
 ✓ id - UUID primary key
 ✓ item_name - Product name
@@ -91,8 +102,11 @@ const { data, error } = await supabase
 ```
 
 **Frontend Usage:**
+
 ```typescript
-const products = await fetch('/api/manage/products/getProducts').then(r => r.json());
+const products = await fetch("/api/manage/products/getProducts").then((r) =>
+  r.json(),
+);
 ```
 
 ---
@@ -103,21 +117,28 @@ const products = await fetch('/api/manage/products/getProducts').then(r => r.jso
 **Path:** `src/app/api/pos/customers/search/route.ts`
 
 **Database Query:**
+
 ```typescript
 const { data: customers, error } = await supabase
-  .from('customers')
-  .select('id, first_name, last_name, phone_number, email_address, address, loyalty_points, created_at')
-  .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
+  .from("customers")
+  .select(
+    "id, first_name, last_name, phone_number, email_address, address, loyalty_points, created_at",
+  )
+  .or(
+    `first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`,
+  )
   .limit(limit);
 ```
 
 **What It Returns:**
+
 - Customers matching search query (min 2 chars)
 - Case-insensitive search (ilike)
 - Max 10 results (configurable)
 - Fields: id, first_name, last_name, phone_number, email_address, address, loyalty_points, created_at
 
 **Features:**
+
 ```
 ✓ Query parameter: ?query=John
 ✓ Min length validation (2 chars)
@@ -128,9 +149,11 @@ const { data: customers, error } = await supabase
 ```
 
 **Frontend Usage:**
+
 ```typescript
-const results = await fetch(`/api/pos/customers/search?query=${searchTerm}&limit=10`)
-  .then(r => r.json());
+const results = await fetch(
+  `/api/pos/customers/search?query=${searchTerm}&limit=10`,
+).then((r) => r.json());
 ```
 
 ---
@@ -143,6 +166,7 @@ const results = await fetch(`/api/pos/customers/search?query=${searchTerm}&limit
 **Database Operations:**
 
 **CREATE (if no id):**
+
 ```typescript
 const { data: newCustomer, error: createError } = await supabase
   .from("customers")
@@ -159,6 +183,7 @@ const { data: newCustomer, error: createError } = await supabase
 ```
 
 **UPDATE (if id provided):**
+
 ```typescript
 const { data: updated, error: updateError } = await supabase
   .from("customers")
@@ -176,6 +201,7 @@ const { data: updated, error: updateError } = await supabase
 ```
 
 **Request Body:**
+
 ```typescript
 {
   id?: string,  // If updating existing
@@ -188,6 +214,7 @@ const { data: updated, error: updateError } = await supabase
 ```
 
 **Validation:**
+
 ```
 ✓ first_name required
 ✓ last_name required
@@ -198,28 +225,29 @@ const { data: updated, error: updateError } = await supabase
 ```
 
 **Frontend Usage:**
+
 ```typescript
 // Create new customer
-const customer = await fetch('/api/pos/customers', {
-  method: 'POST',
+const customer = await fetch("/api/pos/customers", {
+  method: "POST",
   body: JSON.stringify({
-    first_name: 'John',
-    last_name: 'Doe',
-    phone_number: '09171234567',
-    email_address: 'john@example.com'
-  })
-}).then(r => r.json());
+    first_name: "John",
+    last_name: "Doe",
+    phone_number: "09171234567",
+    email_address: "john@example.com",
+  }),
+}).then((r) => r.json());
 
 // Update existing customer
-const updated = await fetch('/api/pos/customers', {
-  method: 'POST',
+const updated = await fetch("/api/pos/customers", {
+  method: "POST",
   body: JSON.stringify({
-    id: 'uuid-123',
-    first_name: 'John',
-    last_name: 'Doe',
-    phone_number: '09171234567'
-  })
-}).then(r => r.json());
+    id: "uuid-123",
+    first_name: "John",
+    last_name: "Doe",
+    phone_number: "09171234567",
+  }),
+}).then((r) => r.json());
 ```
 
 ---
@@ -244,6 +272,7 @@ STEP 7: Return receipt data
 ```
 
 **Request Body:**
+
 ```typescript
 {
   customer_id?: string | null,
@@ -270,6 +299,7 @@ STEP 7: Return receipt data
 ```
 
 **Response (Success):**
+
 ```typescript
 {
   success: true,
@@ -287,6 +317,7 @@ STEP 7: Return receipt data
 ```
 
 **Error Handling:**
+
 ```
 ✓ 401 - Unauthorized (not staff)
 ✓ 400 - Validation error (missing fields)
@@ -296,12 +327,14 @@ STEP 7: Return receipt data
 ```
 
 **Issues Found:**
+
 1. ⚠️ Requires authentication (staff user) - frontend may not be authenticated yet
 2. ⚠️ Uses `supabase.rpc()` which may not be implemented
 3. ⚠️ Fallback to manual update if RPC fails - could cause inconsistency
 4. ⚠️ No true database transaction (Supabase limitation)
 
 **Needs Fixing:**
+
 - [ ] Simplify to remove RPC call (direct SQL update)
 - [ ] Add proper error rollback logic
 - [ ] Test with actual data
@@ -413,15 +446,17 @@ STEP 7: Return receipt data
 ### HIGH PRIORITY
 
 1. **POST /api/orders/pos/create - RPC Fallback Issue**
-   
+
    Current code:
+
    ```typescript
    quantity: supabase.rpc("subtract_quantity", { ... })
    ```
-   
+
    Problem: This RPC function may not exist, causing fallback to manual update
-   
+
    Fix: Remove RPC, use direct SQL update
+
    ```typescript
    const { error: updateError } = await supabase
      .from("products")
@@ -430,48 +465,49 @@ STEP 7: Return receipt data
    ```
 
 2. **Inventory Transaction Atomicity**
-   
+
    Problem: If product_transactions INSERT fails, order already created (inconsistent state)
-   
+
    Fix: Use Supabase transaction or wrap in error handling with order rollback
+
    ```typescript
    // Option A: Check RLS policies allow product_transactions INSERT
    // Option B: Move transaction insert BEFORE order creation
    ```
 
 3. **Authentication Requirement**
-   
+
    Current: Requires staff user authentication
-   
+
    Issue: Frontend may not have auth context yet
-   
+
    Fix: Either set up auth in frontend OR make endpoints public (less secure)
 
 ### MEDIUM PRIORITY
 
 4. **Field Name Standardization**
-   
+
    Current inconsistencies:
    - `phone_number` vs `phone`
    - `email_address` vs `email`
    - `quantity` in products vs `quantity_change` in transactions
-   
+
    Fix: Update frontend to match actual DB field names
 
 5. **Service Selection by Tier**
-   
+
    Current: Services table needs `tier` column for filtering basic/premium
-   
+
    Missing: No endpoint to get services by type (wash) + tier (basic/premium)
-   
+
    Fix: Consider adding `GET /api/services?type=wash&tier=premium` if needed
 
 6. **Loyalty Points Calculation**
-   
+
    Current: Commented out in create order endpoint
-   
+
    Missing: No endpoint to calculate or award loyalty points
-   
+
    Fix: Implement after order creation is stable
 
 ---
@@ -482,38 +518,42 @@ STEP 7: Return receipt data
 
 ```typescript
 // 1. Load services (on component mount)
-const services = await fetch('/api/manage/services/getServices')
-  .then(r => r.json())
-  .then(r => r.data);
+const services = await fetch("/api/manage/services/getServices")
+  .then((r) => r.json())
+  .then((r) => r.data);
 
 // 2. Load products (on component mount)
-const products = await fetch('/api/manage/products/getProducts')
-  .then(r => r.json())
-  .then(r => r.data);
+const products = await fetch("/api/manage/products/getProducts")
+  .then((r) => r.json())
+  .then((r) => r.data);
 
 // 3. Search customers (debounced on input change)
 const customers = await fetch(`/api/pos/customers/search?query=${query}`)
-  .then(r => r.json())
-  .then(r => r.customers);
+  .then((r) => r.json())
+  .then((r) => r.customers);
 
 // 4. Create new customer or update existing
-const customer = await fetch('/api/pos/customers', {
-  method: 'POST',
+const customer = await fetch("/api/pos/customers", {
+  method: "POST",
   body: JSON.stringify({
-    first_name, last_name, phone_number, email_address, address
-  })
-}).then(r => r.json());
+    first_name,
+    last_name,
+    phone_number,
+    email_address,
+    address,
+  }),
+}).then((r) => r.json());
 
 // 5. Create order (main checkout)
-const { receipt } = await fetch('/api/orders/pos/create', {
-  method: 'POST',
+const { receipt } = await fetch("/api/orders/pos/create", {
+  method: "POST",
   body: JSON.stringify({
     customer_id,
     customer_data,
     breakdown,
-    handling
-  })
-}).then(r => r.json());
+    handling,
+  }),
+}).then((r) => r.json());
 ```
 
 ---
@@ -531,21 +571,25 @@ const { receipt } = await fetch('/api/orders/pos/create', {
 ## 🧪 Quick Test Commands
 
 **Test Services Endpoint:**
+
 ```bash
 curl http://localhost:3001/api/manage/services/getServices
 ```
 
 **Test Products Endpoint:**
+
 ```bash
 curl http://localhost:3001/api/manage/products/getProducts
 ```
 
 **Test Customer Search:**
+
 ```bash
 curl "http://localhost:3001/api/pos/customers/search?query=John"
 ```
 
 **Test Create Customer:**
+
 ```bash
 curl -X POST http://localhost:3001/api/pos/customers \
   -H "Content-Type: application/json" \

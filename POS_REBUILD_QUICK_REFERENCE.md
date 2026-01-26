@@ -3,13 +3,15 @@
 ## What Changed?
 
 ### ❌ Old System
+
 - Pane-based UI (sidebar tabs)
 - Per-kg service pricing (rate_per_kg)
 - Service fee per-basket
 - Unclear auto-basket logic
 - Complex nested types
 
-### ✅ New System  
+### ✅ New System
+
 - 6-step workflow UI
 - Flat service pricing
 - Service fee per-ORDER
@@ -21,7 +23,7 @@
 ## 6-Step Workflow
 
 ```
-Step 0: Service Type      (self vs staff) 
+Step 0: Service Type      (self vs staff)
    ↓
 Step 1: Baskets           (weight, services)
    ↓
@@ -40,14 +42,14 @@ Step 6: Payment           (cash/GCash)
 
 ## Key Rules
 
-| Rule | Implementation |
-|------|---|
-| **Basket Weight Max** | 8kg → auto-create new basket |
-| **Iron Min** | 2kg → skip if < 2kg |
-| **Delivery Fee** | ₱50 default, min ₱50 |
-| **Staff Service Fee** | ₱40 per ORDER (not per basket) |
-| **VAT** | 12% inclusive (not added on top) |
-| **Customer Search** | Debounced 300ms |
+| Rule                   | Implementation                            |
+| ---------------------- | ----------------------------------------- |
+| **Basket Weight Max**  | 8kg → auto-create new basket              |
+| **Iron Min**           | 2kg → skip if < 2kg                       |
+| **Delivery Fee**       | ₱50 default, min ₱50                      |
+| **Staff Service Fee**  | ₱40 per ORDER (not per basket)            |
+| **VAT**                | 12% inclusive (not added on top)          |
+| **Customer Search**    | Debounced 300ms                           |
 | **Payment Validation** | Cash: sufficient amount, GCash: reference |
 
 ---
@@ -55,6 +57,7 @@ Step 6: Payment           (cash/GCash)
 ## File Locations
 
 ### Core Logic
+
 ```
 src/app/in/pos/logic/
 ├── posTypes.ts       ← Data types
@@ -63,12 +66,14 @@ src/app/in/pos/logic/
 ```
 
 ### UI
+
 ```
 src/app/in/pos/
 └── page.tsx          ← All 7 components + layout
 ```
 
 ### API
+
 ```
 src/app/api/orders/pos/create/
 └── route.ts          ← POST /api/orders/pos/create
@@ -96,7 +101,7 @@ See: [POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md)
 **Extra Dry Time:** ₱15 per 8-min level  
 **Staff Fee:** ₱40 (if selected in Step 0)  
 **Delivery:** ₱50+ (pickup = ₱0)  
-**VAT:** 12% included  
+**VAT:** 12% included
 
 ---
 
@@ -128,7 +133,7 @@ Response:
 ✅ **Iron Skip:** Enter 1kg iron → should skip (= 0)  
 ✅ **Delivery Fee:** Enter 40 → should validate to 50  
 ✅ **Payment:** No amount → Create Order button disabled  
-✅ **Customer:** Search for "John" → debounced results  
+✅ **Customer:** Search for "John" → debounced results
 
 ---
 
@@ -139,19 +144,19 @@ Response:
 3. Verify database connection
 4. See [POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md)
 5. See [REBUILD_COMPLETE.md](./REBUILD_COMPLETE.md)
-6. Check [_LEGACY_POS_ARCHIVE/](./c:\Users\kizen\Projects\katflix_ilaba\_LEGACY_POS_ARCHIVE)
+6. Check [\_LEGACY_POS_ARCHIVE/](./c:\Users\kizen\Projects\katflix_ilaba_LEGACY_POS_ARCHIVE)
 
 ---
 
 ## Documentation
 
-| Doc | Purpose |
-|-----|---------|
-| [POS_REBUILD_SUMMARY.md](./POS_REBUILD_SUMMARY.md) | Executive overview |
-| [REBUILD_COMPLETE.md](./REBUILD_COMPLETE.md) | Detailed architecture |
-| [POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md) | Testing procedures |
-| [POS_REBUILD_DELIVERY_CHECKLIST.md](./POS_REBUILD_DELIVERY_CHECKLIST.md) | Deliverables list |
-| [POS_REBUILD_QUICK_REFERENCE.md](./POS_REBUILD_QUICK_REFERENCE.md) | This file |
+| Doc                                                                      | Purpose               |
+| ------------------------------------------------------------------------ | --------------------- |
+| [POS_REBUILD_SUMMARY.md](./POS_REBUILD_SUMMARY.md)                       | Executive overview    |
+| [REBUILD_COMPLETE.md](./REBUILD_COMPLETE.md)                             | Detailed architecture |
+| [POS_TESTING_GUIDE.md](./POS_TESTING_GUIDE.md)                           | Testing procedures    |
+| [POS_REBUILD_DELIVERY_CHECKLIST.md](./POS_REBUILD_DELIVERY_CHECKLIST.md) | Deliverables list     |
+| [POS_REBUILD_QUICK_REFERENCE.md](./POS_REBUILD_QUICK_REFERENCE.md)       | This file             |
 
 ---
 
@@ -161,5 +166,5 @@ Response:
 
 ---
 
-*Quick Reference Card*  
-*January 27, 2026*
+_Quick Reference Card_  
+_January 27, 2026_
