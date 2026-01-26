@@ -772,17 +772,42 @@ function BasketCard({
   const basketNumber = basket?.basket_number || 0;
   const total = basket?.total || 0;
 
-  // Safely extract services array - handle both array and non-array cases
-  const servicesArray = Array.isArray(basket?.services) ? basket.services : [];
+  // Extract services from the services object with pricing snapshots
+  // Services are stored as: { wash: "basic", dry: "basic", wash_pricing: {...}, dry_pricing: {...}, ... }
+  const servicesObj = basket?.services || {};
+  
+  // Find all *_pricing entries which contain the service snapshots
+  const servicePricings = Object.entries(servicesObj)
+    .filter(([key]) => key.endsWith("_pricing"))
+    .map(([key, pricingData]: [string, any]) => ({
+      key,
+      serviceType: key.replace("_pricing", ""), // e.g., "wash_pricing" -> "wash"
+      ...pricingData,
+    }));
 
-  // Calculate subtotal from services if not provided
-  const servicesSubtotal = servicesArray.reduce(
-    (sum, service) => sum + (service?.subtotal || 0),
+  // For services without pricing info, extract from the base service keys
+  const baseServices = Object.entries(servicesObj)
+    .filter(([key, value]) => 
+      !key.endsWith("_pricing") && 
+      typeof value === "string" && 
+      value !== "off" && 
+      value !== false
+    )
+    .map(([key, value]) => ({
+      key,
+      serviceType: key,
+      serviceName: key.charAt(0).toUpperCase() + key.slice(1),
+      value, // "basic", "premium", etc.
+    }))
+    .filter(s => !["wash_cycles", "plastic_bags", "iron_weight_kg", "fold", "spin", "additional_dry_time_minutes", "additionalDryMinutes"].includes(s.key));
+
+  // Calculate subtotal from pricing snapshots
+  const servicesSubtotal = servicePricings.reduce(
+    (sum, service) => sum + (service.base_price || 0),
     0,
   );
 
   // If we have no total and no services data, use the summary services if available
-  // This handles cases where services are calculated but not stored as array
   const displayTotal =
     total > 0 ? total : servicesSubtotal > 0 ? servicesSubtotal : 0;
 
@@ -805,27 +830,24 @@ function BasketCard({
         </p>
       )}
 
-      {servicesArray.length > 0 && (
+      {servicePricings.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
           <div className="space-y-1">
-            {servicesArray.map((service, idx) => {
-              const serviceMultiplier = service?.multiplier || 0;
-              const serviceSubtotal = service?.subtotal || 0;
+            {servicePricings.map((pricing) => {
+              const serviceName = pricing.name || pricing.serviceType;
+              const basePrice = pricing.base_price || 0;
+              const tier = pricing.tier ? ` (${pricing.tier})` : "";
 
               return (
                 <div
-                  key={service?.id || `service-${idx}`}
-                  className="text-xs text-gray-700 grid grid-cols-[1fr_70px_80px] gap-2"
+                  key={pricing.key}
+                  className="text-xs text-gray-700 grid grid-cols-[1fr_80px] gap-2"
                 >
                   <span className="font-medium truncate">
-                    {service?.service_name || "Unknown Service"}
-                    {service?.is_premium && " (Premium)"}
-                  </span>
-                  <span className="text-gray-600 text-right">
-                    ×{serviceMultiplier}
+                    {serviceName}{tier}
                   </span>
                   <span className="font-medium text-right">
-                    ₱{(serviceSubtotal as number).toFixed(2)}
+                    ₱{(basePrice as number).toFixed(2)}
                   </span>
                 </div>
               );
@@ -834,7 +856,7 @@ function BasketCard({
         </div>
       )}
 
-      {servicesArray.length === 0 &&
+      {servicePricings.length === 0 &&
         breakdownSummary?.subtotal_services &&
         (breakdownSummary.subtotal_services as number) > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">

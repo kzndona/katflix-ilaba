@@ -29,6 +29,7 @@ interface CreateOrderRequest {
 }
 
 export async function POST(request: NextRequest) {
+  console.log("[POS CREATE] POST /api/orders/pos/create called");
   const supabase = await createClient();
 
   try {
@@ -63,10 +64,13 @@ export async function POST(request: NextRequest) {
 
     // === PARSE REQUEST ===
     const body: CreateOrderRequest = await request.json();
+    console.log("[POS CREATE] Parsed request body, baskets count:", body.breakdown?.baskets?.length || 0);
 
     // === HELPER: Enrich services with pricing snapshots ===
     async function enrichServicesWithPricing(breakdown: any) {
+      console.log("[ENRICH] Function called, baskets count:", breakdown.baskets?.length || 0);
       if (!breakdown.baskets || !Array.isArray(breakdown.baskets)) {
+        console.log("[ENRICH] No baskets array, returning early");
         return breakdown;
       }
 
@@ -76,9 +80,11 @@ export async function POST(request: NextRequest) {
         .select("service_type, tier, name, base_price");
 
       if (servicesError || !allServices) {
-        console.warn("Failed to fetch services for pricing snapshot:", servicesError);
+        console.error("[ENRICH] Failed to fetch services:", servicesError?.message);
         return breakdown; // Return unchanged if fetch fails
       }
+
+      console.log("[ENRICH] Fetched", allServices.length, "services from DB");
 
       // Build pricing map: service_type + tier -> pricing info
       const pricingMap: Record<string, any> = {};
@@ -92,40 +98,57 @@ export async function POST(request: NextRequest) {
         };
       }
 
+      console.log("[ENRICH] Built pricing map with", Object.keys(pricingMap).length, "entries");
+
       // Enrich each basket's services object with pricing snapshots
       const enrichedBreakdown = {
         ...breakdown,
-        baskets: breakdown.baskets.map((basket: any) => {
+        baskets: breakdown.baskets.map((basket: any, idx: number) => {
           const services = basket.services || {};
           const enrichedServices = { ...services };
+
+          console.log("[ENRICH] Processing basket", idx, "with services:", Object.keys(services));
 
           // Add pricing snapshot for each service type
           // WASH
           if (services.wash && services.wash !== "off") {
             const pricingKey = `wash:${services.wash}`;
             enrichedServices.wash_pricing = pricingMap[pricingKey] || {};
+            console.log("[ENRICH] Added wash_pricing for key", pricingKey);
           }
 
           // DRY
           if (services.dry && services.dry !== "off") {
             const pricingKey = `dry:${services.dry}`;
             enrichedServices.dry_pricing = pricingMap[pricingKey] || {};
+            console.log("[ENRICH] Added dry_pricing for key", pricingKey);
           }
 
           // SPIN
           if (services.spin) {
             const pricingKey = `spin:null`;
             enrichedServices.spin_pricing = pricingMap[pricingKey] || {};
+            console.log("[ENRICH] Added spin_pricing for key", pricingKey);
           }
 
           // IRON
           if (services.iron_weight_kg && services.iron_weight_kg > 0) {
             const pricingKey = `iron:null`;
             enrichedServices.iron_pricing = pricingMap[pricingKey] || {};
+            console.log("[ENRICH] Added iron_pricing for key", pricingKey);
+          }
+
+          // FOLD
+          if (services.fold && services.fold !== "off") {
+            const pricingKey = `fold:${services.fold}`;
+            enrichedServices.fold_pricing = pricingMap[pricingKey] || {};
+            console.log("[ENRICH] Added fold_pricing for key", pricingKey);
           }
 
           // STAFF SERVICE (fee is per-order, add to summary but note it in services)
           enrichedServices.staff_service_pricing = pricingMap["staff_service:null"] || {};
+
+          console.log("[ENRICH] Basket", idx, "enriched with", Object.keys(enrichedServices).filter(k => k.includes('pricing')).length, "pricing fields");
 
           return {
             ...basket,
@@ -134,6 +157,7 @@ export async function POST(request: NextRequest) {
         }),
       };
 
+      console.log("[ENRICH] Returning enriched breakdown");
       return enrichedBreakdown;
     }
 
@@ -315,7 +339,9 @@ export async function POST(request: NextRequest) {
     body.breakdown.items = itemsToValidate;
 
     // === STEP 3A: Enrich services with pricing snapshots ===
+    console.log("[POS CREATE] About to enrich services");
     body.breakdown = await enrichServicesWithPricing(body.breakdown);
+    console.log("[POS CREATE] Services enriched");
 
     // STEP 3: Create order
     const { data: newOrder, error: orderError } = await supabase

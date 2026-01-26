@@ -157,11 +157,6 @@ export function usePOSState() {
   const createOrder = useCallback(async () => {
     setIsProcessing(true);
     try {
-      const supabase = createClient();
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) throw new Error("Not authenticated");
-      const { data: staffData } = await supabase.from("staff").select("id").eq("auth_id", authData.user.id).single();
-      if (!staffData) throw new Error("Staff record not found");
       const breakdown = calculateOrderTotal();
       const handling: OrderHandling = {
         service_type: serviceType,
@@ -173,47 +168,36 @@ export function usePOSState() {
         amount_paid: amountPaid,
         gcash_reference: paymentMethod === "gcash" ? gcashReference : undefined,
       };
-      const { data: orderData, error: orderError } = await supabase.from("orders").insert([{ customer_id: customer?.id, cashier_id: staffData.id, breakdown: breakdown, handling: handling, status: "pending", total_amount: breakdown.summary.total }]).select().single();
-      if (orderError) throw orderError;
-      
-      // Collect all items: products + plastic bags from baskets
-      const items = Object.entries(selectedProducts).map(([productId, qty]) => {
-        const product = products.find((p) => p.id === productId);
-        if (!product) return null;
-        return { product_id: productId, quantity: qty };
-      }).filter(Boolean) as any[];
-      
-      // Add plastic bags from baskets
-      const plasticBagProduct = products.find((p: any) => 
-        p.item_name.toLowerCase().includes("bag") || p.item_name.toLowerCase().includes("plastic")
-      );
-      
-      if (plasticBagProduct) {
-        const totalPlasticBags = baskets.reduce((sum, basket) => sum + (basket.services?.plastic_bags || 0), 0);
-        if (totalPlasticBags > 0) {
-          items.push({ product_id: plasticBagProduct.id, quantity: totalPlasticBags });
-        }
+
+      // Call the API endpoint instead of direct database insert
+      const response = await fetch("/api/orders/pos/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          customer_id: customer?.id || null,
+          customer_data: customer ? undefined : {
+            first_name: newCustomerForm.first_name || "Customer",
+            last_name: newCustomerForm.last_name || "Unknown",
+            phone_number: newCustomerForm.phone_number || "",
+            email: newCustomerForm.email_address,
+          },
+          breakdown: breakdown,
+          handling: handling,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to create order: ${response.statusText}`);
       }
-      
-      // Record inventory transactions for all items
-      for (const item of items) {
-        const response = await fetch("/api/inventory/transactions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product_id: item.product_id,
-            quantity_change: -item.quantity,
-            transaction_type: "order",
-            order_id: orderData.id,
-            notes: `Order created by ${staffData.id}`,
-          }),
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Inventory transaction failed: ${errorData.error || response.statusText}`);
-        }
+
+      const responseData = await response.json();
+      if (!responseData.success || !responseData.order_id) {
+        throw new Error("Order created but no ID returned");
       }
-      setLastOrderId(orderData.id);
+
+      setLastOrderId(responseData.order_id);
       setReceiptContent(JSON.stringify(breakdown, null, 2));
       setShowReceiptModal(true);
       resetOrder();
@@ -223,7 +207,7 @@ export function usePOSState() {
     } finally {
       setIsProcessing(false);
     }
-  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer, selectedProducts, products]);
+  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer]);
 
   const resetOrder = useCallback(() => {
     setStep(0);
