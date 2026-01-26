@@ -207,16 +207,21 @@ export default function OrdersPage() {
     return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
   };
 
-  // Group orders by status
+  // Group orders by status and handling type
   const processingOrders = filteredRows.filter(
     (o) => o.status === "processing",
   );
-  const pickupOrders = filteredRows.filter((o) => o.status === "for_pick-up");
+  const pickupOrders = filteredRows.filter(
+    (o) => o.status !== "processing" && o.handling?.pickup?.address,
+  );
   const deliveryOrders = filteredRows.filter(
-    (o) => o.status === "for_delivery",
+    (o) => o.status !== "processing" && o.handling?.delivery?.address,
   );
   const otherOrders = filteredRows.filter(
-    (o) => !["processing", "for_pick-up", "for_delivery"].includes(o.status),
+    (o) =>
+      o.status !== "processing" &&
+      !o.handling?.pickup?.address &&
+      !o.handling?.delivery?.address,
   );
 
   // Combine all grouped orders for pagination
@@ -235,10 +240,7 @@ export default function OrdersPage() {
   const getStatusColor = (status: string) =>
     ({
       pending: "bg-gray-100 text-gray-700",
-      for_pick_up: "bg-blue-100 text-blue-700",
-      "for_pick-up": "bg-blue-100 text-blue-700",
       processing: "bg-orange-100 text-orange-700",
-      for_delivery: "bg-purple-100 text-purple-700",
       completed: "bg-green-100 text-green-700",
       cancelled: "bg-red-100 text-red-700",
     })[status] || "bg-gray-100 text-gray-700";
@@ -246,10 +248,7 @@ export default function OrdersPage() {
   const getStatusLabel = (status: string) =>
     ({
       pending: "Pending",
-      for_pick_up: "Pickup",
-      "for_pick-up": "Pickup",
       processing: "Processing",
-      for_delivery: "Delivery",
       completed: "Completed",
       cancelled: "Cancelled",
     })[status] || status;
@@ -590,38 +589,46 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                 Summary
               </h4>
               <div className="space-y-1 text-sm bg-gray-50 p-3 rounded">
-                {order.breakdown.summary.subtotal_products !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Products:</span>
-                    <span className="font-medium">
-                      ₱{order.breakdown.summary.subtotal_products.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {order.breakdown.summary.subtotal_services !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Services:</span>
-                    <span className="font-medium">
-                      ₱{order.breakdown.summary.subtotal_services.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {order.breakdown.summary.handling !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Handling:</span>
-                    <span className="font-medium">
-                      ₱{order.breakdown.summary.handling.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {order.breakdown.summary.service_fee !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Service Fee:</span>
-                    <span className="font-medium">
-                      ₱{order.breakdown.summary.service_fee.toFixed(2)}
-                    </span>
-                  </div>
-                )}
+                {order.breakdown.summary.subtotal_products !== null &&
+                  order.breakdown.summary.subtotal_products !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Products:</span>
+                      <span className="font-medium">
+                        ₱{(order.breakdown.summary.subtotal_products as number).toFixed(
+                          2,
+                        )}
+                      </span>
+                    </div>
+                  )}
+                {order.breakdown.summary.subtotal_services !== null &&
+                  order.breakdown.summary.subtotal_services !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Services:</span>
+                      <span className="font-medium">
+                        ₱{(order.breakdown.summary.subtotal_services as number).toFixed(
+                          2,
+                        )}
+                      </span>
+                    </div>
+                  )}
+                {order.breakdown.summary.handling !== null &&
+                  order.breakdown.summary.handling !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Handling:</span>
+                      <span className="font-medium">
+                        ₱{(order.breakdown.summary.handling as number).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                {order.breakdown.summary.service_fee !== null &&
+                  order.breakdown.summary.service_fee !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Service Fee:</span>
+                      <span className="font-medium">
+                        ₱{(order.breakdown.summary.service_fee as number).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between pt-1 border-t border-gray-300">
                   <span className="text-gray-700 font-semibold">Total:</span>
                   <span className="font-bold">
@@ -639,24 +646,30 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                 Products ({order.breakdown.items.length})
               </h4>
               <div className="space-y-2">
-                {order.breakdown.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between text-sm p-2 rounded bg-gray-50"
-                  >
-                    <div>
+                {order.breakdown.items.map((item, idx) => {
+                  const quantity = item.quantity || 0;
+                  const unitPrice = item.unit_price || 0;
+                  const subtotal = item.subtotal ?? quantity * unitPrice;
+
+                  return (
+                    <div
+                      key={item.id || `item-${idx}`}
+                      className="flex justify-between text-sm p-2 rounded bg-gray-50"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {item.product_name || "Unknown Product"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {quantity} × ₱{(unitPrice as number).toFixed(2)}
+                        </p>
+                      </div>
                       <p className="font-medium text-gray-900">
-                        {item.product_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {item.quantity} × ₱{item.unit_price.toFixed(2)}
+                        ₱{(subtotal as number).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-medium text-gray-900">
-                      ₱{item.subtotal.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
