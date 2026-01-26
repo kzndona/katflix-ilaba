@@ -124,11 +124,13 @@ export default function Navbar() {
             }`}
           >
             POS
-            <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
-              isActive("/in/pos")
-                ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                : "w-0 group-hover:w-full bg-blue-500/50"
-            }`} />
+            <span
+              className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                isActive("/in/pos")
+                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                  : "w-0 group-hover:w-full bg-blue-500/50"
+              }`}
+            />
           </button>
         )}
 
@@ -143,11 +145,13 @@ export default function Navbar() {
             }`}
           >
             Orders
-            <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
-              isActive("/in/orders")
-                ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                : "w-0 group-hover:w-full bg-blue-500/50"
-            }`} />
+            <span
+              className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                isActive("/in/orders")
+                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                  : "w-0 group-hover:w-full bg-blue-500/50"
+              }`}
+            />
           </button>
         )}
 
@@ -162,11 +166,13 @@ export default function Navbar() {
             }`}
           >
             Baskets
-            <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
-              isActive("/in/baskets")
-                ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                : "w-0 group-hover:w-full bg-blue-500/50"
-            }`} />
+            <span
+              className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                isActive("/in/baskets")
+                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                  : "w-0 group-hover:w-full bg-blue-500/50"
+              }`}
+            />
           </button>
         )}
 
@@ -177,17 +183,21 @@ export default function Navbar() {
             onMouseEnter={() => setManageOpen(true)}
             onMouseLeave={() => setManageOpen(false)}
           >
-            <button className={`font-medium transition-all px-3 py-2 rounded-lg relative group ${
-              isActive("/in/manage")
-                ? "text-blue-400"
-                : "text-slate-200 hover:text-blue-400"
-            }`}>
-              Manage
-              <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+            <button
+              className={`font-medium transition-all px-3 py-2 rounded-lg relative group ${
                 isActive("/in/manage")
-                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                  : "w-0 group-hover:w-full bg-blue-500/50"
-              }`} />
+                  ? "text-blue-400"
+                  : "text-slate-200 hover:text-blue-400"
+              }`}
+            >
+              Manage
+              <span
+                className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                  isActive("/in/manage")
+                    ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                    : "w-0 group-hover:w-full bg-blue-500/50"
+                }`}
+              />
             </button>
             <div
               className={`absolute top-full left-0 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 flex flex-col ${
@@ -223,17 +233,21 @@ export default function Navbar() {
             onMouseEnter={() => setAccountsOpen(true)}
             onMouseLeave={() => setAccountsOpen(false)}
           >
-            <button className={`font-medium transition-all px-3 py-2 rounded-lg relative group ${
-              isActive("/in/accounts")
-                ? "text-blue-400"
-                : "text-slate-200 hover:text-blue-400"
-            }`}>
-              Accounts
-              <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+            <button
+              className={`font-medium transition-all px-3 py-2 rounded-lg relative group ${
                 isActive("/in/accounts")
-                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                  : "w-0 group-hover:w-full bg-blue-500/50"
-              }`} />
+                  ? "text-blue-400"
+                  : "text-slate-200 hover:text-blue-400"
+              }`}
+            >
+              Accounts
+              <span
+                className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                  isActive("/in/accounts")
+                    ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                    : "w-0 group-hover:w-full bg-blue-500/50"
+                }`}
+              />
             </button>
             <div
               className={`absolute top-full left-0 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 flex flex-col ${
@@ -267,11 +281,13 @@ export default function Navbar() {
             }`}
           >
             Performance
-            <span className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
-              isActive("/in/analytics")
-                ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
-                : "w-0 group-hover:w-full bg-blue-500/50"
-            }`} />
+            <span
+              className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
+                isActive("/in/analytics")
+                  ? "w-full bg-blue-500 shadow-lg shadow-blue-500/50"
+                  : "w-0 group-hover:w-full bg-blue-500/50"
+              }`}
+            />
           </button>
         )}
       </div>
@@ -290,11 +306,13 @@ export default function Navbar() {
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
           </svg>
-          <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300 ${
-            isActive("/in/settings")
-              ? "w-4 bg-blue-500 shadow-lg shadow-blue-500/50"
-              : "w-0 group-hover:w-4 bg-blue-500/50"
-          }`} />
+          <span
+            className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300 ${
+              isActive("/in/settings")
+                ? "w-4 bg-blue-500 shadow-lg shadow-blue-500/50"
+                : "w-0 group-hover:w-4 bg-blue-500/50"
+            }`}
+          />
         </button>
         <button
           onClick={signOut}

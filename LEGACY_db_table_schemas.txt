@@ -1,0 +1,295 @@
+create table public.customers (
+  id uuid not null default gen_random_uuid (),
+  auth_id uuid null,
+  first_name text not null,
+  middle_name text null,
+  last_name text not null,
+  birthdate date null,
+  gender text null,
+  address text null,
+  phone_number text not null,
+  email_address text null,
+  loyalty_points integer null default 0,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint customers_pkey primary key (id),
+  constraint customers_auth_id_key unique (auth_id),
+  constraint customers_gender_check check (
+    (
+      gender = any (
+        array['male'::text, 'female'::text, 'other'::text]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_customers_phone on public.customers using btree (phone_number) TABLESPACE pg_default;
+create index IF not exists idx_customers_email on public.customers using btree (email_address) TABLESPACE pg_default;
+create index IF not exists idx_customers_auth_id on public.customers using btree (auth_id) TABLESPACE pg_default;
+
+create table public.customers (
+  id uuid not null default gen_random_uuid (),
+  auth_id uuid null,
+  first_name text not null,
+  middle_name text null,
+  last_name text not null,
+  birthdate date null,
+  gender text null,
+  address text null,
+  phone_number text not null,
+  email_address text null,
+  loyalty_points integer null default 0,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint customers_pkey primary key (id),
+  constraint customers_auth_id_key unique (auth_id),
+  constraint customers_gender_check check (
+    (
+      gender = any (
+        array['male'::text, 'female'::text, 'other'::text]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_customers_phone on public.customers using btree (phone_number) TABLESPACE pg_default;
+create index IF not exists idx_customers_email on public.customers using btree (email_address) TABLESPACE pg_default;
+create index IF not exists idx_customers_auth_id on public.customers using btree (auth_id) TABLESPACE pg_default;
+
+create table public.staff_roles (
+  staff_id uuid not null,
+  role_id text not null,
+  constraint staff_roles_pkey primary key (staff_id, role_id),
+  constraint staff_roles_role_id_fkey foreign KEY (role_id) references roles (id) on delete CASCADE,
+  constraint staff_roles_staff_id_fkey foreign KEY (staff_id) references staff (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_staff_roles_role_id on public.staff_roles using btree (role_id) TABLESPACE pg_default;
+create index IF not exists idx_staff_roles_staff_id on public.staff_roles using btree (staff_id) TABLESPACE pg_default;
+
+create table public.roles (
+  id text not null,
+  constraint roles_pkey primary key (id),
+  constraint roles_id_check check (
+    (
+      id = any (
+        array[
+          'admin'::text,
+          'cashier'::text,
+          'attendant'::text,
+          'rider'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create table public.services (
+  id uuid not null default gen_random_uuid (),
+  service_type text not null,
+  name text not null,
+  description text null,
+  base_duration_minutes numeric null,
+  rate_per_kg numeric(10, 2) null,
+  is_active boolean null default true,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint services_pkey primary key (id),
+  constraint services_base_duration_minutes_check check ((base_duration_minutes >= (0)::numeric)),
+  constraint services_rate_per_kg_check check ((rate_per_kg >= (0)::numeric)),
+  constraint services_service_type_check check (
+    (
+      service_type = any (
+        array[
+          'pickup'::text,
+          'wash'::text,
+          'spin'::text,
+          'dry'::text,
+          'iron'::text,
+          'fold'::text,
+          'delivery'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_services_service_type on public.services using btree (service_type) TABLESPACE pg_default;
+create index IF not exists idx_services_is_active on public.services using btree (is_active) TABLESPACE pg_default;
+
+create table public.products (
+  id uuid not null default gen_random_uuid (),
+  item_name text not null,
+  unit_price numeric(10, 2) not null default 0.00,
+  quantity numeric(10, 2) not null default 0,
+  reorder_level numeric(10, 2) not null default 0,
+  is_active boolean null default true,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  last_updated timestamp without time zone null default CURRENT_TIMESTAMP,
+  unit_cost numeric(10, 2) null default 0.00,
+  image_url text null,
+  image_alt_text text null,
+  constraint products_pkey primary key (id),
+  constraint products_quantity_check check ((quantity >= (0)::numeric)),
+  constraint products_reorder_level_check check ((reorder_level >= (0)::numeric)),
+  constraint products_unit_cost_check check ((unit_cost >= (0)::numeric)),
+  constraint products_unit_price_check check ((unit_price >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_products_is_active on public.products using btree (is_active) TABLESPACE pg_default;
+create index IF not exists idx_products_item_name on public.products using btree (item_name) TABLESPACE pg_default;
+create index IF not exists idx_products_unit_cost on public.products using btree (unit_cost) TABLESPACE pg_default;
+create index IF not exists idx_products_image_url on public.products using btree (image_url) TABLESPACE pg_default;
+
+create table public.product_transactions (
+  id uuid not null default gen_random_uuid (),
+  product_id uuid not null,
+  staff_id uuid null,
+  order_id uuid null,
+  change_type text not null,
+  quantity numeric(10, 2) not null,
+  reason text null,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint product_transactions_pkey primary key (id),
+  constraint product_transactions_order_id_fkey foreign KEY (order_id) references orders (id) on delete set null,
+  constraint product_transactions_product_id_fkey foreign KEY (product_id) references products (id) on delete CASCADE,
+  constraint product_transactions_staff_id_fkey foreign KEY (staff_id) references staff (id) on delete set null,
+  constraint product_transactions_change_type_check check (
+    (
+      change_type = any (
+        array[
+          'add'::text,
+          'remove'::text,
+          'consume'::text,
+          'adjust'::text
+        ]
+      )
+    )
+  ),
+  constraint product_transactions_quantity_check check ((quantity > (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_product_transactions_product_id on public.product_transactions using btree (product_id) TABLESPACE pg_default;
+create index IF not exists idx_product_transactions_order_id on public.product_transactions using btree (order_id) TABLESPACE pg_default;
+create index IF not exists idx_product_transactions_created_at on public.product_transactions using btree (created_at) TABLESPACE pg_default;
+create index IF not exists idx_product_transactions_change_type on public.product_transactions using btree (change_type) TABLESPACE pg_default;
+
+create table public.orders (
+  id uuid not null default gen_random_uuid (),
+  source text not null,
+  customer_id uuid not null,
+  cashier_id uuid null,
+  status text not null default 'pending'::text,
+  created_at timestamp without time zone not null default CURRENT_TIMESTAMP,
+  approved_at timestamp without time zone null,
+  completed_at timestamp without time zone null,
+  cancelled_at timestamp without time zone null,
+  total_amount numeric(10, 2) not null,
+  order_note text null,
+  handling jsonb not null,
+  breakdown jsonb not null,
+  cancellation jsonb null,
+  gcash_receipt_url text null,
+  constraint orders_pkey primary key (id),
+  constraint orders_cashier_id_fkey foreign KEY (cashier_id) references staff (id) on delete set null,
+  constraint orders_customer_id_fkey foreign KEY (customer_id) references customers (id) on delete CASCADE,
+  constraint orders_source_check check (
+    (source = any (array['store'::text, 'app'::text]))
+  ),
+  constraint orders_status_check check (
+    (
+      status = any (
+        array[
+          'pending'::text,
+          'for_pick-up'::text,
+          'processing'::text,
+          'for_delivery'::text,
+          'completed'::text,
+          'cancelled'::text
+        ]
+      )
+    )
+  ),
+  constraint orders_total_amount_check check ((total_amount >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_orders_customer_id on public.orders using btree (customer_id) TABLESPACE pg_default;
+create index IF not exists idx_orders_cashier_id on public.orders using btree (cashier_id) TABLESPACE pg_default;
+create index IF not exists idx_orders_status on public.orders using btree (status) TABLESPACE pg_default;
+create index IF not exists idx_orders_source on public.orders using btree (source) TABLESPACE pg_default;
+create index IF not exists idx_orders_created_at on public.orders using btree (created_at) TABLESPACE pg_default;
+create index IF not exists idx_orders_total_amount on public.orders using btree (total_amount) TABLESPACE pg_default;
+create index IF not exists idx_orders_breakdown_payment on public.orders using gin (((breakdown -> 'payment'::text))) TABLESPACE pg_default;
+create index IF not exists idx_orders_handling_pickup on public.orders using gin (((handling -> 'pickup'::text))) TABLESPACE pg_default;
+create index IF not exists idx_orders_handling_delivery on public.orders using gin (((handling -> 'delivery'::text))) TABLESPACE pg_default;
+
+create table public.machines (
+  id uuid not null default gen_random_uuid (),
+  machine_name text not null,
+  machine_type text not null,
+  status text null default 'available'::text,
+  last_serviced_at timestamp without time zone null,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint machines_pkey primary key (id),
+  constraint machines_machine_type_check check (
+    (
+      machine_type = any (array['wash'::text, 'dry'::text, 'iron'::text])
+    )
+  ),
+  constraint machines_status_check check (
+    (
+      status = any (
+        array[
+          'available'::text,
+          'running'::text,
+          'maintenance'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_machines_status on public.machines using btree (status) TABLESPACE pg_default;
+create index IF not exists idx_machines_machine_type on public.machines using btree (machine_type) TABLESPACE pg_default;
+
+create table public.issues (
+  id uuid not null default gen_random_uuid (),
+  order_id uuid null,
+  basket_number integer null,
+  description text not null,
+  status text null default 'open'::text,
+  severity text null default 'low'::text,
+  reported_by uuid null,
+  resolved_by uuid null,
+  resolved_at timestamp without time zone null,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint issues_pkey primary key (id),
+  constraint issues_order_id_fkey foreign KEY (order_id) references orders (id) on delete CASCADE,
+  constraint issues_reported_by_fkey foreign KEY (reported_by) references staff (id) on delete set null,
+  constraint issues_resolved_by_fkey foreign KEY (resolved_by) references staff (id) on delete set null,
+  constraint issues_severity_check check (
+    (
+      severity = any (
+        array[
+          'low'::text,
+          'medium'::text,
+          'high'::text,
+          'critical'::text
+        ]
+      )
+    )
+  ),
+  constraint issues_status_check check (
+    (
+      status = any (
+        array['open'::text, 'resolved'::text, 'cancelled'::text]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_issues_order_id on public.issues using btree (order_id) TABLESPACE pg_default;
+create index IF not exists idx_issues_status on public.issues using btree (status) TABLESPACE pg_default;
+create index IF not exists idx_issues_severity on public.issues using btree (severity) TABLESPACE pg_default;

@@ -1,59 +1,93 @@
-// app/in/manage/products/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-type Products = {
+type Product = {
   id: string;
   item_name: string;
-  unit_price: string; // form value as string
-  unit_cost: string; // form value as string
-  quantity: string; // form value as string (whole number)
-  reorder_level: string; // form value as string (whole number)
+  sku: string | null;
+  unit_price: string | null;
+  unit_cost: string | null;
+  quantity: string;
+  reorder_level: string;
   is_active: boolean;
-  image_url?: string; // Product image URL
+  image_url: string | null;
+  created_at?: string;
+  updated_at?: string;
+  updated_by?: string;
+};
+
+type SortConfig = {
+  key: keyof Product;
+  direction: "asc" | "desc";
 };
 
 export default function ProductsPage() {
-  const [rows, setRows] = useState<Products[]>([]);
-  const [filteredRows, setFilteredRows] = useState<Products[]>([]);
+  const [rows, setRows] = useState<Product[]>([]);
+  const [filteredRows, setFilteredRows] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selected, setSelected] = useState<Products | null>(null);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editing, setEditing] = useState<Products | null>(null);
-  const [editingImageFile, setEditingImageFile] = useState<File | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "item_name",
+    direction: "asc",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editing, setEditing] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Quantity adjustment modal state
-  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [quantityAdjustment, setQuantityAdjustment] = useState<string>("");
-  const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">(
-    "add",
-  );
+  const ROWS_PER_PAGE = 10;
 
   useEffect(() => {
     load();
   }, []);
 
-  // Debounced search
+  // Apply search and sort
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchQuery.trim() === "") {
-        setFilteredRows(rows);
-      } else {
+      let result = rows;
+
+      // Search
+      if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
-        const filtered = rows.filter((product) => {
-          return product.item_name.toLowerCase().includes(query);
+        result = result.filter((product) => {
+          return (
+            product.item_name.toLowerCase().includes(query) ||
+            (product.sku?.toLowerCase().includes(query) ?? false) ||
+            String(product.quantity).includes(query) ||
+            String(product.unit_price).includes(query) ||
+            (product.created_at?.toLowerCase().includes(query) ?? false) ||
+            (product.updated_at?.toLowerCase().includes(query) ?? false) ||
+            (product.updated_by?.toLowerCase().includes(query) ?? false)
+          );
         });
-        setFilteredRows(filtered);
       }
-    }, 300); // 300ms debounce
+
+      // Sort
+      result = [...result].sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
+
+        if (aVal === null || aVal === undefined) return 1;
+        if (bVal === null || bVal === undefined) return -1;
+
+        if (typeof aVal === "string") {
+          const cmp = aVal.localeCompare(String(bVal));
+          return sortConfig.direction === "asc" ? cmp : -cmp;
+        } else if (typeof aVal === "number") {
+          const numBVal = Number(bVal);
+          return sortConfig.direction === "asc" ? aVal - numBVal : numBVal - aVal;
+        }
+        return 0;
+      });
+
+      setFilteredRows(result);
+      setCurrentPage(1);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, rows]);
+  }, [searchQuery, rows, sortConfig]);
 
   async function load() {
     setLoading(true);
@@ -65,33 +99,24 @@ export default function ProductsPage() {
         throw new Error(body?.error || `Server responded ${res.status}`);
       }
       const data = await res.json();
-      // Map numeric fields into strings for the form
-      const normalized: Products[] = (data || []).map((r: any) => ({
+      const normalized: Product[] = (data || []).map((r: any) => ({
         id: r.id,
         item_name: r.item_name ?? "",
-        unit_price:
-          r.unit_price !== undefined && r.unit_price !== null
-            ? Number(r.unit_price).toFixed(2)
-            : "0.00",
-        unit_cost:
-          r.unit_cost !== undefined && r.unit_cost !== null
-            ? Number(r.unit_cost).toFixed(2)
-            : "0.00",
-        quantity:
-          r.quantity !== undefined && r.quantity !== null
-            ? String(Math.trunc(Number(r.quantity)))
-            : "0",
-        reorder_level:
-          r.reorder_level !== undefined && r.reorder_level !== null
-            ? String(Math.trunc(Number(r.reorder_level)))
-            : "0",
+        sku: r.sku ?? null,
+        unit_price: r.unit_price !== null && r.unit_price !== undefined ? String(r.unit_price) : null,
+        unit_cost: r.unit_cost !== null && r.unit_cost !== undefined ? String(r.unit_cost) : null,
+        quantity: r.quantity !== null && r.quantity !== undefined ? String(Math.trunc(Number(r.quantity))) : "0",
+        reorder_level: r.reorder_level !== null && r.reorder_level !== undefined ? String(Math.trunc(Number(r.reorder_level))) : "0",
         is_active: r.is_active ?? true,
-        image_url: r.image_url ?? undefined,
+        image_url: r.image_url ?? null,
+        created_at: r.created_at ?? undefined,
+        updated_at: r.updated_at ?? undefined,
+        updated_by: r.updated_by ?? undefined,
       }));
       setRows(normalized);
       setFilteredRows(normalized);
     } catch (err) {
-      console.error("Failed to load products:", err);
+      console.error(err);
       setErrorMsg("Failed to load products");
     } finally {
       setLoading(false);
@@ -102,79 +127,29 @@ export default function ProductsPage() {
     setEditing({
       id: "",
       item_name: "",
-      unit_price: "0.00",
-      unit_cost: "0.00",
+      sku: null,
+      unit_price: "",
+      unit_cost: "",
       quantity: "0",
       reorder_level: "0",
       is_active: true,
-      image_url: undefined,
+      image_url: null,
     });
-    setEditingImageFile(null);
-    setSelected(null);
-    setIsEditingDetails(true);
     setErrorMsg(null);
   }
 
-  function openEdit(row: Products) {
-    setEditing({
-      ...row,
-      unit_cost: row.unit_cost ?? "0.00",
-    });
-    setEditingImageFile(null);
-    setSelected(row);
-    setIsEditingDetails(true);
+  function openEdit(row: Product) {
+    setEditing(row);
     setErrorMsg(null);
   }
 
-  function selectProduct(product: Products) {
-    setSelected(product);
-    setIsEditingDetails(false);
-  }
-
-  function updateField<K extends keyof Products>(key: K, value: Products[K]) {
+  function updateField<K extends keyof Product>(key: K, value: Product[K]) {
     if (!editing) return;
     setEditing({ ...editing, [key]: value });
   }
 
-  function validateForm(data: Products) {
-    // required fields
-    const required: (keyof Products)[] = [
-      "item_name",
-      "unit_price",
-      "unit_cost",
-      "quantity",
-      "reorder_level",
-    ];
-
-    for (const k of required) {
-      const v = data[k];
-      if (v === null || v === undefined || String(v).trim() === "") {
-        return `Field ${k} is required`;
-      }
-    }
-
-    // unit_price and unit_cost: numeric >= 0 with up to 2 decimals
-    const moneyPattern = /^\d+(\.\d{1,2})?$/;
-    if (!moneyPattern.test(data.unit_price))
-      return "unit_price must be a non-negative number with up to 2 decimals";
-
-    if (!moneyPattern.test(data.unit_cost))
-      return "unit_cost must be a non-negative number with up to 2 decimals";
-
-    if (Number(data.unit_price) < 0) return "unit_price cannot be negative";
-    if (Number(data.unit_cost) < 0) return "unit_cost cannot be negative";
-
-    // quantity & reorder_level: whole numbers, >= 0
-    const wholePattern = /^\d+$/;
-    if (!wholePattern.test(data.quantity))
-      return "quantity must be a whole number >= 0";
-    if (!wholePattern.test(data.reorder_level))
-      return "reorder_level must be a whole number >= 0";
-
-    if (Number(data.quantity) < 0) return "quantity cannot be negative";
-    if (Number(data.reorder_level) < 0)
-      return "reorder_level cannot be negative";
-
+  function validateForm(data: Product) {
+    if (!data.item_name.trim()) return "item_name is required";
     return null;
   }
 
@@ -182,66 +157,41 @@ export default function ProductsPage() {
     if (!editing) return;
     setErrorMsg(null);
 
-    const data = { ...editing };
-
-    const validation = validateForm(data);
+    const validation = validateForm(editing);
     if (validation) {
       setErrorMsg(validation);
-      console.error("Validation failed:", validation);
       return;
     }
 
     setSaving(true);
     try {
-      // prepare payload: parse numeric strings to numbers
       const payload = {
-        // keep id if present (empty string means create)
-        ...(data.id ? { id: data.id } : {}),
-        item_name: data.item_name.trim(),
-        unit_price: Number(Number(data.unit_price).toFixed(2)),
-        unit_cost: Number(Number(data.unit_cost).toFixed(2)),
-        quantity: Number(Math.trunc(Number(data.quantity))),
-        reorder_level: Number(Math.trunc(Number(data.reorder_level))),
-        is_active: data.is_active,
+        ...(editing.id ? { id: editing.id } : {}),
+        item_name: editing.item_name.trim(),
+        sku: editing.sku?.trim() || null,
+        unit_price: editing.unit_price === "" ? null : Number(editing.unit_price),
+        unit_cost: editing.unit_cost === "" ? null : Number(editing.unit_cost),
+        quantity: Number(Math.trunc(Number(editing.quantity))),
+        reorder_level: Number(Math.trunc(Number(editing.reorder_level))),
+        is_active: editing.is_active,
+        image_url: editing.image_url || null,
       };
 
-      // Check if this is a new product with an image
-      const isNewProduct = !data.id;
-      let requestUrl = "/api/manage/products/saveProduct";
-      let requestOptions: RequestInit;
-
-      if (isNewProduct && editingImageFile) {
-        // Send as FormData to support image upload
-        const formData = new FormData();
-        formData.append("productData", JSON.stringify(payload));
-        formData.append("file", editingImageFile);
-
-        requestOptions = {
-          method: "POST",
-          body: formData,
-        };
-      } else {
-        // Send as JSON (edits without image or no image selected)
-        requestOptions = {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        };
-      }
-
-      const res = await fetch(requestUrl, requestOptions);
+      const res = await fetch("/api/manage/products/saveProduct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const body = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(body.error || `Server responded ${res.status}`);
 
       await load();
-      setIsEditingDetails(false);
       setEditing(null);
-      setEditingImageFile(null);
     } catch (err) {
-      console.error("Save failed:", err);
-      setErrorMsg("Failed to save products");
+      console.error(err);
+      setErrorMsg("Failed to save product");
     } finally {
       setSaving(false);
     }
@@ -249,6 +199,8 @@ export default function ProductsPage() {
 
   async function remove() {
     if (!editing?.id) return;
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    
     setErrorMsg(null);
     setSaving(true);
     try {
@@ -257,692 +209,601 @@ export default function ProductsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editing.id }),
       });
+
       const body = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(body.error || `Server responded ${res.status}`);
 
       await load();
-      setIsEditingDetails(false);
       setEditing(null);
     } catch (err) {
-      console.error("Remove failed:", err);
-      setErrorMsg("Failed to remove products");
+      console.error(err);
+      setErrorMsg("Failed to remove product");
     } finally {
       setSaving(false);
     }
   }
 
-  function openQuantityModal() {
-    setQuantityModalOpen(true);
-    setSelectedProductId("");
-    setQuantityAdjustment("");
-    setAdjustmentType("add");
-    setErrorMsg(null);
-  }
+  // Pagination
+  const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+  const endIdx = startIdx + ROWS_PER_PAGE;
+  const paginatedRows = filteredRows.slice(startIdx, endIdx);
 
-  async function adjustQuantity() {
-    if (!selectedProductId || !quantityAdjustment) {
-      setErrorMsg("Please select a product and enter an amount");
-      return;
-    }
-
-    const amount = Number(quantityAdjustment);
-    if (isNaN(amount) || amount <= 0) {
-      setErrorMsg("Amount must be a positive number");
-      return;
-    }
-
-    setErrorMsg(null);
-    setSaving(true);
-
-    try {
-      const product = rows.find((r) => r.id === selectedProductId);
-      if (!product) {
-        throw new Error("Product not found");
-      }
-
-      const payload = {
-        product_id: selectedProductId,
-        adjustment_amount: amount,
-        adjustment_type: adjustmentType,
-        notes: null,
-      };
-
-      const res = await fetch("/api/manage/products/adjustQuantity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+  const handleSort = (key: keyof Product) => {
+    if (sortConfig.key === key) {
+      setSortConfig({
+        key,
+        direction: sortConfig.direction === "asc" ? "desc" : "asc",
       });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body.error || `Server responded ${res.status}`);
-      }
-
-      // Reload products to show updated quantity
-      await load();
-      setQuantityModalOpen(false);
-      setQuantityAdjustment("");
-      setSelectedProductId("");
-    } catch (err) {
-      console.error("Quantity adjustment failed:", err);
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to adjust quantity",
-      );
-    } finally {
-      setSaving(false);
+    } else {
+      setSortConfig({ key, direction: "asc" });
     }
-  }
+  };
+
+  const SortIcon = ({ field }: { field: keyof Product }) => {
+    if (sortConfig.key !== field) return <span className="text-gray-300">⇅</span>;
+    return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
+  };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-        {/* LEFT PANE - Products List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
-          <div className="p-6 border-b border-gray-200 shrink-0">
-            <h2 className="text-3xl font-bold mb-4">Products</h2>
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-            />
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <div className="mx-auto w-full">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Products Management</h1>
+            <p className="text-gray-500 text-xs mt-0.5">
+              {filteredRows.length} product{filteredRows.length !== 1 ? "s" : ""} found
+            </p>
           </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {filteredRows.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                {rows.length === 0 ? "No products yet" : "No results"}
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredRows.map((product) => (
-                  <div
-                    key={product.id}
-                    onClick={() => selectProduct(product)}
-                    className={`p-4 cursor-pointer transition ${
-                      selected?.id === product.id
-                        ? "bg-blue-50 border-l-4 border-blue-600"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    {product.image_url && (
-                      <img
-                        src={product.image_url}
-                        alt={product.item_name}
-                        className="w-full h-24 object-cover rounded mb-2"
-                      />
-                    )}
-                    <div className="font-medium text-sm">
-                      {product.item_name}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      ₱{product.unit_price}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Qty: {product.quantity}
-                    </div>
-                    {!product.is_active && (
-                      <div className="text-xs text-red-600 mt-1">Inactive</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-6 border-t border-gray-200 shrink-0">
-            <button
-              onClick={openNew}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
-            >
-              + Add New Product
-            </button>
-          </div>
+          <button
+            onClick={openNew}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
+          >
+            + Create New Product
+          </button>
         </div>
 
-        {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col min-h-0">
-          {isEditingDetails && editing ? (
-            <EditPane
-              product={editing}
-              updateField={updateField}
-              save={save}
-              remove={remove}
-              saving={saving}
-              errorMsg={errorMsg}
-              onCancel={() => {
-                setIsEditingDetails(false);
-                setEditing(null);
-                setEditingImageFile(null);
-                setErrorMsg(null);
-              }}
-              isNewProduct={!editing.id}
-              editingImageFile={editingImageFile}
-              setEditingImageFile={setEditingImageFile}
-            />
-          ) : selected ? (
-            <DetailsPane
-              product={selected}
-              onEdit={() => openEdit(selected)}
-              onAdjustQuantity={openQuantityModal}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
-                <div className="text-5xl mb-3">📦</div>
-                <p>Select a product to view details</p>
-              </div>
+        {/* Search Bar */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name, SKU, price, quantity, date, updater..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
+
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">Loading products...</div>
+          ) : paginatedRows.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {rows.length === 0 ? "No products yet. Create one to get started!" : "No results match your search."}
             </div>
+          ) : (
+            <>
+              {/* Table Wrapper with Horizontal Scroll */}
+              <div className="overflow-x-auto flex-1">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("item_name")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Name <SortIcon field="item_name" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("sku")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          SKU <SortIcon field="sku" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("unit_cost")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Unit Cost <SortIcon field="unit_cost" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("unit_price")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Unit Price <SortIcon field="unit_price" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("quantity")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Quantity <SortIcon field="quantity" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("reorder_level")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Reorder Level <SortIcon field="reorder_level" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("created_at")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Created <SortIcon field="created_at" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("updated_at")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Updated <SortIcon field="updated_at" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("updated_by")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Updated By <SortIcon field="updated_by" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("is_active")}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Status <SortIcon field="is_active" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedRows.map((product) => (
+                      <tr
+                        key={product.id}
+                        className="border-b border-gray-200 hover:bg-blue-50 transition"
+                      >
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          {product.item_name}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-700">
+                          {product.sku || "—"}
+                        </td>
+                        <td className="px-4 py-2 text-sm font-semibold text-blue-700">
+                          {product.unit_cost ? `₱${parseFloat(product.unit_cost).toFixed(2)}` : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-sm font-semibold text-green-700">
+                          {product.unit_price ? `₱${parseFloat(product.unit_price).toFixed(2)}` : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-700">
+                          {product.quantity}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-700">
+                          {product.reorder_level}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-600">
+                          {product.created_at
+                            ? new Date(product.created_at).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-600">
+                          {product.updated_at
+                            ? new Date(product.updated_at).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-600">
+                          {product.updated_by || "—"}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          {product.is_active ? (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                              ✓ Active
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                              ✗ Inactive
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <button
+                            onClick={() => openEdit(product)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <div className="text-xs text-gray-600">
+                    Showing {startIdx + 1} to {Math.min(endIdx, filteredRows.length)} of{" "}
+                    {filteredRows.length} products
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ← Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => {
+                        const diff = Math.abs(p - currentPage);
+                        return diff < 3 || p === 1 || p === totalPages;
+                      })
+                      .map((p, i, arr) => (
+                        <div key={p}>
+                          {i > 0 && arr[i - 1] !== p - 1 && (
+                            <span className="px-1 text-gray-400">...</span>
+                          )}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            className={`px-2 py-1 rounded text-xs font-medium transition ${
+                              currentPage === p
+                                ? "bg-blue-600 text-white"
+                                : "border border-gray-300 hover:bg-gray-200"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </div>
+                      ))}
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* Quantity Adjustment Modal */}
-      {quantityModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 w-[480px] rounded-lg shadow-lg space-y-4">
-            <div className="text-lg font-semibold text-gray-900">
-              Adjust Product Quantity
-            </div>
-
-            {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
-
-            <div className="space-y-4">
-              {/* Product Dropdown */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1 text-gray-700">
-                  Select Product
-                </label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Choose a product --</option>
-                  {rows.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.item_name} (Current: {product.quantity})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Add/Subtract Toggle */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1 text-gray-700">
-                  Action
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setAdjustmentType("add")}
-                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-                      adjustmentType === "add"
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    Add (+)
-                  </button>
-                  <button
-                    onClick={() => setAdjustmentType("subtract")}
-                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-                      adjustmentType === "subtract"
-                        ? "bg-red-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    Subtract (-)
-                  </button>
-                </div>
-              </div>
-
-              {/* Amount Input */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1 text-gray-700">
-                  Amount
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={quantityAdjustment}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\D/g, "");
-                    setQuantityAdjustment(cleaned);
-                  }}
-                  placeholder="Enter quantity to adjust"
-                  className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Preview */}
-              {selectedProductId && quantityAdjustment && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-medium text-blue-900">
-                    Preview:
-                  </div>
-                  <div className="text-sm text-blue-700 mt-1">
-                    {(() => {
-                      const product = rows.find(
-                        (r) => r.id === selectedProductId,
-                      );
-                      if (!product) return "";
-                      const current = Number(product.quantity);
-                      const amount = Number(quantityAdjustment);
-                      const newQty =
-                        adjustmentType === "add"
-                          ? current + amount
-                          : current - amount;
-                      return `${product.item_name}: ${current} ${
-                        adjustmentType === "add" ? "+" : "-"
-                      } ${amount} = ${newQty}`;
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-3">
-              <button
-                onClick={() => setQuantityModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={adjustQuantity}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                disabled={saving || !selectedProductId || !quantityAdjustment}
-              >
-                {saving ? "Adjusting..." : "Apply"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Edit Modal - Slide from Right */}
+      {editing && (
+        <EditModal
+          product={editing}
+          updateField={updateField}
+          save={save}
+          remove={remove}
+          saving={saving}
+          errorMsg={errorMsg}
+          onClose={() => {
+            setEditing(null);
+            setErrorMsg(null);
+          }}
+          isNewProduct={!editing.id}
+        />
       )}
     </div>
   );
 }
 
-// Details Pane Component
-function DetailsPane({
-  product,
-  onEdit,
-  onAdjustQuantity,
-}: {
-  product: Products;
-  onEdit: () => void;
-  onAdjustQuantity: () => void;
-}) {
-  const margin = Number(product.unit_price) - Number(product.unit_cost);
-  const marginPercent =
-    Number(product.unit_price) > 0
-      ? ((margin / Number(product.unit_price)) * 100).toFixed(1)
-      : "0";
-  const isLowStock = Number(product.quantity) < Number(product.reorder_level);
-
-  return (
-    <div className="p-8 h-full flex flex-col">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            {product.image_url && (
-              <img
-                src={product.image_url}
-                alt={product.item_name}
-                className="w-32 h-32 object-cover rounded-lg mb-4 border border-gray-300"
-              />
-            )}
-            <h1 className="text-4xl font-bold text-gray-900">
-              {product.item_name}
-            </h1>
-            <p className="text-gray-500 mt-1">Product ID: {product.id}</p>
-          </div>
-          <span
-            className={`px-4 py-2 rounded-full text-sm font-semibold ${
-              product.is_active
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {product.is_active ? "✓ Active" : "✗ Inactive"}
-          </span>
-        </div>
-      </div>
-
-      {/* Pricing & Margin Info */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
-          <div className="text-sm text-gray-600 font-medium">Unit Cost</div>
-          <div className="text-3xl font-bold text-blue-900 mt-2">
-            ₱{product.unit_cost}
-          </div>
-        </div>
-        <div className="bg-linear-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
-          <div className="text-sm text-gray-600 font-medium">Unit Price</div>
-          <div className="text-3xl font-bold text-green-900 mt-2">
-            ₱{product.unit_price}
-          </div>
-        </div>
-        <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
-          <div className="text-sm text-gray-600 font-medium">Margin</div>
-          <div className="text-3xl font-bold text-purple-900 mt-2">
-            ₱{margin.toFixed(2)}
-          </div>
-          <div className="text-xs text-gray-600 mt-1">{marginPercent}%</div>
-        </div>
-      </div>
-
-      {/* Stock Info */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div
-          className={`rounded-lg p-6 border-2 ${
-            isLowStock
-              ? "bg-orange-50 border-orange-300"
-              : "bg-gray-50 border-gray-200"
-          }`}
-        >
-          <div className="text-sm text-gray-600 font-medium">
-            Current Quantity
-          </div>
-          <div
-            className={`text-3xl font-bold mt-2 ${
-              isLowStock ? "text-orange-900" : "text-gray-900"
-            }`}
-          >
-            {product.quantity}
-          </div>
-          {isLowStock && (
-            <div className="text-xs text-orange-700 mt-2 font-medium">
-              ⚠ Below reorder level
-            </div>
-          )}
-        </div>
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-          <div className="text-sm text-gray-600 font-medium">Reorder Level</div>
-          <div className="text-3xl font-bold text-gray-900 mt-2">
-            {product.reorder_level}
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-3 mt-auto pt-6 border-t border-gray-200">
-        <button
-          onClick={onAdjustQuantity}
-          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-        >
-          Adjust Quantity
-        </button>
-        <button
-          onClick={onEdit}
-          className="flex-1 px-4 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition font-medium"
-        >
-          Edit Product
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Edit Pane Component
-function EditPane({
+// Edit Modal Component
+function EditModal({
   product,
   updateField,
   save,
   remove,
   saving,
   errorMsg,
-  onCancel,
+  onClose,
   isNewProduct,
-  editingImageFile,
-  setEditingImageFile,
 }: {
-  product: Products;
-  updateField: (key: keyof Products, value: any) => void;
+  product: Product;
+  updateField: (key: keyof Product, value: any) => void;
   save: () => Promise<void>;
   remove: () => Promise<void>;
   saving: boolean;
   errorMsg: string | null;
-  onCancel: () => void;
+  onClose: () => void;
   isNewProduct: boolean;
-  editingImageFile: File | null;
-  setEditingImageFile: (file: File | null) => void;
 }) {
   return (
-    <div className="p-8 h-full flex flex-col">
-      <h2 className="text-3xl font-bold text-gray-900 mb-6">
-        {isNewProduct ? "Add New Product" : "Edit Product"}
-      </h2>
-
-      {errorMsg && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="text-red-800 text-sm font-medium">{errorMsg}</div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto space-y-5 pr-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Item Name
-          </label>
-          <input
-            type="text"
-            value={product.item_name}
-            onChange={(e) => updateField("item_name", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <ImageUploadField
-          product={product}
-          editingImageFile={editingImageFile}
-          setEditingImageFile={setEditingImageFile}
-          saving={saving}
-          isNewProduct={isNewProduct}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Unit Cost (₱)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={product.unit_cost}
-              onChange={(e) => updateField("unit_cost", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Unit Price (₱)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={product.unit_price}
-              onChange={(e) => updateField("unit_price", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantity
-            </label>
-            <input
-              type="number"
-              step="1"
-              value={product.quantity}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, "");
-                updateField("quantity", cleaned === "" ? "0" : cleaned);
-              }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reorder Level
-            </label>
-            <input
-              type="number"
-              step="1"
-              value={product.reorder_level}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, "");
-                updateField("reorder_level", cleaned === "" ? "0" : cleaned);
-              }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 pt-2">
-          <input
-            type="checkbox"
-            id="is_active"
-            checked={product.is_active}
-            onChange={(e) => updateField("is_active", e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
-          />
-          <label
-            htmlFor="is_active"
-            className="text-sm font-medium text-gray-700"
-          >
-            Active
-          </label>
-        </div>
-      </div>
-
-      <div className="flex gap-3 pt-6 border-t border-gray-200 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
-          disabled={saving}
-        >
-          Cancel
-        </button>
-        {!isNewProduct && (
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50">
+      {/* Modal Slide from Right */}
+      <div
+        className="bg-white shadow-2xl h-full w-full max-w-md flex flex-col animate-in slide-in-from-right"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-3 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 flex justify-between items-center shrink-0">
+          <h2 className="text-lg font-bold text-gray-900">
+            {isNewProduct ? "Add New Product" : "Edit Product"}
+          </h2>
           <button
-            onClick={remove}
-            className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+            onClick={onClose}
+            className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 space-y-4">
+            {errorMsg && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+              </div>
+            )}
+
+            {/* Item Name */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">
+                Item Name
+              </label>
+              <input
+                type="text"
+                value={product.item_name}
+                onChange={(e) => updateField("item_name", e.target.value)}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Product Name"
+              />
+            </div>
+
+            {/* SKU */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">
+                SKU (Stock Keeping Unit)
+              </label>
+              <input
+                type="text"
+                value={product.sku ?? ""}
+                onChange={(e) => updateField("sku", e.target.value || null)}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., PROD-001"
+              />
+            </div>
+
+            {/* Unit Cost and Unit Price */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-900 mb-1">
+                  Unit Cost (₱)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={product.unit_cost ?? ""}
+                  onChange={(e) =>
+                    updateField(
+                      "unit_cost",
+                      e.target.value === "" ? "" : e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-900 mb-1">
+                  Unit Price (₱)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={product.unit_price ?? ""}
+                  onChange={(e) =>
+                    updateField(
+                      "unit_price",
+                      e.target.value === "" ? "" : e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Quantity and Reorder Level */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-900 mb-1">
+                  Quantity
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={product.quantity}
+                  onChange={(e) =>
+                    updateField(
+                      "quantity",
+                      e.target.value === "" ? "0" : e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-900 mb-1">
+                  Reorder Level
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={product.reorder_level}
+                  onChange={(e) =>
+                    updateField(
+                      "reorder_level",
+                      e.target.value === "" ? "0" : e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            {/* Image Upload */}
+            <ImageUploadField product={product} updateField={updateField} saving={saving} />
+
+            {/* Active Checkbox */}
+            <div className="flex items-center space-x-2 py-1">
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={product.is_active}
+                onChange={(e) => updateField("is_active", e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <label
+                htmlFor="is_active"
+                className="text-xs font-semibold text-gray-900 cursor-pointer"
+              >
+                Active
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex gap-2 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 border border-gray-300 rounded text-gray-900 text-xs font-medium hover:bg-gray-100 transition"
             disabled={saving}
           >
-            Delete
+            Cancel
           </button>
-        )}
-        <button
-          onClick={save}
-          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50"
-          disabled={saving}
-        >
-          {saving ? "Saving..." : isNewProduct ? "Add Product" : "Save Changes"}
-        </button>
+          {!isNewProduct && (
+            <button
+              onClick={remove}
+              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition"
+              disabled={saving}
+            >
+              Delete
+            </button>
+          )}
+          <button
+            onClick={save}
+            className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition disabled:opacity-50"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : isNewProduct ? "Create" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Image Upload Component - Now handles both immediate uploads (for existing products) and deferred uploads (for new products)
+// Image Upload Component
 function ImageUploadField({
   product,
-  editingImageFile,
-  setEditingImageFile,
+  updateField,
   saving,
-  isNewProduct,
 }: {
-  product: Products;
-  editingImageFile: File | null;
-  setEditingImageFile: (file: File | null) => void;
+  product: Product;
+  updateField: (key: keyof Product, value: any) => void;
   saving: boolean;
-  isNewProduct: boolean;
 }) {
+  const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  const handleFileSelect = (file: File) => {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ""
+  );
+
+  const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setUploadError("Please upload an image file");
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError("File size must be under 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size must be under 5MB");
       return;
     }
 
     setUploadError(null);
-
-    if (isNewProduct) {
-      // For new products, store the file to be uploaded with the save
-      setEditingImageFile(file);
-    } else {
-      // For existing products, upload immediately
-      uploadImageImmediately(file);
-    }
-  };
-
-  const uploadImageImmediately = async (file: File) => {
-    setUploadError(null);
+    setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("productId", product.id);
+      const timestamp = Date.now();
+      const filename = `${product.id}-${timestamp}`;
+      
+      const { data, error } = await supabase.storage
+        .from("product-images")
+        .upload(filename, file, { upsert: true });
 
-      const res = await fetch("/api/manage/products/uploadImage", {
-        method: "POST",
-        body: formData,
-      });
+      if (error) throw error;
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || "Upload failed");
-      }
-
-      // Reload to get updated image
-      window.location.reload();
+      const imageUrl = `https://nkcfolnwxxnsskaerkyq.supabase.co/storage/v1/object/public/product-images/${data.path}`;
+      updateField("image_url", imageUrl);
+      setUploadError(null);
     } catch (err) {
       console.error("Upload error:", err);
       setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!product.image_url) return;
-
+    
     setUploadError(null);
+    setUploading(true);
 
     try {
-      const res = await fetch("/api/manage/products/deleteImage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          imageUrl: product.image_url,
-        }),
-      });
+      const filename = product.image_url.split("/").pop();
+      if (!filename) throw new Error("Invalid image URL");
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || "Delete failed");
-      }
+      const { error } = await supabase.storage
+        .from("product-images")
+        .remove([filename]);
 
-      // Reload to refresh
-      window.location.reload();
+      if (error) throw error;
+
+      updateField("image_url", null);
+      setUploadError(null);
     } catch (err) {
       console.error("Delete error:", err);
       setUploadError(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -966,50 +827,36 @@ function ImageUploadField({
     }
   };
 
-  // Show preview of file being added to new product
-  const previewFile = isNewProduct ? editingImageFile : null;
-
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
+      <label className="block text-xs font-semibold text-gray-900">
         Product Image
       </label>
 
-      {(product.image_url || previewFile) && (
+      {product.image_url && (
         <div className="relative w-full">
           <img
-            src={
-              previewFile
-                ? URL.createObjectURL(previewFile)
-                : product.image_url!
-            }
+            src={product.image_url}
             alt={product.item_name}
             className="w-full h-32 object-cover rounded-lg border border-gray-300"
           />
-          {previewFile && (
-            <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
-              ✓ Ready to upload
-            </div>
-          )}
-          {!previewFile && !isNewProduct && (
-            <button
-              onClick={handleDelete}
-              disabled={saving}
-              className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
-            >
-              ✕
-            </button>
-          )}
+          <button
+            onClick={handleDelete}
+            disabled={uploading || saving}
+            className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50 transition text-sm"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {!previewFile && (
+      {!product.image_url && (
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
+          className={`border-2 border-dashed rounded-lg p-4 text-center transition ${
             dragActive
               ? "border-blue-500 bg-blue-50"
               : "border-gray-300 bg-gray-50 hover:bg-gray-100"
@@ -1024,29 +871,30 @@ function ImageUploadField({
                 handleFileSelect(e.target.files[0]);
               }
             }}
-            disabled={saving}
+            disabled={uploading || saving}
             className="hidden"
           />
           <label htmlFor="image-upload" className="cursor-pointer block">
-            <div className="text-3xl mb-2">🖼️</div>
-            <div className="text-sm font-medium text-gray-700">
+            <div className="text-2xl mb-2">🖼️</div>
+            <div className="text-xs font-medium text-gray-700">
               Drag image here or click to upload
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Max 2MB • JPG, PNG, etc.
+              Max 5MB • JPG, PNG, etc.
             </div>
-            {isNewProduct && (
-              <div className="text-xs text-blue-600 mt-2 font-medium">
-                Image will be uploaded when you save the product
-              </div>
-            )}
           </label>
         </div>
       )}
 
       {uploadError && (
-        <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+        <div className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg p-2">
           {uploadError}
+        </div>
+      )}
+
+      {uploading && (
+        <div className="text-blue-600 text-xs bg-blue-50 border border-blue-200 rounded-lg p-2">
+          Uploading...
         </div>
       )}
     </div>

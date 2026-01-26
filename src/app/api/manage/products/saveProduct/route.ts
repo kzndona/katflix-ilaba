@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
       if (!productJsonStr) {
         return NextResponse.json(
-          { error: "productData is required" },
+          { success: false, error: "productData is required" },
           { status: 400 }
         );
       }
@@ -35,9 +35,23 @@ export async function POST(req: Request) {
     // Validate required fields
     if (!productData.item_name) {
       return NextResponse.json(
-        { error: "item_name is required" },
+        { success: false, error: "item_name is required" },
         { status: 400 }
       );
+    }
+
+    // Convert string numbers to proper numeric types
+    if (productData.unit_price) {
+      productData.unit_price = parseFloat(productData.unit_price);
+    }
+    if (productData.unit_cost) {
+      productData.unit_cost = parseFloat(productData.unit_cost);
+    }
+    if (productData.quantity) {
+      productData.quantity = parseFloat(productData.quantity);
+    }
+    if (productData.reorder_level) {
+      productData.reorder_level = parseFloat(productData.reorder_level);
     }
 
     let result: any;
@@ -61,7 +75,7 @@ export async function POST(req: Request) {
     const savedProduct = result.data?.[0];
     if (!savedProduct) {
       return NextResponse.json(
-        { error: "Failed to save product" },
+        { success: false, error: "Failed to save product" },
         { status: 500 }
       );
     }
@@ -72,14 +86,14 @@ export async function POST(req: Request) {
       // Validate file
       if (imageFile.size > 2 * 1024 * 1024) {
         return NextResponse.json(
-          { error: "File size must be under 2MB" },
+          { success: false, error: "File size must be under 2MB" },
           { status: 400 }
         );
       }
 
       if (!imageFile.type.startsWith("image/")) {
         return NextResponse.json(
-          { error: "File must be an image" },
+          { success: false, error: "File must be an image" },
           { status: 400 }
         );
       }
@@ -99,7 +113,7 @@ export async function POST(req: Request) {
       if (uploadError) {
         console.error("Supabase upload error:", uploadError);
         return NextResponse.json(
-          { error: `Failed to upload image: ${uploadError.message}` },
+          { success: false, error: `Failed to upload image: ${uploadError.message}` },
           { status: 500 }
         );
       }
@@ -118,7 +132,7 @@ export async function POST(req: Request) {
       if (updateError) {
         console.error("Database update error:", updateError);
         return NextResponse.json(
-          { error: "Failed to update product with image" },
+          { success: false, error: "Failed to update product with image" },
           { status: 500 }
         );
       }
@@ -127,11 +141,11 @@ export async function POST(req: Request) {
       savedProduct.image_url = publicUrl.publicUrl;
     }
 
-    return NextResponse.json(savedProduct);
+    return NextResponse.json({ success: true, data: savedProduct });
   } catch (error) {
-    console.error("Failed to save products:", error);
+    console.error("Failed to save product:", error);
     return NextResponse.json(
-      { error: "Failed to save products" },
+      { success: false, error: "Failed to save product" },
       { status: 500 }
     );
   }

@@ -4,7 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: "Missing products ID" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing product ID" },
+        { status: 400 }
+      );
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +21,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to remove products:", error);
-    return NextResponse.json({ error: "Failed to remove products" }, { status: 500 });
+    console.error("Failed to remove product:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to remove product" },
+      { status: 500 }
+    );
   }
 }
