@@ -669,9 +669,9 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                       <span>VAT (12% inclusive):</span>
                       <span>
                         ₱
-                        {(
-                          order.breakdown.summary.vat_amount as number
-                        ).toFixed(2)}
+                        {(order.breakdown.summary.vat_amount as number).toFixed(
+                          2,
+                        )}
                       </span>
                     </div>
                   )}
@@ -728,7 +728,11 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
               </h4>
               <div className="space-y-3">
                 {order.breakdown.baskets.map((basket, idx) => (
-                  <BasketCard key={idx} basket={basket} breakdownSummary={order.breakdown.summary} />
+                  <BasketCard
+                    key={idx}
+                    basket={basket}
+                    breakdownSummary={order.breakdown.summary}
+                  />
                 ))}
               </div>
             </div>
@@ -758,30 +762,35 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BasketCard({ basket, breakdownSummary }: { basket: Order["breakdown"]["baskets"][0]; breakdownSummary?: Order["breakdown"]["summary"] }) {
+function BasketCard({
+  basket,
+  breakdownSummary,
+}: {
+  basket: Order["breakdown"]["baskets"][0];
+  breakdownSummary?: Order["breakdown"]["summary"];
+}) {
   const basketNumber = basket?.basket_number || 0;
   const total = basket?.total || 0;
 
   // Safely extract services array - handle both array and non-array cases
   const servicesArray = Array.isArray(basket?.services) ? basket.services : [];
-  
+
   // Calculate subtotal from services if not provided
   const servicesSubtotal = servicesArray.reduce(
     (sum, service) => sum + (service?.subtotal || 0),
-    0
+    0,
   );
-  
+
   // If we have no total and no services data, use the summary services if available
   // This handles cases where services are calculated but not stored as array
-  const displayTotal = total > 0 ? total : (servicesSubtotal > 0 ? servicesSubtotal : 0);
+  const displayTotal =
+    total > 0 ? total : servicesSubtotal > 0 ? servicesSubtotal : 0;
 
   return (
     <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h5 className="font-semibold text-sm">
-            Basket #{basketNumber}
-          </h5>
+          <h5 className="font-semibold text-sm">Basket #{basketNumber}</h5>
         </div>
         <div className="text-right">
           <div className="text-sm font-semibold text-gray-900">
@@ -825,13 +834,16 @@ function BasketCard({ basket, breakdownSummary }: { basket: Order["breakdown"]["
         </div>
       )}
 
-      {servicesArray.length === 0 && breakdownSummary?.subtotal_services && (breakdownSummary.subtotal_services as number) > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
-          <p className="text-xs text-gray-500 italic">
-            Services included in basket (₱{(breakdownSummary.subtotal_services as number).toFixed(2)} total)
-          </p>
-        </div>
-      )}
+      {servicesArray.length === 0 &&
+        breakdownSummary?.subtotal_services &&
+        (breakdownSummary.subtotal_services as number) > 0 && (
+          <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
+            <p className="text-xs text-gray-500 italic">
+              Services included in basket (₱
+              {(breakdownSummary.subtotal_services as number).toFixed(2)} total)
+            </p>
+          </div>
+        )}
     </div>
   );
 }

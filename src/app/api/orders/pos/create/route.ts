@@ -137,8 +137,6 @@ export async function POST(request: NextRequest) {
       return enrichedBreakdown;
     }
 
-    const cashierId = staffData.id;
-
     // === VALIDATE INPUT ===
     if (!body.breakdown || !body.handling) {
       return NextResponse.json(
