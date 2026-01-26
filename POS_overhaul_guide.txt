@@ -6,15 +6,15 @@ I'll try to explain the process.
 
     wash = on/off
     wash type = 
-        premium = ({price: 65.00} pesos, {duration: 33} minutes, {description: double rinse})
-        basic = ({price: 80.00} pesos, {duration: 39} minutes, {description: triple rinse})
+        basic = ({price: 65.00} pesos, {duration: 33} minutes, {description: double rinse})
+        premium = ({price: 80.00} pesos, {duration: 39} minutes, {description: triple rinse})
     -----------------
     spin = on/off ({price: 20.00} pesos, {duration: 10} minutes, {description: double rinse})
     -----------------
     dry = on/off
     dry type = 
-        premium = ({price: 65.00} pesos, {duration: 32} minutes, {description:})
-        basic = ({price: 80.00} pesos, {duration: 40} minutes, {description:})
+        basic = ({price: 65.00} pesos, {duration: 32} minutes, {description:})
+        premium = ({price: 80.00} pesos, {duration: 40} minutes, {description:})
     additional dry time = -/+ ({price: 15} pesos, {duration: 8} minutes, {description:})
     -----------------
     drop-off service = on/off ({price: 40.00} pesos, {duration:}, {description:})

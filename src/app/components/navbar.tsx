@@ -110,7 +110,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-lg px-6 py-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40 m-0">
+    <nav className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-lg px-6 py-4 flex justify-between items-center w-full m-0">
       {/* Left Navigation */}
       <div className="flex items-center space-x-6">
         {/* POS - Cashier only */}

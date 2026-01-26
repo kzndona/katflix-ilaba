@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatToPST, formatDateToPST } from "@/src/app/utils/dateUtils";
+import { formatToPST } from "@/src/app/utils/dateUtils";
 
 type Customer = {
   id: string;
@@ -74,21 +74,27 @@ type Order = {
   customers: Customer | null;
 };
 
+type SortConfig = {
+  key: keyof Order;
+  direction: "asc" | "desc";
+};
+
 export default function OrdersPage() {
   const [rows, setRows] = useState<Order[]>([]);
   const [filteredRows, setFilteredRows] = useState<Order[]>([]);
-  const [processingRows, setProcessingRows] = useState<Order[]>([]);
-  const [pickupRows, setPickupRows] = useState<Order[]>([]);
-  const [deliveryRows, setDeliveryRows] = useState<Order[]>([]);
-  const [selected, setSelected] = useState<Order | null>(null);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editing, setEditing] = useState<Order | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "created_at",
+    direction: "desc",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [viewing, setViewing] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  const ROWS_PER_PAGE = 10;
 
   useEffect(() => {
     const today = new Date();
@@ -101,14 +107,16 @@ export default function OrdersPage() {
   }, []);
 
   useEffect(() => {
-    filterByDate();
-  }, [rows, dateFrom, dateTo]);
+    filterAndSort();
+  }, [rows, searchQuery, sortConfig, dateFrom, dateTo]);
 
   async function load() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/orders/getOrdersWithBaskets");
+      const res = await fetch("/api/orders", {
+        credentials: "include",
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Server responded ${res.status}`);
@@ -116,18 +124,20 @@ export default function OrdersPage() {
       const data = await res.json();
       setRows(data || []);
     } catch (err) {
+      console.error(err);
       setErrorMsg("Failed to load orders");
     } finally {
       setLoading(false);
     }
   }
 
-  function filterByDate() {
-    let filtered = rows;
+  function filterAndSort() {
+    let result = rows;
 
+    // Apply date filter
     if (dateFrom) {
       const from = new Date(dateFrom);
-      filtered = filtered.filter((order) => {
+      result = result.filter((order) => {
         const orderDate = order.created_at ? new Date(order.created_at) : null;
         return orderDate && orderDate >= from;
       });
@@ -136,452 +146,416 @@ export default function OrdersPage() {
     if (dateTo) {
       const to = new Date(dateTo);
       to.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((order) => {
+      result = result.filter((order) => {
         const orderDate = order.created_at ? new Date(order.created_at) : null;
         return orderDate && orderDate <= to;
       });
     }
 
-    // Separate processing, pickup, delivery, and other orders
-    const processing = filtered.filter(
-      (order) => order.status === "processing",
-    );
-    const pickup = filtered.filter((order) => order.status === "for_pick-up");
-    const delivery = filtered.filter(
-      (order) => order.status === "for_delivery",
-    );
-    const nonProcessing = filtered.filter(
-      (order) =>
-        !["processing", "for_pick-up", "for_delivery"].includes(order.status),
-    );
-
-    // Sort by created_at descending
-    processing.sort(
-      (a, b) =>
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime(),
-    );
-    pickup.sort(
-      (a, b) =>
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime(),
-    );
-    delivery.sort(
-      (a, b) =>
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime(),
-    );
-    nonProcessing.sort(
-      (a, b) =>
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime(),
-    );
-
-    setProcessingRows(processing);
-    setPickupRows(pickup);
-    setDeliveryRows(delivery);
-    setFilteredRows(nonProcessing);
-  }
-
-  function selectOrder(order: Order) {
-    setSelected(order);
-    setIsEditingDetails(false);
-  }
-
-  function startEdit() {
-    if (!selected) return;
-    setEditing({ ...selected });
-    setIsEditingDetails(true);
-  }
-
-  function updateField<K extends keyof Order>(key: K, value: Order[K]) {
-    if (!editing) return;
-    const updated = { ...editing, [key]: value };
-    // Auto-set completed_at when status changes to completed
-    if (key === "status" && value === "completed" && !editing.completed_at) {
-      updated.completed_at = new Date().toISOString();
-    }
-    setEditing(updated);
-  }
-
-  function validateForm(data: Order) {
-    if (!data.source.trim()) return "Source is required";
-    if (!data.status.trim()) return "Status is required";
-    return null;
-  }
-
-  async function save() {
-    if (!editing) return;
-
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    const validation = validateForm(editing);
-    if (validation) {
-      setErrorMsg(validation);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = {
-        ...(editing.id ? { id: editing.id } : {}),
-        ...(editing.customer_id ? { customer_id: editing.customer_id } : {}),
-        source: editing.source,
-        status: editing.status,
-        total_amount: editing.total_amount,
-        order_note: editing.order_note || null,
-        completed_at: editing.completed_at || null,
-      };
-
-      const res = await fetch("/api/orders/saveOrder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    // Apply search filter
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((order) => {
+        const customerName = order.customers
+          ? `${order.customers.first_name} ${order.customers.last_name}`.toLowerCase()
+          : "";
+        return customerName.includes(query);
       });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(body.error || `Server responded ${res.status}`);
-
-      setSuccessMsg("Order saved successfully");
-      load();
-      setTimeout(() => {
-        setIsEditingDetails(false);
-        setEditing(null);
-        setSuccessMsg(null);
-      }, 1500);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to save order";
-      setErrorMsg(msg);
-    } finally {
-      setSaving(false);
     }
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      let aVal: any = a[sortConfig.key];
+      let bVal: any = b[sortConfig.key];
+
+      if (sortConfig.key === "created_at") {
+        aVal = new Date(aVal || 0).getTime();
+        bVal = new Date(bVal || 0).getTime();
+      }
+
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
+
+      if (typeof aVal === "string") {
+        const cmp = aVal.localeCompare(String(bVal));
+        return sortConfig.direction === "asc" ? cmp : -cmp;
+      } else if (typeof aVal === "number") {
+        const numBVal = Number(bVal);
+        return sortConfig.direction === "asc"
+          ? aVal - numBVal
+          : numBVal - aVal;
+      }
+      return 0;
+    });
+
+    setFilteredRows(result);
+    setCurrentPage(1);
   }
 
-  async function remove() {
-    if (!editing?.id) return;
-
-    setSaving(true);
-    try {
-      const res = await fetch("/api/orders/removeOrder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editing.id }),
+  const handleSort = (key: keyof Order) => {
+    if (sortConfig.key === key) {
+      setSortConfig({
+        key,
+        direction: sortConfig.direction === "asc" ? "desc" : "asc",
       });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(body.error || `Server responded ${res.status}`);
-
-      setSuccessMsg("Order deleted successfully");
-      load();
-      setTimeout(() => {
-        setIsEditingDetails(false);
-        setEditing(null);
-        setSelected(null);
-        setSuccessMsg(null);
-      }, 1500);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to delete order";
-      setErrorMsg(msg);
-    } finally {
-      setSaving(false);
+    } else {
+      setSortConfig({ key, direction: "asc" });
     }
-  }
+  };
 
-  return (
-    <div className="p-6 bg-gray-50 flex flex-col h-screen">
-      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
-        {/* LEFT PANE - Orders List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-3xl font-bold mb-4">Orders</h2>
+  const SortIcon = ({ field }: { field: keyof Order }) => {
+    if (sortConfig.key !== field)
+      return <span className="text-gray-300">⇅</span>;
+    return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
+  };
 
-            {/* Date Range Filter */}
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  From
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">To</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
-            ) : errorMsg ? (
-              <div className="p-4 text-red-600 text-sm">{errorMsg}</div>
-            ) : (
-              <>
-                {/* Processing Orders */}
-                {processingRows.length > 0 && (
-                  <div>
-                    <div className="sticky top-0 bg-orange-50 px-4 py-3 border-b border-orange-200 font-semibold text-orange-900 text-sm">
-                      🔄 Processing ({processingRows.length})
-                    </div>
-                    <div>
-                      {processingRows.map((order) => (
-                        <OrderListItem
-                          key={order.id}
-                          order={order}
-                          isSelected={selected?.id === order.id}
-                          onClick={() => selectOrder(order)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pickup Orders */}
-                {pickupRows.length > 0 && (
-                  <div>
-                    <div className="sticky top-0 bg-amber-50 px-4 py-3 border-b border-amber-200 font-semibold text-amber-900 text-sm">
-                      🏪 Pickup ({pickupRows.length})
-                    </div>
-                    <div>
-                      {pickupRows.map((order) => (
-                        <OrderListItem
-                          key={order.id}
-                          order={order}
-                          isSelected={selected?.id === order.id}
-                          onClick={() => selectOrder(order)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Delivery Orders */}
-                {deliveryRows.length > 0 && (
-                  <div>
-                    <div className="sticky top-0 bg-cyan-50 px-4 py-3 border-b border-cyan-200 font-semibold text-cyan-900 text-sm">
-                      🚚 Delivery ({deliveryRows.length})
-                    </div>
-                    <div>
-                      {deliveryRows.map((order) => (
-                        <OrderListItem
-                          key={order.id}
-                          order={order}
-                          isSelected={selected?.id === order.id}
-                          onClick={() => selectOrder(order)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Non-Processing Orders */}
-                {filteredRows.length > 0 && (
-                  <div>
-                    <div className="sticky top-0 bg-gray-100 px-4 py-3 border-b border-gray-300 font-semibold text-gray-900 text-sm">
-                      📋 Other Orders ({filteredRows.length})
-                    </div>
-                    <div>
-                      {filteredRows.map((order) => (
-                        <OrderListItem
-                          key={order.id}
-                          order={order}
-                          isSelected={selected?.id === order.id}
-                          onClick={() => selectOrder(order)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {processingRows.length === 0 &&
-                  pickupRows.length === 0 &&
-                  deliveryRows.length === 0 &&
-                  filteredRows.length === 0 && (
-                    <div className="p-4 text-center text-gray-500 text-sm">
-                      No orders found
-                    </div>
-                  )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col overflow-hidden">
-          {isEditingDetails && editing ? (
-            <EditPane
-              order={editing}
-              updateField={updateField}
-              save={save}
-              remove={remove}
-              saving={saving}
-              errorMsg={errorMsg}
-              successMsg={successMsg}
-              onCancel={() => {
-                setIsEditingDetails(false);
-                setEditing(null);
-                setErrorMsg(null);
-              }}
-            />
-          ) : selected ? (
-            <DetailsPane order={selected} onEdit={startEdit} />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
-                <div className="text-5xl mb-3">📦</div>
-                <p>Select an order to view details</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+  // Group orders by status
+  const processingOrders = filteredRows.filter(
+    (o) => o.status === "processing",
   );
-}
+  const pickupOrders = filteredRows.filter((o) => o.status === "for_pick-up");
+  const deliveryOrders = filteredRows.filter(
+    (o) => o.status === "for_delivery",
+  );
+  const otherOrders = filteredRows.filter(
+    (o) =>
+      !["processing", "for_pick-up", "for_delivery"].includes(o.status),
+  );
 
-function OrderListItem({
-  order,
-  isSelected,
-  onClick,
-}: {
-  order: Order;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const customerName = order.customers
-    ? `${order.customers.first_name} ${order.customers.last_name}`
-    : "Unknown";
+  // Combine all grouped orders for pagination
+  const groupedOrders = [
+    ...processingOrders,
+    ...pickupOrders,
+    ...deliveryOrders,
+    ...otherOrders,
+  ];
 
-  const statusColor =
-    {
+  const totalPages = Math.ceil(groupedOrders.length / ROWS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+  const endIdx = startIdx + ROWS_PER_PAGE;
+  const paginatedRows = groupedOrders.slice(startIdx, endIdx);
+
+  const getStatusColor = (status: string) =>
+    ({
       pending: "bg-gray-100 text-gray-700",
+      for_pick_up: "bg-blue-100 text-blue-700",
       "for_pick-up": "bg-blue-100 text-blue-700",
       processing: "bg-orange-100 text-orange-700",
       for_delivery: "bg-purple-100 text-purple-700",
       completed: "bg-green-100 text-green-700",
       cancelled: "bg-red-100 text-red-700",
-    }[order.status] || "bg-gray-100 text-gray-700";
+    }[status] || "bg-gray-100 text-gray-700");
 
-  const statusLabel =
-    {
+  const getStatusLabel = (status: string) =>
+    ({
       pending: "Pending",
-      "for_pick-up": "Pick-up",
+      for_pick_up: "Pickup",
+      "for_pick-up": "Pickup",
       processing: "Processing",
       for_delivery: "Delivery",
       completed: "Completed",
       cancelled: "Cancelled",
-    }[order.status] || order.status;
+    }[status] || status);
 
   return (
-    <div
-      onClick={onClick}
-      className={`px-3 py-2.5 cursor-pointer transition border-l-4 border-b border-b-gray-100 ${
-        isSelected
-          ? "bg-blue-50 border-blue-600"
-          : "border-transparent hover:bg-gray-50"
-      }`}
-    >
-      <div className="flex justify-between items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm text-gray-900 truncate">
-            {customerName}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColor}`}
-            >
-              {statusLabel}
-            </span>
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <div className="mx-auto w-full">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+            <p className="text-gray-500 text-xs mt-0.5">
+              {groupedOrders.length} order
+              {groupedOrders.length !== 1 ? "s" : ""} found
+            </p>
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <div className="font-bold text-sm text-gray-900">
-            ₱{order.total_amount.toFixed(2)}
+
+        {/* Filters */}
+        <div className="mb-4 grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">
-            {formatToPST(order.created_at)}
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
           </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              Search Customer
+            </label>
+            <input
+              type="text"
+              placeholder="Search by customer name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">
+              Loading orders...
+            </div>
+          ) : paginatedRows.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {groupedOrders.length === 0
+                ? "No orders found in the selected date range."
+                : "No results match your search."}
+            </div>
+          ) : (
+            <>
+              {/* Table Wrapper with Horizontal Scroll */}
+              <div className="overflow-x-auto flex-1">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("total_amount" as keyof Order)}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Customer <SortIcon field="total_amount" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
+                        Phone
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("status" as keyof Order)}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Status <SortIcon field="status" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("source" as keyof Order)}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Source <SortIcon field="source" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() =>
+                            handleSort("total_amount" as keyof Order)
+                          }
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Total <SortIcon field="total_amount" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        <button
+                          onClick={() => handleSort("created_at" as keyof Order)}
+                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
+                        >
+                          Created <SortIcon field="created_at" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedRows.map((order) => {
+                      const customerName = order.customers
+                        ? `${order.customers.first_name} ${order.customers.last_name}`
+                        : "Unknown";
+
+                      return (
+                        <tr
+                          key={order.id}
+                          className="border-b border-gray-200 hover:bg-blue-50 transition"
+                        >
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                            {customerName}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-700">
+                            {order.customers?.phone_number || "—"}
+                          </td>
+                          <td className="px-4 py-2 text-sm">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
+                                order.status,
+                              )}`}
+                            >
+                              {getStatusLabel(order.status)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-700 capitalize">
+                            {order.source}
+                          </td>
+                          <td className="px-4 py-2 text-sm font-semibold text-green-700">
+                            ₱{order.total_amount.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            {formatToPST(order.created_at)}
+                          </td>
+                          <td className="px-4 py-2 text-sm">
+                            <button
+                              onClick={() => setViewing(order)}
+                              className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <div className="text-xs text-gray-600">
+                    Showing {startIdx + 1} to{" "}
+                    {Math.min(endIdx, groupedOrders.length)} of{" "}
+                    {groupedOrders.length} orders
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ← Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => {
+                        const diff = Math.abs(p - currentPage);
+                        return diff < 3 || p === 1 || p === totalPages;
+                      })
+                      .map((p, i, arr) => (
+                        <div key={p}>
+                          {i > 0 && arr[i - 1] !== p - 1 && (
+                            <span className="px-1 text-gray-400">...</span>
+                          )}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            className={`px-2 py-1 rounded text-xs font-medium transition ${
+                              currentPage === p
+                                ? "bg-blue-600 text-white"
+                                : "border border-gray-300 hover:bg-gray-200"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </div>
+                      ))}
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
+
+      {/* View Modal - Centered */}
+      {viewing && (
+        <ViewModal
+          order={viewing}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
 
-function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
+function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
-        <div>
-          <h3 className="text-3xl font-bold">
-            {order.customers
-              ? `${order.customers.first_name} ${order.customers.last_name}`
-              : "No customer"}
-          </h3>
-          <p className="text-gray-500 mt-1 text-sm">
-            Order #{order.id.slice(0, 8)}
-          </p>
-        </div>
-        <button
-          onClick={onEdit}
-          className="p-3 hover:bg-gray-100 rounded-lg transition shrink-0"
-          title="Edit"
-        >
-          <svg
-            className="w-6 h-6 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      {/* Modal Centered */}
+      <div
+        className="bg-white shadow-2xl rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 flex justify-between items-center shrink-0">
+          <h2 className="text-lg font-bold text-gray-900">
+            Order Details
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-        </button>
-      </div>
+            ✕
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-4">
-          {/* Order Status & Dates */}
-          <div className="grid grid-cols-3 gap-4">
-            <DetailField label="📊 Status" value={order.status} />
-            <DetailField label="� Source" value={order.source} />
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Customer & Order Info */}
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {order.customers
+                ? `${order.customers.first_name} ${order.customers.last_name}`
+                : "No customer"}
+            </h3>
+            <p className="text-sm text-gray-500">
+              Order #{order.id.slice(0, 8)}
+            </p>
+          </div>
+
+          {/* Key Details */}
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
+            <DetailField label="Status" value={order.status} />
+            <DetailField label="Source" value={order.source} />
             <DetailField
-              label="📅 Created"
-              value={formatToPST(order.created_at)}
+              label="Total Amount"
+              value={`₱${order.total_amount.toFixed(2)}`}
             />
-            {order.completed_at && (
-              <DetailField
-                label="✅ Completed"
-                value={formatToPST(order.completed_at)}
-              />
-            )}
+            <DetailField label="Created" value={formatToPST(order.created_at)} />
           </div>
 
           {/* Customer Contact */}
           {order.customers && (
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
               <DetailField
-                label="☎️ Phone"
+                label="Phone"
                 value={order.customers.phone_number || "—"}
               />
               <DetailField
-                label="📧 Email"
+                label="Email"
                 value={order.customers.email_address || "—"}
               />
             </div>
@@ -589,9 +563,9 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
           {/* Handling */}
           {order.handling && (
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-gray-200">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                🚚 Pickup & Delivery
+                Pickup & Delivery
               </h4>
               <div className="space-y-2 text-sm">
                 <div>
@@ -612,11 +586,11 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
           {/* Pricing Summary */}
           {order.breakdown?.summary && (
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-gray-200">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                💰 Summary
+                Summary
               </h4>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-sm bg-gray-50 p-3 rounded">
                 {order.breakdown.summary.subtotal_products !== null && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Products:</span>
@@ -649,9 +623,9 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between pt-1 border-t border-gray-200">
+                <div className="flex justify-between pt-1 border-t border-gray-300">
                   <span className="text-gray-700 font-semibold">Total:</span>
-                  <span className="font-bold text-lg">
+                  <span className="font-bold">
                     ₱{order.total_amount.toFixed(2)}
                   </span>
                 </div>
@@ -661,9 +635,9 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
           {/* Products */}
           {order.breakdown?.items && order.breakdown.items.length > 0 && (
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-gray-200">
               <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                🛍️ Products ({order.breakdown.items.length})
+                Products ({order.breakdown.items.length})
               </h4>
               <div className="space-y-2">
                 {order.breakdown.items.map((item) => (
@@ -688,11 +662,11 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
             </div>
           )}
 
-          {/* Baskets Section */}
+          {/* Baskets */}
           {order.breakdown?.baskets && order.breakdown.baskets.length > 0 && (
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-gray-200">
               <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                🧺 Baskets ({order.breakdown.baskets.length})
+                Baskets ({order.breakdown.baskets.length})
               </h4>
               <div className="space-y-3">
                 {order.breakdown.baskets.map((basket, idx) => (
@@ -702,7 +676,26 @@ function DetailsPane({ order, onEdit }: { order: Order; onEdit: () => void }) {
             </div>
           )}
         </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition"
+          >
+            Close
+          </button>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="text-xs text-gray-500 font-medium">{label}</label>
+      <p className="text-sm text-gray-900">{value}</p>
     </div>
   );
 }
@@ -753,15 +746,6 @@ function BasketCard({ basket }: { basket: Order["breakdown"]["baskets"][0] }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-0">
-      <label className="text-xs text-gray-500 font-medium">{label}</label>
-      <p className="text-sm text-gray-900">{value}</p>
     </div>
   );
 }
