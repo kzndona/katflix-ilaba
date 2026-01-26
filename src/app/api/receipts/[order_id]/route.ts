@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { serverError, notFound } from '@/src/app/utils/api/authMiddleware';
+
+/**
+ * Helper: Return 404 response
+ */
+function notFound(message: string) {
+  return NextResponse.json({ success: false, error: message }, { status: 404 });
+}
+
+/**
+ * Helper: Return 500 response
+ */
+function serverError(message: string) {
+  return NextResponse.json({ success: false, error: message }, { status: 500 });
+}
 
 /**
  * GET /api/receipts/:order_id
