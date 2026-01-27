@@ -996,9 +996,11 @@ function OrderSummary({
   // Helper to get plastic bags product price from products table
   const getPlasticBagsPrice = () => {
     const plasticBagProduct = pos.products.find(
-      (p: any) => p.item_name?.toLowerCase().includes("plastic") || p.item_name?.toLowerCase().includes("bag")
+      (p: any) =>
+        p.item_name?.toLowerCase().includes("plastic") ||
+        p.item_name?.toLowerCase().includes("bag"),
     );
-    return plasticBagProduct?.unit_price || 0.50; // Default to 0.50 if not found
+    return plasticBagProduct?.unit_price || 0.5; // Default to 0.50 if not found
   };
 
   // Helper to get additional dry time info from dry service modifiers
@@ -1490,7 +1492,7 @@ export default function POSPage() {
   useEffect(() => {
     setMounted(true);
     if (pos.step === 0) pos.setStep(1);
-    
+
     // Fetch staff info from session
     const fetchStaffInfo = async () => {
       try {
@@ -1498,7 +1500,10 @@ export default function POSPage() {
         if (res.ok) {
           const data = await res.json();
           console.log("[POS] Auth user data:", data);
-          const name = data.staff_name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || "Staff";
+          const name =
+            data.staff_name ||
+            `${data.firstName || ""} ${data.lastName || ""}`.trim() ||
+            "Staff";
           setStaffName(name);
           setStaffId(data.staff_id || "");
           console.log("[POS] Set staffId:", data.staff_id);
@@ -1510,7 +1515,7 @@ export default function POSPage() {
         console.error("[POS] Failed to fetch staff info:", err);
       }
     };
-    
+
     fetchStaffInfo();
   }, []);
 
@@ -1528,44 +1533,51 @@ export default function POSPage() {
   const handleDailySalesReport = async () => {
     setShowSalesReport(true);
     setReportLoading(true);
-    
+
     try {
       // Get today's date range
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       // Fetch all orders and filter by cashier
       const res = await fetch("/api/orders", {
         credentials: "include",
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         console.log("[Sales Report] Total orders fetched:", data.length);
         console.log("[Sales Report] Current staffId:", staffId);
-        
+
         // Filter by cashier and today's date
         const filteredOrders = (data || []).filter((order: any) => {
-          const orderDate = order.created_at ? new Date(order.created_at) : null;
+          const orderDate = order.created_at
+            ? new Date(order.created_at)
+            : null;
           const matchesCashier = order.cashier_id === staffId;
-          const isToday = orderDate && orderDate >= today && orderDate < tomorrow;
-          
+          const isToday =
+            orderDate && orderDate >= today && orderDate < tomorrow;
+
           if (!matchesCashier && order.cashier_id) {
-            console.log(`[Sales Report] Order ${order.id.slice(0, 8)} cashier_id: ${order.cashier_id}, not matching ${staffId}`);
+            console.log(
+              `[Sales Report] Order ${order.id.slice(0, 8)} cashier_id: ${order.cashier_id}, not matching ${staffId}`,
+            );
           }
-          
+
           return matchesCashier && isToday;
         });
-        
+
         console.log("[Sales Report] Filtered orders:", filteredOrders.length);
-        
-        setReportOrders(filteredOrders.sort((a: any, b: any) => {
-          const timeA = new Date(a.created_at).getTime();
-          const timeB = new Date(b.created_at).getTime();
-          return timeB - timeA; // Most recent first
-        }));
+
+        setReportOrders(
+          filteredOrders.sort((a: any, b: any) => {
+            const timeA = new Date(a.created_at).getTime();
+            const timeB = new Date(b.created_at).getTime();
+            return timeB - timeA; // Most recent first
+          }),
+        );
       }
     } catch (err) {
       console.error("Failed to fetch sales report:", err);
@@ -1576,37 +1588,37 @@ export default function POSPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-        {/* LEFT: Sidebar - Steps & Baskets */}
-        {currentStep >= 2 && (
-          <div className="w-48 bg-slate-800 text-slate-50 border-r border-slate-700 p-4 flex flex-col gap-4 overflow-y-auto">
-            {/* Step Navigation Tabs */}
-            <div className="space-y-2 pb-4 border-b border-slate-700">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                Steps
-              </div>
-              {[
-                { num: 1, label: "Service" },
-                { num: 2, label: "Baskets" },
-                { num: 3, label: "Products" },
-                { num: 4, label: "Customer" },
-                { num: 5, label: "Handling" },
-              ].map((step) => (
-                <button
-                  key={step.num}
-                  onClick={() => pos.setStep(step.num as any)}
-                  className={`w-full px-3 py-2 text-sm font-bold rounded-lg transition text-left ${
-                    currentStep === step.num
-                      ? "text-white rounded-lg"
-                      : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-                  }`}
-                  style={
-                    currentStep === step.num ? { backgroundColor: "#c41d7f" } : {}
-                  }
-                >
-                  {step.label}
-                </button>
-              ))}
+      {/* LEFT: Sidebar - Steps & Baskets */}
+      {currentStep >= 2 && (
+        <div className="w-48 bg-slate-800 text-slate-50 border-r border-slate-700 p-4 flex flex-col gap-4 overflow-y-auto">
+          {/* Step Navigation Tabs */}
+          <div className="space-y-2 pb-4 border-b border-slate-700">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              Steps
             </div>
+            {[
+              { num: 1, label: "Service" },
+              { num: 2, label: "Baskets" },
+              { num: 3, label: "Products" },
+              { num: 4, label: "Customer" },
+              { num: 5, label: "Handling" },
+            ].map((step) => (
+              <button
+                key={step.num}
+                onClick={() => pos.setStep(step.num as any)}
+                className={`w-full px-3 py-2 text-sm font-bold rounded-lg transition text-left ${
+                  currentStep === step.num
+                    ? "text-white rounded-lg"
+                    : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                }`}
+                style={
+                  currentStep === step.num ? { backgroundColor: "#c41d7f" } : {}
+                }
+              >
+                {step.label}
+              </button>
+            ))}
+          </div>
 
           {/* Add/Remove Basket Buttons */}
           <div className="space-y-2 pb-4 border-b border-slate-700">
@@ -1684,7 +1696,9 @@ export default function POSPage() {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Daily Sales Report</h2>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Daily Sales Report
+                </h2>
                 <p className="text-xs text-gray-600">Cashier: {staffName}</p>
               </div>
               <button
@@ -1711,15 +1725,26 @@ export default function POSPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">
-                          <th className="text-left px-4 py-2 font-semibold text-gray-700">Order ID</th>
-                          <th className="text-left px-4 py-2 font-semibold text-gray-700">Customer</th>
-                          <th className="text-center px-4 py-2 font-semibold text-gray-700">Time</th>
-                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Amount</th>
+                          <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                            Order ID
+                          </th>
+                          <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                            Customer
+                          </th>
+                          <th className="text-center px-4 py-2 font-semibold text-gray-700">
+                            Time
+                          </th>
+                          <th className="text-right px-4 py-2 font-semibold text-gray-700">
+                            Amount
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {reportOrders.map((order: any, idx: number) => (
-                          <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <tr
+                            key={order.id}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
                             <td className="px-4 py-2 text-gray-900 font-mono text-xs">
                               {order.id.slice(0, 8)}
                             </td>
@@ -1729,10 +1754,13 @@ export default function POSPage() {
                                 : "Walk-in"}
                             </td>
                             <td className="px-4 py-2 text-gray-600 text-center">
-                              {new Date(order.created_at).toLocaleTimeString("en-PH", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {new Date(order.created_at).toLocaleTimeString(
+                                "en-PH",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
                             </td>
                             <td className="px-4 py-2 text-right text-gray-900 font-semibold">
                               ₱{order.total_amount.toFixed(2)}
@@ -1741,13 +1769,20 @@ export default function POSPage() {
                         ))}
                         {/* Total Row */}
                         <tr className="bg-blue-50 border-t-2 border-blue-300 font-bold">
-                          <td colSpan={3} className="px-4 py-3 text-right text-gray-900">
+                          <td
+                            colSpan={3}
+                            className="px-4 py-3 text-right text-gray-900"
+                          >
                             TOTAL
                           </td>
                           <td className="px-4 py-3 text-right text-blue-700 text-lg">
                             ₱
                             {reportOrders
-                              .reduce((sum: number, order: any) => sum + order.total_amount, 0)
+                              .reduce(
+                                (sum: number, order: any) =>
+                                  sum + order.total_amount,
+                                0,
+                              )
                               .toFixed(2)}
                           </td>
                         </tr>
@@ -1758,25 +1793,38 @@ export default function POSPage() {
                   {/* Summary Stats */}
                   <div className="mt-6 grid grid-cols-3 gap-4">
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-xs text-gray-600 mb-1">Transaction Count</p>
-                      <p className="text-2xl font-bold text-gray-900">{reportOrders.length}</p>
+                      <p className="text-xs text-gray-600 mb-1">
+                        Transaction Count
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {reportOrders.length}
+                      </p>
                     </div>
                     <div className="bg-blue-50 rounded-lg p-4">
                       <p className="text-xs text-gray-600 mb-1">Total Amount</p>
                       <p className="text-2xl font-bold text-blue-700">
                         ₱
                         {reportOrders
-                          .reduce((sum: number, order: any) => sum + order.total_amount, 0)
+                          .reduce(
+                            (sum: number, order: any) =>
+                              sum + order.total_amount,
+                            0,
+                          )
                           .toFixed(2)}
                       </p>
                     </div>
                     <div className="bg-green-50 rounded-lg p-4">
-                      <p className="text-xs text-gray-600 mb-1">Average Transaction</p>
+                      <p className="text-xs text-gray-600 mb-1">
+                        Average Transaction
+                      </p>
                       <p className="text-2xl font-bold text-green-700">
                         ₱
                         {(
-                          reportOrders.reduce((sum: number, order: any) => sum + order.total_amount, 0) /
-                          (reportOrders.length || 1)
+                          reportOrders.reduce(
+                            (sum: number, order: any) =>
+                              sum + order.total_amount,
+                            0,
+                          ) / (reportOrders.length || 1)
                         ).toFixed(2)}
                       </p>
                     </div>

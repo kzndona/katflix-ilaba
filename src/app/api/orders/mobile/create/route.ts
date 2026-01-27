@@ -26,6 +26,7 @@ interface CreateMobileOrderRequest {
   };
   breakdown: any; // OrderBreakdown JSONB
   handling: any; // OrderHandling JSONB
+  gcash_receipt_url?: string; // Optional GCash receipt image URL
 }
 
 export async function POST(request: NextRequest) {
@@ -34,6 +35,10 @@ export async function POST(request: NextRequest) {
   try {
     // === PARSE REQUEST ===
     const body: CreateMobileOrderRequest = await request.json();
+
+    // === DEBUG LOG ===
+    console.log("[MOBILE ORDER] Request payload:", JSON.stringify(body, null, 2));
+    console.log("[MOBILE ORDER] gcash_receipt_url:", body.gcash_receipt_url);
 
     // === HELPER: Enrich services with pricing snapshots ===
     async function enrichServicesWithPricing(breakdown: any) {
@@ -320,12 +325,21 @@ export async function POST(request: NextRequest) {
         source: "mobile", // Mark as mobile order
         breakdown: body.breakdown,
         handling: body.handling,
+        gcash_receipt_url: body.gcash_receipt_url || null,
         status: "pending",
         total_amount: body.breakdown.summary.total,
         created_at: new Date().toISOString(),
       })
       .select("id")
       .single();
+
+    console.log("[MOBILE ORDER] Order insert payload:", {
+      customer_id: customerId,
+      source: "mobile",
+      gcash_receipt_url: body.gcash_receipt_url || null,
+      status: "pending",
+      total_amount: body.breakdown.summary.total,
+    });
 
     if (orderError || !newOrder) {
       console.error("Order creation error:", orderError);

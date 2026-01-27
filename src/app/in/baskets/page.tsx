@@ -761,7 +761,8 @@ export default function BasketsPage() {
                             order.handling.delivery &&
                             (order.handling.delivery.status === "pending" ||
                               order.handling.delivery.status ===
-                                "in_progress") && (
+                                "in_progress" ||
+                              order.handling.delivery.status === "completed") && (
                               <div
                                 className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
                                   order.handling.delivery.status ===
@@ -909,16 +910,49 @@ export default function BasketsPage() {
                   </div>
 
                   {/* Delivery Address */}
-                  {mobileOrderModal.handling.delivery.address && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">
-                        🚚 Delivery
-                      </h3>
-                      <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
-                        {mobileOrderModal.handling.delivery.address}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      🚚 Delivery
+                    </h3>
+                    <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
+                      {mobileOrderModal.handling.delivery.address || "—"}
+                    </p>
+                  </div>
+
+                  {/* Products List */}
+                  {mobileOrderModal.breakdown?.items &&
+                    mobileOrderModal.breakdown.items.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          📦 Products
+                        </h3>
+                        <div className="space-y-2">
+                          {mobileOrderModal.breakdown.items.map(
+                            (item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="text-sm bg-gray-50 p-2 rounded border border-gray-200"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900">
+                                      {item.product_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {item.quantity} × ₱
+                                      {(item.unit_price as number).toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <p className="font-medium text-gray-900">
+                                    ₱{(item.subtotal as number).toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                   {/* Order Total */}
                   <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-4">

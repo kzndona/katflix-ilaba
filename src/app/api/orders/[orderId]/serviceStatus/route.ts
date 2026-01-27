@@ -113,22 +113,20 @@ export async function PATCH(
           `[Order Status Update] Order ${orderId} updated to completed (delivery done)`
         );
       }
-    } else if (
-      handlingType === "pickup" &&
-      status === "in_progress" &&
-      order.status === "for_pick-up"
-    ) {
-      // If pickup starts and order is ready for pickup, update to processing
+    } else if (handlingType === "pickup" && status === "in_progress") {
+      // If pickup starts, accept the order and move to processing
+      // pending → for_pick-up (acceptance) → processing (pickup started)
+      const newStatus = order.status === "pending" ? "for_pick-up" : "processing";
       const { error: statusError } = await supabase
         .from("orders")
-        .update({ status: "processing" })
+        .update({ status: newStatus })
         .eq("id", orderId);
 
       if (statusError) {
         console.warn("[Order Status Update] Warning:", statusError);
       } else {
         console.log(
-          `[Order Status Update] Order ${orderId} updated to processing (pickup started)`
+          `[Order Status Update] Order ${orderId} updated to ${newStatus} (pickup started)`
         );
       }
     }

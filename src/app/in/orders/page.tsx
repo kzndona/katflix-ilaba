@@ -22,6 +22,7 @@ type Order = {
   order_note: string | null;
   created_at: string | null;
   completed_at: string | null;
+  gcash_receipt_url?: string | null;
   handling: {
     pickup: {
       address: string;

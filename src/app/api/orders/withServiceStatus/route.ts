@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         total_amount,
         breakdown,
         handling,
+        gcash_receipt_url,
         created_at,
         customers:customer_id(
           id,
@@ -121,6 +122,7 @@ export async function GET(request: NextRequest) {
         status: order.status,
         total_amount: order.total_amount,
         created_at: order.created_at,
+        gcash_receipt_url: order.gcash_receipt_url,
         customers: order.customers,
         staff: order.staff,
         handling: safeHandling,
