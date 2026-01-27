@@ -208,31 +208,137 @@ export async function PATCH(
 
     // === UPDATE ORDER STATUS IF NEEDED ===
     // Check if all services in all baskets are complete
-    const { data: allServiceStatuses } = await supabase
-      .from("basket_service_status")
-      .select("status")
-      .eq("order_id", orderId);
+    // First, fetch the order with breakdown to see what services are expected
+    const { data: fullOrder } = await supabase
+      .from("orders")
+      .select("breakdown")
+      .eq("id", orderId)
+      .single();
 
-    if (allServiceStatuses && allServiceStatuses.length > 0) {
-      const allServicesComplete = allServiceStatuses.every(
-        (s: any) => s.status === "completed" || s.status === "skipped"
+    if (!fullOrder || !fullOrder.breakdown?.baskets) {
+      console.warn("Could not fetch order breakdown for status check");
+    } else {
+      // Get all service status records for this order
+      const { data: allServiceStatuses } = await supabase
+        .from("basket_service_status")
+        .select("basket_number, service_type, status")
+        .eq("order_id", orderId);
+
+      // Check if all expected services are complete or skipped
+      let allServicesComplete = true;
+      
+      console.log(
+        `[Service Check] Order ${orderId} - Processing ${fullOrder.breakdown.baskets?.length || 0} baskets`
+      );
+      console.log(
+        `[Service Check] Order ${orderId} - Available status records:`,
+        JSON.stringify(allServiceStatuses || [])
+      );
+      
+      for (const basket of fullOrder.breakdown.baskets) {
+        const services = basket.services || {};
+        
+        console.log(
+          `[Service Check] Order ${orderId} - Basket ${basket.basket_number} full services object:`,
+          JSON.stringify(services)
+        );
+        
+        // Main service types: wash, dry, spin, iron, fold
+        // They're complete if they exist and have a status record that's completed/skipped
+        const mainServices = ["wash", "dry", "spin", "iron", "fold"];
+        
+        for (const serviceType of mainServices) {
+          let serviceValue = services[serviceType];
+          
+          // Handle special case: iron is stored as iron_weight_kg
+          if (serviceType === "iron") {
+            serviceValue = services.iron_weight_kg;
+          }
+          
+          // Service is expected if it's not "off" and not null/false/0
+          const isExpected = 
+            serviceValue !== "off" && 
+            serviceValue !== false && 
+            serviceValue !== null && 
+            serviceValue !== 0 && 
+            serviceValue !== "";
+
+          if (isExpected) {
+            // Check if there's a completed/skipped record for this service
+            const statusRecord = allServiceStatuses?.find(
+              (s: any) =>
+                s.basket_number === basket.basket_number &&
+                s.service_type === serviceType
+            );
+
+            if (
+              !statusRecord ||
+              (statusRecord.status !== "completed" &&
+                statusRecord.status !== "skipped")
+            ) {
+              allServicesComplete = false;
+              console.log(
+                `[Service Check] Order ${orderId} - Basket ${basket.basket_number} service ${serviceType} NOT COMPLETE. Value: ${serviceValue}, Expected: ${isExpected}, Has Record: ${!!statusRecord}, Status: ${statusRecord?.status || "N/A"}`
+              );
+              break;
+            } else {
+              console.log(
+                `[Service Check] Order ${orderId} - Basket ${basket.basket_number} service ${serviceType} OK. Status: ${statusRecord.status}`
+              );
+            }
+          } else {
+            console.log(
+              `[Service Check] Order ${orderId} - Basket ${basket.basket_number} service ${serviceType} not expected. Value: ${serviceValue}`
+            );
+          }
+        }
+
+        if (!allServicesComplete) break;
+      }
+      
+      console.log(
+        `[Service Check] Order ${orderId} - Final result: allServicesComplete=${allServicesComplete}`
       );
 
       if (allServicesComplete) {
-        // Update order status to "for_pick-up" if all services are done
-        const { error: statusError } = await supabase
-          .from("orders")
-          .update({ status: "for_pick-up" })
-          .eq("id", orderId)
-          .eq("status", "processing"); // Only update if currently processing
+        // Check if both pickup and delivery are skipped (store addresses)
+        const pickupAddr = order.handling?.pickup?.address?.toLowerCase() || "";
+        const deliveryAddr = order.handling?.delivery?.address?.toLowerCase() || "";
+        const isInStoreOnly = 
+          (pickupAddr === "store" || pickupAddr === "in-store") &&
+          (deliveryAddr === "store" || deliveryAddr === "in-store");
 
-        if (statusError) {
-          console.warn("[Order Status Update] Warning:", statusError);
-          // Don't fail the request, just warn
+        if (isInStoreOnly) {
+          // For in-store only orders, go directly to "completed" when all services are done
+          const { error: statusError } = await supabase
+            .from("orders")
+            .update({ status: "completed" })
+            .eq("id", orderId)
+            .eq("status", "processing");
+
+          if (statusError) {
+            console.warn("[Order Status Update] Warning:", statusError);
+          } else {
+            console.log(
+              `[Order Status Update] Order ${orderId} updated to completed (in-store only)`
+            );
+          }
         } else {
-          console.log(
-            `[Order Status Update] Order ${orderId} updated to for_pick-up`
-          );
+          // For orders with delivery, go to "for_pick-up" when all services are done
+          const { error: statusError } = await supabase
+            .from("orders")
+            .update({ status: "for_pick-up" })
+            .eq("id", orderId)
+            .eq("status", "processing"); // Only update if currently processing
+
+          if (statusError) {
+            console.warn("[Order Status Update] Warning:", statusError);
+            // Don't fail the request, just warn
+          } else {
+            console.log(
+              `[Order Status Update] Order ${orderId} updated to for_pick-up`
+            );
+          }
         }
       } else if (newStatus === "in_progress") {
         // Update order status to "processing" when first service starts

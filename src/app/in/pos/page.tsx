@@ -946,6 +946,43 @@ function OrderSummary({
     "Handling",
   ];
 
+  // Helper to get service info from DB
+  const getServiceInfo = (serviceType: string, tier?: string) => {
+    const matching = pos.services.filter((s: any) => s.service_type === serviceType);
+    if (!matching.length) return { name: "", price: 0, description: "" };
+    
+    const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+    return {
+      name: service.name || "",
+      price: service.base_price || 0,
+      description: service.description || ""
+    };
+  };
+
+  // Helper to get additional dry time info from dry service modifiers
+  const getAdditionalDryTimeInfo = () => {
+    const dryService = pos.services.find((s: any) => s.service_type === "dry");
+    if (!dryService) return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
+    
+    try {
+      const modifiers = typeof dryService.modifiers === "string" 
+        ? JSON.parse(dryService.modifiers)
+        : dryService.modifiers;
+      
+      if (modifiers?.additional_dry_time) {
+        return {
+          price_per_increment: modifiers.additional_dry_time.price_per_increment || 15,
+          minutes_per_increment: modifiers.additional_dry_time.minutes_per_increment || 8,
+          max_increments: modifiers.additional_dry_time.max_increments || 3
+        };
+      }
+    } catch (e) {
+      console.error("Error parsing dry service modifiers:", e);
+    }
+    
+    return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
+  };
+
   return (
     <div className="flex flex-col h-full gap-0">
       {/* Scrollable top section - Order breakdown */}
@@ -983,37 +1020,37 @@ function OrderSummary({
                       {basket.services.wash && basket.services.wash !== "off" && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>🧺 Wash ({basket.services.wash})</span>
-                          <span className="font-semibold">₱{(basket.services.wash === "basic" ? 80 : 65).toFixed(2)}</span>
+                          <span className="font-semibold">₱{getServiceInfo("wash", basket.services.wash).price.toFixed(2)}</span>
                         </div>
                       )}
                       {basket.services.spin && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>🌀 Spin</span>
-                          <span className="font-semibold">₱20.00</span>
+                          <span className="font-semibold">₱{getServiceInfo("spin").price.toFixed(2)}</span>
                         </div>
                       )}
                       {basket.services.dry && basket.services.dry !== "off" && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>💨 Dry ({basket.services.dry})</span>
-                          <span className="font-semibold">₱{(basket.services.dry === "basic" ? 80 : 65).toFixed(2)}</span>
+                          <span className="font-semibold">₱{getServiceInfo("dry", basket.services.dry).price.toFixed(2)}</span>
                         </div>
                       )}
                       {(basket.services.additionalDryMinutes || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>⏱️ Extra Dry ({basket.services.additionalDryMinutes}m)</span>
-                          <span className="font-semibold">₱{(((basket.services.additionalDryMinutes || 0) / 8) * 15).toFixed(2)}</span>
+                          <span className="font-semibold">₱{(((basket.services.additionalDryMinutes || 0) / getAdditionalDryTimeInfo().minutes_per_increment) * getAdditionalDryTimeInfo().price_per_increment).toFixed(2)}</span>
                         </div>
                       )}
                       {(basket.services.iron_weight_kg || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>👔 Iron ({basket.services.iron_weight_kg}kg)</span>
-                          <span className="font-semibold">₱{((basket.services.iron_weight_kg || 0) * 80).toFixed(2)}</span>
+                          <span className="font-semibold">₱{((basket.services.iron_weight_kg || 0) * getServiceInfo("iron").price).toFixed(2)}</span>
                         </div>
                       )}
                       {(basket.services.plastic_bags || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>🛍️ Bags ({basket.services.plastic_bags}pc)</span>
-                          <span className="font-semibold">₱{((basket.services.plastic_bags || 0) * 5).toFixed(2)}</span>
+                          <span className="font-semibold">₱{((basket.services.plastic_bags || 0) * getServiceInfo("plastic_bags").price).toFixed(2)}</span>
                         </div>
                       )}
                     </>

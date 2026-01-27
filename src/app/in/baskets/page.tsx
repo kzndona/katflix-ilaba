@@ -250,8 +250,7 @@ export default function BasketsPage() {
 
     // Check if pickup is "In-store" or "store" (POS) - if so, skip pickup phase and go straight to services
     const pickupAddr = order.handling.pickup.address?.toLowerCase() || "";
-    const isStorePickup =
-      pickupAddr === "in-store" || pickupAddr === "store";
+    const isStorePickup = pickupAddr === "in-store" || pickupAddr === "store";
 
     // STEP 1: Check if pickup is pending (unless store pickup)
     if (!isStorePickup && order.handling.pickup.status === "pending") {
@@ -287,21 +286,30 @@ export default function BasketsPage() {
       };
     }
 
-    // Check for pending service
-    const pendingService = services.find((s: any) => s.status === "pending");
-    if (pendingService) {
-      return {
-        label: `Start ${pendingService.service_type.charAt(0).toUpperCase() + pendingService.service_type.slice(1)}`,
-        action: "start",
-        type: "service",
-        serviceType: pendingService.service_type,
-        basketNumber: basket.basket_number,
-      };
+    // Check for pending service - respect SERVICE_SEQUENCE order
+    for (const serviceType of SERVICE_SEQUENCE) {
+      const pendingService = services.find(
+        (s: any) => s.service_type === serviceType && s.status === "pending"
+      );
+      if (pendingService) {
+        return {
+          label: `Start ${serviceType.charAt(0).toUpperCase() + serviceType.slice(1)}`,
+          action: "start",
+          type: "service",
+          serviceType: serviceType,
+          basketNumber: basket.basket_number,
+        };
+      }
     }
 
-    // STEP 3: If all services done and delivery available
+    // STEP 3: If all services done and delivery available (and not store delivery)
+    const deliveryAddr = order.handling.delivery.address?.toLowerCase() || "";
+    const isStoreDelivery =
+      deliveryAddr === "in-store" || deliveryAddr === "store";
+
     if (
       order.handling.delivery.address &&
+      !isStoreDelivery &&
       order.handling.delivery.status === "pending"
     ) {
       return {
@@ -313,6 +321,7 @@ export default function BasketsPage() {
 
     if (
       order.handling.delivery.address &&
+      !isStoreDelivery &&
       order.handling.delivery.status === "in_progress"
     ) {
       return {
@@ -731,8 +740,12 @@ export default function BasketsPage() {
                               );
                             })}
 
-                          {/* DELIVERY */}
+                          {/* DELIVERY - Skip if address is "In-store" or "store" (POS) */}
                           {order.handling?.delivery?.address &&
+                            order.handling.delivery.address?.toLowerCase() !==
+                              "in-store" &&
+                            order.handling.delivery.address?.toLowerCase() !==
+                              "store" &&
                             order.handling.delivery &&
                             (order.handling.delivery.status === "pending" ||
                               order.handling.delivery.status ===

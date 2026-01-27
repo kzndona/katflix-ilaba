@@ -1,6 +1,7 @@
 # POS Order Handling Structure - Fixed
 
 ## Problem
+
 POS orders were creating with an incomplete handling structure. The pickup phase was showing in the timeline even for in-store orders because:
 
 1. **Missing pickup address**: The handling object didn't have `pickup.address` set to "store"
@@ -8,24 +9,27 @@ POS orders were creating with an incomplete handling structure. The pickup phase
 3. **Timeline logic**: Frontend couldn't determine if pickup should be skipped without the address
 
 ## Root Cause
+
 The POS and mobile order creation endpoints were accepting incomplete handling data and not standardizing it to the proper structure before saving.
 
 ## Solution
 
 ### 1. POS Order Creation
+
 **File: `src/app/api/orders/pos/create/route.ts`**
 
 Now builds proper handling structure:
+
 ```typescript
 const handling = {
   pickup: {
-    address: "store",  // Always "store" for POS
+    address: "store", // Always "store" for POS
     status: "pending",
     started_at: null,
     completed_at: null,
   },
   delivery: {
-    address: body.handling?.delivery_address || "store",  // From request or default to "store"
+    address: body.handling?.delivery_address || "store", // From request or default to "store"
     status: "pending",
     started_at: null,
     completed_at: null,
@@ -36,19 +40,21 @@ const handling = {
 ```
 
 ### 2. Mobile Order Creation
+
 **File: `src/app/api/orders/mobile/create/route.ts`**
 
 Now builds proper handling structure:
+
 ```typescript
 const handling = {
   pickup: {
-    address: body.handling?.pickup_address || "",  // From request (required for mobile)
+    address: body.handling?.pickup_address || "", // From request (required for mobile)
     status: "pending",
     started_at: null,
     completed_at: null,
   },
   delivery: {
-    address: body.handling?.delivery_address || "",  // From request (required for mobile)
+    address: body.handling?.delivery_address || "", // From request (required for mobile)
     status: "pending",
     started_at: null,
     completed_at: null,
@@ -59,9 +65,11 @@ const handling = {
 ```
 
 ### 3. Timeline Logic Updated
+
 **File: `src/app/in/baskets/page.tsx`**
 
 Updated `getTimelineNextAction()` to recognize both "in-store" and "store":
+
 ```typescript
 const pickupAddr = order.handling.pickup.address?.toLowerCase() || "";
 const isStorePickup = pickupAddr === "in-store" || pickupAddr === "store";
@@ -73,9 +81,11 @@ if (!isStorePickup && order.handling.pickup.status === "pending") {
 ```
 
 ### 4. Timeline Rendering Updated
+
 **File: `src/app/in/baskets/page.tsx`**
 
 Pickup phase is hidden for both "in-store" and "store":
+
 ```tsx
 {order.handling?.pickup &&
   order.handling.pickup.address?.toLowerCase() !== "in-store" &&
@@ -86,9 +96,11 @@ Pickup phase is hidden for both "in-store" and "store":
 ```
 
 ### 5. Service Endpoint Updated
+
 **File: `src/app/api/orders/[orderId]/basket/[basketNumber]/service/route.ts`**
 
 Auto-skips pickup for both "in-store" and "store":
+
 ```typescript
 const pickupAddr = order.handling?.pickup?.address?.toLowerCase() || "";
 const isStorePickup = pickupAddr === "in-store" || pickupAddr === "store";
@@ -103,7 +115,7 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
       completed_at: new Date().toISOString(),
     },
   };
-  
+
   await supabase.from("orders").update({ handling: updatedHandling });
 }
 ```
@@ -113,6 +125,7 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
 ### Now Created As:
 
 **POS Order:**
+
 ```json
 {
   "handling": {
@@ -135,23 +148,24 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
 ```
 
 **Mobile Order:**
+
 ```json
 {
   "handling": {
     "pickup": {
-      "address": "customer address",  // From request
+      "address": "customer address", // From request
       "status": "pending",
       "started_at": null,
       "completed_at": null
     },
     "delivery": {
-      "address": "delivery address",  // From request
+      "address": "delivery address", // From request
       "status": "pending",
       "started_at": null,
       "completed_at": null
     },
     "payment_method": "gcash",
-    "amount_paid": 350.00
+    "amount_paid": 350.0
   }
 }
 ```
@@ -159,12 +173,15 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
 ## Behavior Changes
 
 ### POS Orders (Store Pickup)
+
 **Before:**
+
 - Pickup phase showed in timeline
 - "Start Pickup" button appeared
 - Confusing UX for in-store orders
 
 **After:**
+
 - Pickup phase is **hidden** from timeline
 - No pickup buttons shown
 - Services appear as first phase
@@ -172,7 +189,9 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
 - Order flows: pending → processing → for_pick-up → completed
 
 ### Mobile Orders (Real Addresses)
+
 **Unchanged:**
+
 - Pickup phase shown (customer pickup address)
 - Delivery phase shown (delivery address)
 - Full workflow visible
@@ -181,6 +200,7 @@ if (isStorePickup && order.handling?.pickup?.status === "pending") {
 ## Testing
 
 Create a POS order now:
+
 1. Go to POS page
 2. Create order with "In-store" or "Store" delivery
 3. Go to baskets page
