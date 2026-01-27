@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
     // === PARSE REQUEST ===
     const body: CreateOrderRequest = await request.json();
     console.log("[POS CREATE] Parsed request body, baskets count:", body.breakdown?.baskets?.length || 0);
+    if (body.breakdown?.baskets?.[0]) {
+      console.log("[POS CREATE] Basket[0].services:", body.breakdown.baskets[0].services);
+      console.log("[POS CREATE] Basket[0].services.additional_dry_time_minutes:", body.breakdown.baskets[0].services?.additional_dry_time_minutes);
+    }
 
     // === HELPER: Enrich services with pricing snapshots ===
     async function enrichServicesWithPricing(breakdown: any) {
@@ -146,6 +150,19 @@ export async function POST(request: NextRequest) {
             const pricingKey = `fold:${services.fold}`;
             enrichedServices.fold_pricing = pricingMap[pricingKey] || {};
             console.log("[ENRICH] Added fold_pricing for key", pricingKey);
+          }
+
+          // ADDITIONAL DRY TIME
+          if (services.additional_dry_time_minutes && services.additional_dry_time_minutes > 0) {
+            // Additional dry time is ₱15 per 8 minutes (hardcoded constant)
+            enrichedServices.additional_dry_time_pricing = {
+              service_type: "additional_dry_time",
+              price_per_increment: 15,
+              minutes_per_increment: 8,
+              total_minutes: services.additional_dry_time_minutes,
+              total_price: (services.additional_dry_time_minutes / 8) * 15,
+            };
+            console.log("[ENRICH] Added additional_dry_time_pricing:", enrichedServices.additional_dry_time_pricing);
           }
 
           // STAFF SERVICE (fee is per-order, add to summary but note it in services)
@@ -369,8 +386,12 @@ export async function POST(request: NextRequest) {
     console.log("[POS CREATE] About to enrich services");
     body.breakdown = await enrichServicesWithPricing(body.breakdown);
     console.log("[POS CREATE] Services enriched");
+    if (body.breakdown?.baskets?.[0]) {
+      console.log("[POS CREATE] After enrichment - Basket[0].services.additional_dry_time_minutes:", body.breakdown.baskets[0].services?.additional_dry_time_minutes);
+    }
 
     // STEP 3: Create order
+    console.log("[POS CREATE] About to insert order. Final breakdown baskets[0].services.additional_dry_time_minutes:", body.breakdown.baskets?.[0]?.services?.additional_dry_time_minutes);
     const { data: newOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -395,6 +416,17 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = newOrder.id;
+
+    // Verify what was actually inserted
+    const { data: verifyOrder, error: verifyError } = await supabase
+      .from("orders")
+      .select("id, breakdown")
+      .eq("id", orderId)
+      .single();
+
+    if (verifyOrder?.breakdown?.baskets?.[0]) {
+      console.log("[POS CREATE] VERIFY after insert - Basket[0].services.additional_dry_time_minutes:", verifyOrder.breakdown.baskets[0].services?.additional_dry_time_minutes);
+    }
 
     // STEP 4: Deduct inventory (product_transactions)
     // Collect all items to deduct: regular items + plastic bags from baskets

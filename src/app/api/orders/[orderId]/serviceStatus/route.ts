@@ -57,7 +57,7 @@ export async function PATCH(
     // === FETCH CURRENT ORDER ===
     const { data: order, error: fetchError } = await supabase
       .from("orders")
-      .select("handling, status")
+      .select("handling, status, cashier_id")
       .eq("id", orderId)
       .single();
 
@@ -114,11 +114,20 @@ export async function PATCH(
         );
       }
     } else if (handlingType === "pickup" && status === "in_progress") {
-      // If pickup starts, move to processing
-      // pending → processing (pickup started)
+      // If pickup starts, move to processing and assign cashier
+      const updateData: any = { status: "processing" };
+
+      // If staffId is provided and order doesn't have a cashier yet, assign it
+      if (staffId && !order.cashier_id) {
+        updateData.cashier_id = staffId;
+        console.log(
+          `[Order Approval] Assigning staff ${staffId} as cashier for order ${orderId}`
+        );
+      }
+
       const { error: statusError } = await supabase
         .from("orders")
-        .update({ status: "processing" })
+        .update(updateData)
         .eq("id", orderId);
 
       if (statusError) {

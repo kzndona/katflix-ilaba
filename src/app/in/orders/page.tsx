@@ -134,12 +134,20 @@ export default function OrdersPage() {
     const urlDateTo = params.get("dateTo");
     const urlCashierId = params.get("cashierId");
 
+    // Format date to local YYYY-MM-DD (not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    setDateFrom(urlDateFrom || yesterday.toISOString().split("T")[0]);
-    setDateTo(urlDateTo || today.toISOString().split("T")[0]);
+    setDateFrom(urlDateFrom || formatLocalDate(yesterday));
+    setDateTo(urlDateTo || formatLocalDate(today));
     if (urlCashierId) {
       setCashierFilter(urlCashierId);
     }
@@ -214,9 +222,14 @@ export default function OrdersPage() {
       let aVal: any = a[sortConfig.key];
       let bVal: any = b[sortConfig.key];
 
-      if (sortConfig.key === "created_at") {
-        aVal = new Date(aVal || 0).getTime();
-        bVal = new Date(bVal || 0).getTime();
+      // Special handling for date fields
+      if (
+        sortConfig.key === "created_at" ||
+        sortConfig.key === "completed_at"
+      ) {
+        const aTime = aVal ? new Date(aVal).getTime() : 0;
+        const bTime = bVal ? new Date(bVal).getTime() : 0;
+        return sortConfig.direction === "asc" ? aTime - bTime : bTime - aTime;
       }
 
       if (aVal === null || aVal === undefined) return 1;
@@ -258,10 +271,22 @@ export default function OrdersPage() {
     (o) => o.status === "processing",
   );
   const pickupOrders = filteredRows.filter(
-    (o) => o.status !== "processing" && o.handling?.pickup?.address,
+    (o) =>
+      o.status !== "processing" &&
+      o.handling?.pickup?.address &&
+      !o.handling?.delivery?.address,
   );
   const deliveryOrders = filteredRows.filter(
-    (o) => o.status !== "processing" && o.handling?.delivery?.address,
+    (o) =>
+      o.status !== "processing" &&
+      o.handling?.delivery?.address &&
+      !o.handling?.pickup?.address,
+  );
+  const pickupAndDeliveryOrders = filteredRows.filter(
+    (o) =>
+      o.status !== "processing" &&
+      o.handling?.pickup?.address &&
+      o.handling?.delivery?.address,
   );
   const otherOrders = filteredRows.filter(
     (o) =>
@@ -271,12 +296,8 @@ export default function OrdersPage() {
   );
 
   // Combine all grouped orders for pagination
-  const groupedOrders = [
-    ...processingOrders,
-    ...pickupOrders,
-    ...deliveryOrders,
-    ...otherOrders,
-  ];
+  // NOTE: This maintains the sort order from filteredRows
+  const groupedOrders = filteredRows;
 
   const totalPages = Math.ceil(groupedOrders.length / ROWS_PER_PAGE);
   const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
@@ -994,7 +1015,22 @@ function BasketCard({
       key,
       serviceType: key.replace("_pricing", ""), // e.g., "wash_pricing" -> "wash"
       ...pricingData,
-    }));
+    }))
+    .sort((a, b) => {
+      // Define service order: Wash, Spin, Dry, Additional Dry, Iron
+      const serviceOrder: Record<string, number> = {
+        wash: 1,
+        spin: 2,
+        dry: 3,
+        additional_dry_time: 4,
+        iron: 5,
+        staff_service: 6,
+        fold: 7,
+      };
+      const orderA = serviceOrder[a.serviceType] || 99;
+      const orderB = serviceOrder[b.serviceType] || 99;
+      return orderA - orderB;
+    });
 
   // For services without pricing info, extract from the base service keys
   const baseServices = Object.entries(servicesObj)
@@ -1020,13 +1056,18 @@ function BasketCard({
           "fold",
           "spin",
           "additional_dry_time_minutes",
-          "additionalDryMinutes",
         ].includes(s.key),
     );
 
   // Calculate subtotal from pricing snapshots
   const servicesSubtotal = servicePricings.reduce(
-    (sum, service) => sum + (service.base_price || 0),
+    (sum, service) => {
+      // For additional_dry_time, use total_price; for others use base_price
+      const price = service.serviceType === "additional_dry_time" 
+        ? (service.total_price || 0)
+        : (service.base_price || 0);
+      return sum + price;
+    },
     0,
   );
 
@@ -1057,6 +1098,23 @@ function BasketCard({
         <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
           <div className="space-y-1">
             {servicePricings.map((pricing) => {
+              // Handle additional_dry_time_pricing specially
+              if (pricing.serviceType === "additional_dry_time") {
+                return (
+                  <div
+                    key={pricing.key}
+                    className="text-xs text-gray-700 grid grid-cols-[1fr_80px] gap-2"
+                  >
+                    <span className="font-medium truncate">
+                      Additional Dry ({pricing.total_minutes}m)
+                    </span>
+                    <span className="font-medium text-right">
+                      ₱{(pricing.total_price as number).toFixed(2)}
+                    </span>
+                  </div>
+                );
+              }
+
               const serviceName = pricing.name || pricing.serviceType;
               const basePrice = pricing.base_price || 0;
               const tier = pricing.tier ? ` (${pricing.tier})` : "";

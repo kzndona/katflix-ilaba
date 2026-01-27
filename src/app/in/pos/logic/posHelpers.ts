@@ -134,7 +134,9 @@ export function calculateBasketSubtotal(
 
   // Additional dry time
   const dryTimeLevels = basket.services.additional_dry_time_minutes / 8; // 0, 1, 2, or 3
-  total += dryTimeLevels * PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL;
+  const additionalDryTimeCost = dryTimeLevels * PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL;
+  console.log(`[posHelpers] Basket ${basket.basket_number}: additional_dry_time_minutes=${basket.services.additional_dry_time_minutes}, dryTimeLevels=${dryTimeLevels}, cost=₱${additionalDryTimeCost}`);
+  total += additionalDryTimeCost;
 
   // Plastic bags - included in services subtotal
   if ((basket.services.plastic_bags || 0) > 0) {

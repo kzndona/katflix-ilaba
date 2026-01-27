@@ -10,9 +10,7 @@ export function formatToPST(utcDateString: string | null): string {
     const date = new Date(utcDateString);
     if (isNaN(date.getTime())) return "-";
 
-    // Add 8 hours to convert from UTC to PST (UTC+8)
-    const pstDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-
+    // Use Intl.DateTimeFormat with Manila timezone (Asia/Manila = UTC+8)
     const formatter = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "2-digit",
@@ -21,9 +19,10 @@ export function formatToPST(utcDateString: string | null): string {
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
+      timeZone: "Asia/Manila",
     });
 
-    return formatter.format(pstDate);
+    return formatter.format(date);
   } catch (error) {
     console.error("Error formatting date:", error);
     return "-";
@@ -42,16 +41,15 @@ export function formatDateToPST(utcDateString: string | null): string {
     const date = new Date(utcDateString);
     if (isNaN(date.getTime())) return "-";
 
-    // Add 8 hours to convert from UTC to PST (UTC+8)
-    const pstDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-
+    // Use Intl.DateTimeFormat with Manila timezone (Asia/Manila = UTC+8)
     const formatter = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
+      timeZone: "Asia/Manila",
     });
 
-    return formatter.format(pstDate);
+    return formatter.format(date);
   } catch (error) {
     console.error("Error formatting date:", error);
     return "-";

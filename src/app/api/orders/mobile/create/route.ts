@@ -27,6 +27,9 @@ interface CreateMobileOrderRequest {
   breakdown: any; // OrderBreakdown JSONB
   handling: any; // OrderHandling JSONB
   gcash_receipt_url?: string; // Optional GCash receipt image URL
+  loyalty?: {
+    discount_tier: null | 'tier1' | 'tier2';
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -410,7 +413,56 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // === STEP 5: Generate receipt data ===
+    // === STEP 5: Award or deduct loyalty points ===
+    const discountTier = body.loyalty?.discount_tier || null;
+    
+    if (discountTier) {
+      // Customer is using loyalty discount - deduct points
+      let pointsToDeduct = 0;
+      if (discountTier === 'tier1') pointsToDeduct = 10;  // 10 points for 5% discount
+      if (discountTier === 'tier2') pointsToDeduct = 20;  // 20 points for 15% discount
+      
+      if (pointsToDeduct > 0) {
+        const { data: currentCustomer } = await supabase
+          .from("customers")
+          .select("loyalty_points")
+          .eq("id", customerId)
+          .single();
+        
+        if (currentCustomer) {
+          const newPoints = Math.max(0, (currentCustomer.loyalty_points || 0) - pointsToDeduct);
+          const { error: updateError } = await supabase
+            .from("customers")
+            .update({ loyalty_points: newPoints })
+            .eq("id", customerId);
+          
+          if (updateError) {
+            console.error("Failed to deduct loyalty points:", updateError);
+          }
+        }
+      }
+    } else {
+      // Customer is NOT using loyalty discount - award 1 point per completed order
+      const { data: currentCustomer } = await supabase
+        .from("customers")
+        .select("loyalty_points")
+        .eq("id", customerId)
+        .single();
+      
+      if (currentCustomer) {
+        const newPoints = (currentCustomer.loyalty_points || 0) + 1;
+        const { error: updateError } = await supabase
+          .from("customers")
+          .update({ loyalty_points: newPoints })
+          .eq("id", customerId);
+        
+        if (updateError) {
+          console.error("Failed to award loyalty points:", updateError);
+        }
+      }
+    }
+
+    // === STEP 6: Generate receipt data ===
     const receiptData = {
       order_id: orderId,
       customer_name: `${body.customer_data.first_name} ${body.customer_data.last_name}`.trim(),

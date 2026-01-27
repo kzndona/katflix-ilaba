@@ -424,9 +424,7 @@ export default function BasketsPage() {
         console.log("[UPDATE SERVICE] Response from endpoint:", responseData);
 
         if (!res.ok) {
-          throw new Error(
-            responseData.error || "Failed to update service",
-          );
+          throw new Error(responseData.error || "Failed to update service");
         }
       }
 
@@ -968,7 +966,10 @@ export default function BasketsPage() {
                 {/* Right Panel - GCash Receipt */}
                 <div className="w-1/2 bg-gray-50 overflow-hidden p-6 flex flex-col items-center justify-center">
                   {(() => {
-                    console.log("[MODAL RENDER] gcash_receipt_url:", mobileOrderModal.gcash_receipt_url);
+                    console.log(
+                      "[MODAL RENDER] gcash_receipt_url:",
+                      mobileOrderModal.gcash_receipt_url,
+                    );
                     return null;
                   })()}
                   {mobileOrderModal.gcash_receipt_url ? (

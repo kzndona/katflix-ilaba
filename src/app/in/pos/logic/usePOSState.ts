@@ -201,6 +201,12 @@ export function usePOSState() {
       if (!product) return null;
       return { product_id: productId, product_name: product.item_name, unit_price: product.unit_price, quantity: qty };
     }).filter(Boolean) as OrderItem[];
+    console.log("[POS] Calculating order total with baskets:", baskets.map(b => ({
+      number: b.basket_number,
+      weight: b.weight_kg,
+      dry: b.services.dry,
+      additional_dry_time_minutes: b.services.additional_dry_time_minutes,
+    })));
     return buildOrderBreakdown(baskets, items, serviceType === "staff_service", deliveryType === "delivery", deliveryFeeOverride, services, products);
   }, [baskets, selectedProducts, serviceType, deliveryType, deliveryFeeOverride, services, products]);
 
@@ -221,6 +227,11 @@ export function usePOSState() {
     setIsProcessing(true);
     try {
       let breakdown = calculateOrderTotal();
+      console.log("[POS CREATE] Breakdown baskets:", breakdown.baskets.map(b => ({
+        number: b.basket_number,
+        additional_dry_time_minutes: b.services.additional_dry_time_minutes,
+        subtotal: b.subtotal,
+      })));
       let discountPercent = 0;
       
       // Apply loyalty discount tier if selected
@@ -249,25 +260,36 @@ export function usePOSState() {
         gcash_reference: paymentMethod === "gcash" ? gcashReference : undefined,
       };
 
+      console.log("[POS CREATE] Sending order with baskets:", breakdown.baskets.map(b => ({
+        number: b.basket_number,
+        additional_dry_time_minutes: b.services.additional_dry_time_minutes,
+        subtotal: b.subtotal,
+      })));
+
+      // Build the payload
+      const payload = {
+        customer_id: customer?.id || null,
+        customer_data: customer ? undefined : {
+          first_name: newCustomerForm.first_name || "Customer",
+          last_name: newCustomerForm.last_name || "Unknown",
+          phone_number: newCustomerForm.phone_number || "",
+          email: newCustomerForm.email_address,
+        },
+        breakdown: breakdown,
+        handling: handling,
+        loyalty: {
+          discount_tier: loyaltyDiscountTier,
+        },
+      };
+
+      console.log("[POS CREATE] Full payload baskets[0].services:", payload.breakdown.baskets[0]?.services);
+
       // Call the API endpoint instead of direct database insert
       const response = await fetch("/api/orders/pos/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          customer_id: customer?.id || null,
-          customer_data: customer ? undefined : {
-            first_name: newCustomerForm.first_name || "Customer",
-            last_name: newCustomerForm.last_name || "Unknown",
-            phone_number: newCustomerForm.phone_number || "",
-            email: newCustomerForm.email_address,
-          },
-          breakdown: breakdown,
-          handling: handling,
-          loyalty: {
-            discount_tier: loyaltyDiscountTier,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
