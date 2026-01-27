@@ -66,6 +66,7 @@ type Order = {
       staff_service_fee: number | null;
       delivery_fee: number | null;
       vat_amount: number | null;
+      loyalty_discount?: number | null;
       total: number;
     };
     payment: {
@@ -81,6 +82,25 @@ type Order = {
     first_name: string;
     last_name: string;
   } | null;
+  service_logs?: Array<{
+    id: string;
+    basket_number: number;
+    service_type: "wash" | "dry" | "spin" | "iron" | "fold";
+    status: "pending" | "in_progress" | "completed" | "skipped";
+    started_at: string | null;
+    completed_at: string | null;
+    notes: string | null;
+    started_by_staff: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    } | null;
+    completed_by_staff: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    } | null;
+  }>;
 };
 
 type SortConfig = {
@@ -250,7 +270,9 @@ export default function OrdersPage() {
   const getStatusColor = (status: string) =>
     ({
       pending: "bg-gray-100 text-gray-700",
-      processing: "bg-orange-100 text-orange-700",
+      processing: "bg-blue-100 text-blue-700",
+      "for_pick-up": "bg-yellow-100 text-yellow-700",
+      for_delivery: "bg-violet-100 text-violet-700",
       completed: "bg-green-100 text-green-700",
       cancelled: "bg-red-100 text-red-700",
     })[status] || "bg-gray-100 text-gray-700";
@@ -683,6 +705,19 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                       </span>
                     </div>
                   )}
+                {order.breakdown.summary.loyalty_discount !== null &&
+                  order.breakdown.summary.loyalty_discount !== undefined &&
+                  (order.breakdown.summary.loyalty_discount as number) > 0 && (
+                    <div className="flex justify-between text-amber-700 font-semibold">
+                      <span>Loyalty Discount:</span>
+                      <span>
+                        -₱
+                        {(
+                          order.breakdown.summary.loyalty_discount as number
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between pt-1 border-t border-gray-300">
                   <span className="text-gray-700 font-semibold">Total:</span>
                   <span className="font-bold">
@@ -742,6 +777,152 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                     breakdownSummary={order.breakdown.summary}
                   />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Service Timeline */}
+          {order.service_logs && order.service_logs.length > 0 && (
+            <div className="pt-2 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                Service Timeline
+              </h4>
+              <div className="space-y-2">
+                {/* Group logs by basket */}
+                {Array.from(
+                  new Set(order.service_logs.map((log) => log.basket_number)),
+                )
+                  .sort((a, b) => a - b)
+                  .map((basketNum) => {
+                    const basketLogs = order.service_logs!.filter(
+                      (log) => log.basket_number === basketNum,
+                    );
+                    return (
+                      <div
+                        key={basketNum}
+                        className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                      >
+                        <p className="text-xs font-semibold text-gray-700 mb-2">
+                          Basket #{basketNum}
+                        </p>
+                        <div className="space-y-2 pl-3 border-l-2 border-blue-300">
+                          {basketLogs.map((log, idx) => (
+                            <div key={log.id} className="text-xs">
+                              <div className="flex items-start gap-2">
+                                <div className="mt-1">
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full -ml-3.5 ${
+                                      log.status === "completed"
+                                        ? "bg-green-500"
+                                        : log.status === "in_progress"
+                                          ? "bg-blue-500"
+                                          : log.status === "skipped"
+                                            ? "bg-gray-400"
+                                            : "bg-yellow-500"
+                                    }`}
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium text-gray-900 capitalize">
+                                      {log.service_type}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        log.status === "completed"
+                                          ? "bg-green-100 text-green-800"
+                                          : log.status === "in_progress"
+                                            ? "bg-blue-100 text-blue-800"
+                                            : log.status === "skipped"
+                                              ? "bg-gray-100 text-gray-800"
+                                              : "bg-yellow-100 text-yellow-800"
+                                      }`}
+                                    >
+                                      {log.status.replace("_", " ")}
+                                    </span>
+                                  </div>
+
+                                  {/* Started Info */}
+                                  {log.started_at && (
+                                    <div className="mt-1 text-gray-600">
+                                      <span>Started: </span>
+                                      <span className="text-gray-900 font-medium">
+                                        {new Date(
+                                          log.started_at,
+                                        ).toLocaleString()}
+                                      </span>
+                                      {log.started_by_staff && (
+                                        <span className="text-gray-500">
+                                          {" "}
+                                          by{" "}
+                                          <span className="text-gray-900">
+                                            {log.started_by_staff.first_name}{" "}
+                                            {log.started_by_staff.last_name}
+                                          </span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Completed Info */}
+                                  {log.completed_at && (
+                                    <div className="mt-1 text-gray-600">
+                                      <span>Completed: </span>
+                                      <span className="text-gray-900 font-medium">
+                                        {new Date(
+                                          log.completed_at,
+                                        ).toLocaleString()}
+                                      </span>
+                                      {log.completed_by_staff && (
+                                        <span className="text-gray-500">
+                                          {" "}
+                                          by{" "}
+                                          <span className="text-gray-900">
+                                            {log.completed_by_staff.first_name}{" "}
+                                            {log.completed_by_staff.last_name}
+                                          </span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Duration */}
+                                  {log.started_at && log.completed_at && (
+                                    <div className="mt-1 text-gray-600 text-xs">
+                                      <span>Duration: </span>
+                                      <span className="text-gray-900 font-medium">
+                                        {(() => {
+                                          const start = new Date(log.started_at);
+                                          const end = new Date(log.completed_at);
+                                          const diffMs =
+                                            end.getTime() - start.getTime();
+                                          const diffMins = Math.round(
+                                            diffMs / 60000,
+                                          );
+                                          const hours = Math.floor(diffMins / 60);
+                                          const mins = diffMins % 60;
+                                          return hours > 0
+                                            ? `${hours}h ${mins}m`
+                                            : `${mins}m`;
+                                        })()}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Notes */}
+                                  {log.notes && (
+                                    <div className="mt-1 text-gray-600 text-xs italic">
+                                      {log.notes}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

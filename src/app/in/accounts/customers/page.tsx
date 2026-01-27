@@ -23,15 +23,13 @@ export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([]);
   const [filteredRows, setFilteredRows] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selected, setSelected] = useState<Customer | null>(null);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
+  const [modalMode, setModalMode] = useState<"view" | "edit">("view");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(
-    null,
-  );
+  const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Load customers on component mount
   useEffect(() => {
@@ -48,7 +46,9 @@ export default function CustomersPage() {
         const filtered = rows.filter((customer) => {
           const fullName =
             `${customer.first_name} ${customer.last_name}`.toLowerCase();
-          return fullName.includes(query);
+          const email = (customer.email_address || "").toLowerCase();
+          const phone = (customer.phone_number || "").toLowerCase();
+          return fullName.includes(query) || email.includes(query) || phone.includes(query);
         });
         setFilteredRows(filtered);
       }
@@ -59,6 +59,7 @@ export default function CustomersPage() {
 
   // Fetch customers from API
   async function load() {
+    setLoading(true);
     try {
       const res = await fetch("/api/customer/getCustomersTable");
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
@@ -67,6 +68,9 @@ export default function CustomersPage() {
       setFilteredRows(data);
     } catch (error) {
       console.error("Failed to load customers:", error);
+      setErrorMsg("Failed to load customers");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -86,22 +90,23 @@ export default function CustomersPage() {
     };
     setEditing(newCustomer);
     setOriginalCustomer(null);
-    setSelected(null);
-    setIsEditingDetails(true);
+    setModalMode("edit");
+    setErrorMsg(null);
   }
 
-  // Select a customer to view their details
-  function selectCustomer(customer: Customer) {
-    setSelected(customer);
-    setIsEditingDetails(false);
+  // Open customer in view mode
+  function openView(customer: Customer) {
+    setEditing(customer);
+    setOriginalCustomer(customer);
+    setModalMode("view");
   }
 
-  // Start editing the selected customer
+  // Switch to edit mode
   function startEdit() {
-    if (!selected) return;
-    setEditing({ ...selected });
-    setOriginalCustomer({ ...selected });
-    setIsEditingDetails(true);
+    if (!editing) return;
+    setEditing({ ...editing });
+    setOriginalCustomer({ ...editing });
+    setModalMode("edit");
   }
 
   // Save customer to database via API
@@ -163,7 +168,6 @@ export default function CustomersPage() {
       setSuccessMsg(result.message || "Customer saved successfully");
       load(); // reload table
       setTimeout(() => {
-        setIsEditingDetails(false);
         setEditing(null);
         setSuccessMsg(null);
       }, 2000);
@@ -205,9 +209,7 @@ export default function CustomersPage() {
       setSuccessMsg("Customer deleted successfully");
       load(); // reload table
       setTimeout(() => {
-        setIsEditingDetails(false);
         setEditing(null);
-        setSelected(null);
         setSuccessMsg(null);
       }, 1500);
     } catch (error) {
@@ -227,209 +229,152 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="p-6 h-screen bg-gray-50 flex flex-col">
-      {/* Two-column layout: left (list) and right (details/edit) */}
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-        {/* LEFT PANE - Customers List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
-          <div className="p-6 border-b border-gray-200 shrink-0">
-            <h2 className="text-3xl font-bold mb-4">Customers</h2>
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-            />
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <div className="mx-auto w-full">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Customers Management
+            </h1>
+            <p className="text-gray-500 text-xs mt-0.5">
+              {filteredRows.length} customer
+              {filteredRows.length !== 1 ? "s" : ""} found
+            </p>
           </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {filteredRows.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                {rows.length === 0 ? "No customers yet" : "No results"}
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredRows.map((customer) => (
-                  <div
-                    key={customer.id}
-                    onClick={() => selectCustomer(customer)}
-                    className={`p-4 cursor-pointer transition ${
-                      selected?.id === customer.id
-                        ? "bg-blue-50 border-l-4 border-blue-600"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="font-medium text-sm">
-                      {customer.first_name} {customer.last_name}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {customer.email_address}
-                    </div>
-                    {customer.loyalty_points !== null &&
-                      customer.loyalty_points > 0 && (
-                        <div className="text-xs text-amber-600 mt-1 font-medium">
-                          ★ {customer.loyalty_points} points
-                        </div>
-                      )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-6 border-t border-gray-200 shrink-0">
-            <button
-              onClick={openNew}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
-            >
-              + Add New Customer
-            </button>
-          </div>
+          <button
+            onClick={openNew}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
+          >
+            + Add New Customer
+          </button>
         </div>
 
-        {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col min-h-0">
-          {isEditingDetails && editing ? (
-            <EditPane
-              customer={editing}
-              originalCustomer={originalCustomer}
-              updateField={updateField}
-              save={save}
-              remove={remove}
-              saving={saving}
-              errorMsg={errorMsg}
-              successMsg={successMsg}
-              onCancel={() => {
-                setIsEditingDetails(false);
-                setEditing(null);
-                setErrorMsg(null);
-              }}
-              isNewCustomer={!editing.id}
-            />
-          ) : selected ? (
-            <DetailsPane customer={selected} onEdit={startEdit} />
+        {/* Search Bar */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
+
+        {/* Error Message */}
+        {errorMsg && !editing && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMsg && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <div className="text-green-800 text-xs font-medium">{successMsg}</div>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">
+              Loading customers...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {rows.length === 0
+                ? "No customers yet. Create one to get started!"
+                : "No results match your search."}
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
-                <div className="text-5xl mb-3">👥</div>
-                <p>Select a customer to view details</p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Loyalty Points
+                    </th>
+                    <th className="px-6 py-3 text-center font-semibold text-gray-900">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRows.map((customer) => (
+                    <tr
+                      key={customer.id}
+                      className="hover:bg-gray-50 transition"
+                    >
+                      <td className="px-6 py-4 text-gray-900 font-medium">
+                        {customer.first_name} {customer.last_name}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {customer.email_address || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {customer.phone_number || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {customer.loyalty_points && customer.loyalty_points > 0
+                          ? `⭐ ${customer.loyalty_points}`
+                          : "—"}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => openView(customer)}
+                          className="text-blue-600 hover:text-blue-700 font-medium text-xs mr-3"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
 
-// Details View Pane - Displays customer information in read-only format
-function DetailsPane({
-  customer,
-  onEdit,
-}: {
-  customer: Customer;
-  onEdit: () => void;
-}) {
-  return (
-    <div className="p-8 h-full flex flex-col">
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              {customer.first_name} {customer.last_name}
-            </h1>
-            <p className="text-gray-500 mt-2">Customer ID: {customer.id}</p>
-          </div>
-          <button
-            onClick={onEdit}
-            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-            title="Edit Customer"
-          >
-            Edit
-          </button>
-        </div>
-      </div>
-
-      {/* Contact Info Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
-          <div className="text-sm text-gray-600 font-medium">Email</div>
-          <div className="text-lg font-semibold text-blue-900 mt-2">
-            {customer.email_address || "—"}
-          </div>
-        </div>
-        <div className="bg-linear-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
-          <div className="text-sm text-gray-600 font-medium">Phone</div>
-          <div className="text-lg font-semibold text-green-900 mt-2">
-            {customer.phone_number || "—"}
-          </div>
-        </div>
-      </div>
-
-      {/* Loyalty Points */}
-      {customer.loyalty_points !== null && customer.loyalty_points > 0 && (
-        <div className="bg-linear-to-br from-yellow-50 to-amber-100 rounded-lg p-6 border border-amber-200 mb-8">
-          <div className="text-sm text-gray-600 font-medium">
-            Loyalty Points
-          </div>
-          <div className="text-3xl font-bold text-amber-900 mt-2">
-            ⭐ {customer.loyalty_points}
-          </div>
-        </div>
-      )}
-
-      {/* Personal Information Grid */}
-      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Personal Information
-        </h3>
-        <div className="grid grid-cols-2 gap-6">
-          <DetailField label="First Name" value={customer.first_name} />
-          <DetailField
-            label="Middle Name"
-            value={customer.middle_name || "—"}
-          />
-          <DetailField label="Last Name" value={customer.last_name} />
-          <DetailField label="Birthdate" value={customer.birthdate || "—"} />
-          <DetailField
-            label="Gender"
-            value={
-              customer.gender
-                ? customer.gender.charAt(0).toUpperCase() +
-                  customer.gender.slice(1)
-                : "—"
-            }
-          />
-        </div>
-      </div>
-
-      {/* Address Section */}
-      {customer.address && (
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Address</h3>
-          <p className="text-gray-700 leading-relaxed">{customer.address}</p>
-        </div>
+      {/* Detail Modal - Center Rectangle Modal */}
+      {editing && (
+        <CustomerModal
+          customer={editing}
+          originalCustomer={originalCustomer}
+          mode={modalMode}
+          updateField={updateField}
+          save={save}
+          remove={remove}
+          saving={saving}
+          errorMsg={errorMsg}
+          successMsg={successMsg}
+          onCancel={() => {
+            setEditing(null);
+            setErrorMsg(null);
+          }}
+          onEdit={startEdit}
+          isNewCustomer={!editing.id}
+        />
       )}
     </div>
   );
 }
 
-// Details Field Component - Reusable field display for read-only info
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-5">
-      <label className="text-sm text-gray-500 font-medium">{label}</label>
-      <p className="text-base text-gray-900 mt-1">{value}</p>
-    </div>
-  );
-}
-
-// Edit Pane - Form for creating/editing customer information
-function EditPane({
+// Customer Modal - Centered Rectangle Modal
+function CustomerModal({
   customer,
   originalCustomer,
+  mode,
   updateField,
   save,
   remove,
@@ -437,10 +382,12 @@ function EditPane({
   errorMsg,
   successMsg,
   onCancel,
+  onEdit,
   isNewCustomer,
 }: {
   customer: Customer;
   originalCustomer: Customer | null;
+  mode: "view" | "edit";
   updateField: (key: keyof Customer, value: any) => void;
   save: () => void;
   remove: () => void;
@@ -448,127 +395,276 @@ function EditPane({
   errorMsg: string | null;
   successMsg: string | null;
   onCancel: () => void;
+  onEdit: () => void;
   isNewCustomer: boolean;
 }) {
-  // Check if there are any changes from original data
   const hasChanges =
     isNewCustomer ||
     !originalCustomer ||
     JSON.stringify(customer) !== JSON.stringify(originalCustomer);
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-gray-200">
-        <h3 className="text-4xl font-bold">
-          {isNewCustomer ? "Add New Customer" : "Edit Customer"}
-        </h3>
+  if (mode === "view") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+            <h2 className="text-lg font-bold text-gray-900">
+              {customer.first_name} {customer.last_name}
+            </h2>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6">
+            {/* Contact Info */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="text-xs font-semibold text-gray-600 mb-1">
+                  Email
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {customer.email_address || "—"}
+                </div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="text-xs font-semibold text-gray-600 mb-1">
+                  Phone
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {customer.phone_number || "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Loyalty Points */}
+            {customer.loyalty_points !== null &&
+              customer.loyalty_points > 0 && (
+                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 mb-6">
+                  <div className="text-xs font-semibold text-gray-600 mb-1">
+                    Loyalty Points
+                  </div>
+                  <div className="text-sm font-medium text-gray-900">
+                    ⭐ {customer.loyalty_points}
+                  </div>
+                </div>
+              )}
+
+            {/* Personal Information */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    First Name
+                  </div>
+                  <div className="text-gray-900 mt-1">{customer.first_name}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Middle Name
+                  </div>
+                  <div className="text-gray-900 mt-1">
+                    {customer.middle_name || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Last Name
+                  </div>
+                  <div className="text-gray-900 mt-1">{customer.last_name}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Birthdate
+                  </div>
+                  <div className="text-gray-900 mt-1">
+                    {customer.birthdate || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">Gender</div>
+                  <div className="text-gray-900 mt-1">
+                    {customer.gender
+                      ? customer.gender.charAt(0).toUpperCase() +
+                        customer.gender.slice(1)
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            {customer.address && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Address
+                </h3>
+                <p className="text-sm text-gray-700">{customer.address}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-2 justify-end">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition"
+            >
+              Close
+            </button>
+            <button
+              onClick={onEdit}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      <div className="flex-1 overflow-y-auto p-8">
-        {errorMsg && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700">
-            {errorMsg}
-          </div>
-        )}
+  // Edit Mode
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div
+        className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white shrink-0">
+          <h2 className="text-lg font-bold text-gray-900">
+            {isNewCustomer ? "Add New Customer" : "Edit Customer"}
+          </h2>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600 text-xl"
+            disabled={saving}
+          >
+            ✕
+          </button>
+        </div>
 
-        {successMsg && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg text-sm text-green-700">
-            {successMsg}
-          </div>
-        )}
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              {errorMsg}
+            </div>
+          )}
 
-        <div className="grid grid-cols-2 gap-6">
-          <Field
-            label="First Name"
-            value={customer.first_name}
-            onChange={(v) => updateField("first_name", v)}
-          />
-          <Field
-            label="Middle Name"
-            value={customer.middle_name ?? ""}
-            onChange={(v) => updateField("middle_name", v)}
-          />
-          <Field
-            label="Last Name"
-            value={customer.last_name}
-            onChange={(v) => updateField("last_name", v)}
-          />
-          <Field
-            label="Birthdate"
-            type="date"
-            value={customer.birthdate ?? ""}
-            onChange={(v) => updateField("birthdate", v)}
-            max={new Date().toISOString().split("T")[0]}
-          />
+          {successMsg && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              {successMsg}
+            </div>
+          )}
 
-          <Select
-            label="Gender"
-            value={customer.gender ?? ""}
-            onChange={(v) => updateField("gender", v || null)}
-            options={[
-              { value: "", label: "Select…" },
-              { value: "male", label: "Male" },
-              { value: "female", label: "Female" },
-            ]}
-          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="First Name"
+                value={customer.first_name}
+                onChange={(v) => updateField("first_name", v)}
+              />
+              <Field
+                label="Middle Name"
+                value={customer.middle_name ?? ""}
+                onChange={(v) => updateField("middle_name", v)}
+              />
+            </div>
 
-          <Field
-            label="Email Address"
-            value={customer.email_address ?? ""}
-            onChange={(v) => updateField("email_address", v)}
-          />
-          <PhoneField
-            label="Phone"
-            value={customer.phone_number ?? ""}
-            onChange={(v) => updateField("phone_number", v)}
-          />
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="Last Name"
+                value={customer.last_name}
+                onChange={(v) => updateField("last_name", v)}
+              />
+              <Field
+                label="Birthdate"
+                type="date"
+                value={customer.birthdate ?? ""}
+                onChange={(v) => updateField("birthdate", v)}
+                max={new Date().toISOString().split("T")[0]}
+              />
+            </div>
 
-          <div className="col-span-2">
+            <Select
+              label="Gender"
+              value={customer.gender ?? ""}
+              onChange={(v) => updateField("gender", v || null)}
+              options={[
+                { value: "", label: "Select…" },
+                { value: "male", label: "Male" },
+                { value: "female", label: "Female" },
+              ]}
+            />
+
+            <PhoneField
+              label="Phone"
+              value={customer.phone_number ?? ""}
+              onChange={(v) => updateField("phone_number", v)}
+            />
+
+            <Field
+              label="Email Address"
+              value={customer.email_address ?? ""}
+              onChange={(v) => updateField("email_address", v)}
+            />
+
             <Field
               label="Address"
               value={customer.address ?? ""}
               onChange={(v) => updateField("address", v)}
             />
-          </div>
 
-          {isNewCustomer && (
-            <div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-              <strong>📧 Account Creation:</strong> An invitation link will be
-              sent to the email address. The customer can set their password and
-              activate their account through the link.
-            </div>
+            {isNewCustomer && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                <strong>📧 Account Creation:</strong> An invitation link will be
+                sent to the email address.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-2 justify-end shrink-0">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          {!isNewCustomer && (
+            <button
+              onClick={remove}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-50"
+              disabled={saving}
+            >
+              Delete
+            </button>
+          )}
+          {hasChanges && (
+            <button
+              onClick={save}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : isNewCustomer ? "Add" : "Save"}
+            </button>
           )}
         </div>
-      </div>
-
-      <div className="p-8 border-t border-gray-200 flex justify-end gap-4">
-        <button
-          onClick={onCancel}
-          className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 text-base font-medium w-24"
-          disabled={saving}
-        >
-          Cancel
-        </button>
-
-        {!isNewCustomer && (
-          <button
-            onClick={remove}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 text-base font-medium w-24"
-            disabled={saving}
-          >
-            Delete
-          </button>
-        )}
-
-        {hasChanges && (
-          <button
-            onClick={save}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-base font-medium w-24"
-            disabled={saving}
-          >
-            {saving ? "Saving..." : isNewCustomer ? "Add" : "Save"}
-          </button>
-        )}
       </div>
     </div>
   );
@@ -590,14 +686,14 @@ function PhoneField({
 
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <input
         type="tel"
         value={value}
         onChange={(e) => {
-          // Only allow digits
           const digits = e.target.value.replace(/\D/g, "");
-          // Limit to 11 digits for Philippine format
           if (digits.length <= 11) {
             onChange(digits);
           }
@@ -605,7 +701,7 @@ function PhoneField({
         maxLength={11}
         disabled={disabled}
         placeholder="09XXXXXXXXX"
-        className={`border px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500 ${
+        className={`border px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500 ${
           value && !isValid
             ? "border-red-300 focus:ring-red-500"
             : "border-gray-300 focus:ring-blue-500"
@@ -638,14 +734,16 @@ function Field({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         max={max}
-        className="border border-gray-300 px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+        className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
       />
     </div>
   );
@@ -665,11 +763,13 @@ function Select({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-gray-300 px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

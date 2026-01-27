@@ -289,7 +289,7 @@ export default function BasketsPage() {
     // Check for pending service - respect SERVICE_SEQUENCE order
     for (const serviceType of SERVICE_SEQUENCE) {
       const pendingService = services.find(
-        (s: any) => s.service_type === serviceType && s.status === "pending"
+        (s: any) => s.service_type === serviceType && s.status === "pending",
       );
       if (pendingService) {
         return {
@@ -312,6 +312,18 @@ export default function BasketsPage() {
       !isStoreDelivery &&
       order.handling.delivery.status === "pending"
     ) {
+      // For multi-basket orders, only allow delivery to start when ALL baskets are ready
+      const allBasketsReady = order.breakdown?.baskets?.every((b) =>
+        b.services.every(
+          (s) => s.status === "completed" || s.status === "skipped",
+        ),
+      );
+
+      if (!allBasketsReady) {
+        // Some baskets still have pending/in-progress services - can't start delivery yet
+        return null;
+      }
+
       return {
         label: "Start Delivery",
         action: "start",
@@ -463,7 +475,7 @@ export default function BasketsPage() {
               onClick={() => toggleStatus("pending")}
               className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
                 selectedStatuses.includes("pending")
-                  ? "bg-blue-100 text-blue-900 shadow-md hover:shadow-lg"
+                  ? "bg-gray-100 text-gray-900 shadow-md hover:shadow-lg"
                   : "bg-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -471,10 +483,10 @@ export default function BasketsPage() {
                 type="checkbox"
                 checked={selectedStatuses.includes("pending")}
                 onChange={() => {}}
-                className="w-5 h-5 rounded border-2 border-blue-400 cursor-pointer"
+                className="w-5 h-5 rounded border-2 border-gray-400 cursor-pointer"
               />
               <span>Pending</span>
-              <span className="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-xs bg-gray-200 text-gray-900 px-2 py-0.5 rounded-full font-bold">
                 {countByStatus("pending")}
               </span>
             </button>
@@ -484,7 +496,7 @@ export default function BasketsPage() {
               onClick={() => toggleStatus("for_pick-up")}
               className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
                 selectedStatuses.includes("for_pick-up")
-                  ? "bg-teal-100 text-teal-900 shadow-md hover:shadow-lg"
+                  ? "bg-yellow-100 text-yellow-900 shadow-md hover:shadow-lg"
                   : "bg-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -492,10 +504,10 @@ export default function BasketsPage() {
                 type="checkbox"
                 checked={selectedStatuses.includes("for_pick-up")}
                 onChange={() => {}}
-                className="w-5 h-5 rounded border-2 border-teal-400 cursor-pointer"
+                className="w-5 h-5 rounded border-2 border-yellow-400 cursor-pointer"
               />
               <span>Pickup</span>
-              <span className="text-xs bg-teal-200 text-teal-900 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-xs bg-yellow-200 text-yellow-900 px-2 py-0.5 rounded-full font-bold">
                 {countByStatus("for_pick-up")}
               </span>
             </button>
@@ -505,7 +517,7 @@ export default function BasketsPage() {
               onClick={() => toggleStatus("processing")}
               className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
                 selectedStatuses.includes("processing")
-                  ? "bg-amber-100 text-amber-900 shadow-md hover:shadow-lg"
+                  ? "bg-blue-100 text-blue-900 shadow-md hover:shadow-lg"
                   : "bg-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -513,10 +525,10 @@ export default function BasketsPage() {
                 type="checkbox"
                 checked={selectedStatuses.includes("processing")}
                 onChange={() => {}}
-                className="w-5 h-5 rounded border-2 border-amber-400 cursor-pointer"
+                className="w-5 h-5 rounded border-2 border-blue-400 cursor-pointer"
               />
               <span>Processing</span>
-              <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">
                 {countByStatus("processing")}
               </span>
             </button>
@@ -596,9 +608,9 @@ export default function BasketsPage() {
                         order.status === "processing"
                           ? "bg-blue-200 text-blue-900"
                           : order.status === "for_pick-up"
-                            ? "bg-orange-200 text-orange-900"
+                            ? "bg-yellow-200 text-yellow-900"
                             : order.status === "for_delivery"
-                              ? "bg-purple-200 text-purple-900"
+                              ? "bg-violet-200 text-violet-900"
                               : "bg-gray-200 text-gray-900"
                       }`}
                     >

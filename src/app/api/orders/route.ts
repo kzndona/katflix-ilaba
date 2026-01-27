@@ -51,6 +51,27 @@ export async function GET(request: NextRequest) {
           id,
           first_name,
           last_name
+        ),
+        basket_service_status(
+          id,
+          basket_number,
+          service_type,
+          status,
+          started_at,
+          completed_at,
+          started_by,
+          completed_by,
+          notes,
+          staff:started_by(
+            id,
+            first_name,
+            last_name
+          ),
+          completed_by_staff:completed_by(
+            id,
+            first_name,
+            last_name
+          )
         )
       `)
       .order('created_at', { ascending: false });
@@ -126,6 +147,7 @@ export async function GET(request: NextRequest) {
             staff_service_fee: summary.staff_service_fee ?? null,
             delivery_fee: summary.delivery_fee ?? null,
             vat_amount: summary.vat_amount ?? null,
+            loyalty_discount: summary.loyalty_discount ?? null,
             total: summary.total ?? order.total_amount,
           },
           payment: breakdown.payment || {
@@ -137,6 +159,17 @@ export async function GET(request: NextRequest) {
         },
         customers: order.customers,
         staff: order.staff,
+        service_logs: (order.basket_service_status || []).map((log: any) => ({
+          id: log.id,
+          basket_number: log.basket_number,
+          service_type: log.service_type,
+          status: log.status,
+          started_at: log.started_at,
+          completed_at: log.completed_at,
+          notes: log.notes,
+          started_by_staff: log.staff,
+          completed_by_staff: log.completed_by_staff,
+        })),
       };
     });
 

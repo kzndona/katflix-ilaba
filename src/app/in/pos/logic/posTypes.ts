@@ -135,6 +135,7 @@ export interface CustomerData {
   last_name: string;
   phone_number: string;
   email?: string;
+  loyalty_points?: number;                // Customer's loyalty points
 }
 
 export interface DeliveryData {

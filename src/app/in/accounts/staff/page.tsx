@@ -1,22 +1,22 @@
 /**
  * Staff Management Page - Accounts Module
  *
- * Provides a two-panel interface for managing laundry staff members including:
- * - Staff list with real-time search by name
- * - Detailed view with role badges, contact information, and personal details
+ * Provides a table interface for managing laundry staff members including:
+ * - Staff list with real-time search by name, email, phone
+ * - Table display with columns for name, email, phone, role, status
  * - Create, edit, and delete staff with validation
  * - Role assignment (admin, cashier, attendant, rider, cashier_attendant)
+ * - Centered modal for viewing/editing staff details
  *
  * Architecture Notes:
- * - LEFT PANE: Scrollable staff list with search (3-column grid = 1 col)
- * - RIGHT PANE: Details view or edit form (3-column grid = 2 cols)
+ * - Table view with pagination and search
+ * - Details modal with view/edit modes
  * - Role data comes from staff_roles junction table (handled by API)
- * - Uses gradient cards in DetailsPane for visual hierarchy
  */
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 // Staff type definition - represents a staff member record from the database
 // The role field is populated from the staff_roles junction table by the API
@@ -39,13 +39,13 @@ export default function StaffPage() {
   const [rows, setRows] = useState<Staff[]>([]); // All staff records from API
   const [filteredRows, setFilteredRows] = useState<Staff[]>([]); // Filtered by search query
   const [searchQuery, setSearchQuery] = useState(""); // Current search text
-  const [selected, setSelected] = useState<Staff | null>(null); // Currently selected staff in list
-  const [isEditingDetails, setIsEditingDetails] = useState(false); // Toggle between view/edit mode
   const [editing, setEditing] = useState<Staff | null>(null); // Staff data being edited
+  const [modalMode, setModalMode] = useState<"view" | "edit">("view"); // Modal view or edit mode
   const [errorMsg, setErrorMsg] = useState<string | null>(null); // Error message from save/delete
   const [successMsg, setSuccessMsg] = useState<string | null>(null); // Success message
   const [saving, setSaving] = useState(false); // Loading state during save/delete
   const [originalStaff, setOriginalStaff] = useState<Staff | null>(null); // Original data for change detection
+  const [loading, setLoading] = useState(false); // Loading state for table
 
   // Load staff from database on component mount
   useEffect(() => {
@@ -62,7 +62,9 @@ export default function StaffPage() {
         const filtered = rows.filter((staff) => {
           const fullName =
             `${staff.first_name} ${staff.last_name}`.toLowerCase();
-          return fullName.includes(query);
+          const email = (staff.email_address || "").toLowerCase();
+          const phone = (staff.phone_number || "").toLowerCase();
+          return fullName.includes(query) || email.includes(query) || phone.includes(query);
         });
         setFilteredRows(filtered);
       }
@@ -73,6 +75,7 @@ export default function StaffPage() {
 
   // Fetch all staff from API and populate both rows and filteredRows
   async function load() {
+    setLoading(true);
     try {
       const res = await fetch("/api/staff/getStaffTable");
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
@@ -81,6 +84,9 @@ export default function StaffPage() {
       setFilteredRows(data);
     } catch (error) {
       console.error("Failed to load staff:", error);
+      setErrorMsg("Failed to load staff");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -101,22 +107,23 @@ export default function StaffPage() {
     };
     setEditing(newStaff);
     setOriginalStaff(null);
-    setSelected(null);
-    setIsEditingDetails(true);
+    setModalMode("edit");
+    setErrorMsg(null);
   }
 
-  // Select a staff member from the list to view their details
-  function selectStaff(staff: Staff) {
-    setSelected(staff);
-    setIsEditingDetails(false);
+  // Open staff in view mode
+  function openView(staff: Staff) {
+    setEditing(staff);
+    setOriginalStaff(staff);
+    setModalMode("view");
   }
 
-  // Switch from details view to edit mode for the selected staff
+  // Switch to edit mode
   function startEdit() {
-    if (!selected) return;
-    setEditing({ ...selected });
-    setOriginalStaff({ ...selected });
-    setIsEditingDetails(true);
+    if (!editing) return;
+    setEditing({ ...editing });
+    setOriginalStaff({ ...editing });
+    setModalMode("edit");
   }
 
   // Validate and save staff to database via API (create new or update existing)
@@ -182,7 +189,6 @@ export default function StaffPage() {
       setSuccessMsg(result.message || "Staff saved successfully");
       load(); // reload table
       setTimeout(() => {
-        setIsEditingDetails(false);
         setEditing(null);
         setSuccessMsg(null);
       }, 2000);
@@ -213,9 +219,7 @@ export default function StaffPage() {
       setSuccessMsg("Staff deleted successfully");
       load(); // reload table
       setTimeout(() => {
-        setIsEditingDetails(false);
         setEditing(null);
-        setSelected(null);
         setSuccessMsg(null);
       }, 1500);
     } catch (error) {
@@ -235,250 +239,171 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="p-6 h-screen bg-gray-50 flex flex-col">
-      {/* Two-panel layout: Left pane (staff list) = 1 column, Right pane (details/edit) = 2 columns */}
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-        {/* LEFT PANE - Staff List */}
-        <div className="col-span-1 bg-white rounded-lg shadow flex flex-col min-h-0">
-          <div className="p-6 border-b border-gray-200 shrink-0">
-            <h2 className="text-3xl font-bold mb-4">Staff</h2>
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-            />
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
+      <div className="mx-auto w-full">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Staff Management
+            </h1>
+            <p className="text-gray-500 text-xs mt-0.5">
+              {filteredRows.length} staff member
+              {filteredRows.length !== 1 ? "s" : ""} found
+            </p>
           </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {filteredRows.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                {rows.length === 0 ? "No staff yet" : "No results"}
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredRows.map((staff) => (
-                  <div
-                    key={staff.id}
-                    onClick={() => selectStaff(staff)}
-                    className={`p-4 cursor-pointer transition ${
-                      selected?.id === staff.id
-                        ? "bg-blue-50 border-l-4 border-blue-600"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="font-medium text-sm">
-                      {staff.first_name} {staff.last_name}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 capitalize">
-                      {staff.role}
-                    </div>
-                    {!staff.is_active && (
-                      <div className="text-xs text-red-600 mt-1">Inactive</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-6 border-t border-gray-200 shrink-0">
-            <button
-              onClick={openNew}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-base font-medium"
-            >
-              + Add New Staff
-            </button>
-          </div>
+          <button
+            onClick={openNew}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
+          >
+            + Add New Staff
+          </button>
         </div>
 
-        {/* RIGHT PANE - Details or Edit */}
-        <div className="col-span-2 bg-white rounded-lg shadow flex flex-col min-h-0">
-          {isEditingDetails && editing ? (
-            <EditPane
-              staff={editing}
-              originalStaff={originalStaff}
-              updateField={updateField}
-              save={save}
-              remove={remove}
-              saving={saving}
-              errorMsg={errorMsg}
-              successMsg={successMsg}
-              onCancel={() => {
-                setIsEditingDetails(false);
-                setEditing(null);
-                setErrorMsg(null);
-              }}
-              isNewStaff={!editing.id}
-            />
-          ) : selected ? (
-            <DetailsPane staff={selected} onEdit={startEdit} />
+        {/* Search Bar */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
+
+        {/* Error Message */}
+        {errorMsg && !editing && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMsg && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <div className="text-green-800 text-xs font-medium">{successMsg}</div>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">
+              Loading staff...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {rows.length === 0
+                ? "No staff yet. Create one to get started!"
+                : "No results match your search."}
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
-                <div className="text-5xl mb-3">👤</div>
-                <p>Select a staff member to view details</p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center font-semibold text-gray-900">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRows.map((staff) => (
+                    <tr key={staff.id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 text-gray-900 font-medium">
+                        {staff.first_name} {staff.last_name}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {staff.email_address || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {staff.phone_number || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {staff.role
+                            .replace(/_/g, " ")
+                            .split(" ")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() +
+                                word.slice(1).toLowerCase()
+                            )
+                            .join(" ")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            staff.is_active
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {staff.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => openView(staff)}
+                          className="text-blue-600 hover:text-blue-700 font-medium text-xs"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
+
+      {/* Detail Modal - Center Rectangle Modal */}
+      {editing && (
+        <StaffModal
+          staff={editing}
+          originalStaff={originalStaff}
+          mode={modalMode}
+          updateField={updateField}
+          save={save}
+          remove={remove}
+          saving={saving}
+          errorMsg={errorMsg}
+          successMsg={successMsg}
+          onCancel={() => {
+            setEditing(null);
+            setErrorMsg(null);
+          }}
+          onEdit={startEdit}
+          isNewStaff={!editing.id}
+        />
+      )}
     </div>
   );
 }
 
-// Details View Pane - Modernized with gradient cards matching customers page design
-function DetailsPane({ staff, onEdit }: { staff: Staff; onEdit: () => void }) {
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header with staff name and edit button */}
-      <div className="p-8 border-b border-gray-200 flex justify-between items-start">
-        <div>
-          <h3 className="text-4xl font-bold">
-            {staff.first_name} {staff.last_name}
-          </h3>
-          {/* Role badge with background color - color based on role type */}
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-sm font-medium text-gray-600">Role:</span>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-                staff.role === "admin"
-                  ? "bg-red-100 text-red-700"
-                  : staff.role === "cashier"
-                    ? "bg-blue-100 text-blue-700"
-                    : staff.role === "attendant"
-                      ? "bg-green-100 text-green-700"
-                      : staff.role === "rider"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-yellow-100 text-yellow-700"
-              }`}
-            >
-              {staff.role}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={onEdit}
-          className="p-3 hover:bg-gray-100 rounded-lg transition"
-          title="Edit"
-        >
-          <svg
-            className="w-6 h-6 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Scrollable content area with organized sections and gradient cards */}
-      <div className="flex-1 overflow-y-auto p-8">
-        {/* Contact Information Section - Gradient cards for key contact fields */}
-        <div className="mb-8">
-          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
-            Contact Information
-          </h4>
-          <div className="space-y-3">
-            {/* Email Card - Blue gradient for email communication */}
-            <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-              <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-                Email Address
-              </div>
-              <div className="text-sm text-blue-900 mt-2 text-wrap">
-                {staff.email_address || "—"}
-              </div>
-            </div>
-
-            {/* Phone Card - Green gradient for phone communication */}
-            <div className="bg-linear-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
-              <div className="text-xs font-medium text-green-700 uppercase tracking-wider">
-                Phone Number
-              </div>
-              <div className="text-sm text-green-900 mt-2">
-                {staff.phone_number || "—"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Personal Information Section - Standard layout for basic details */}
-        <div className="mb-8">
-          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
-            Personal Information
-          </h4>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label="First Name" value={staff.first_name} />
-            <DetailField label="Middle Name" value={staff.middle_name || "—"} />
-            <DetailField label="Last Name" value={staff.last_name} />
-            <DetailField label="Birthdate" value={staff.birthdate || "—"} />
-            <DetailField
-              label="Gender"
-              value={
-                staff.gender
-                  ? staff.gender.charAt(0).toUpperCase() + staff.gender.slice(1)
-                  : "—"
-              }
-            />
-          </div>
-        </div>
-
-        {/* Address Section - Full-width for address field */}
-        <div className="mb-8">
-          <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
-            Address
-          </h4>
-          <DetailField label="" value={staff.address || "—"} />
-        </div>
-
-        {/* Account Status Card - Shows active/inactive state with color coding */}
-        <div
-          className={`p-4 rounded-lg border ${
-            staff.is_active
-              ? "bg-green-50 border-green-200"
-              : "bg-red-50 border-red-200"
-          }`}
-        >
-          <div className="text-sm">
-            <span className="font-medium text-gray-700">Account Status: </span>
-            <span
-              className={
-                staff.is_active
-                  ? "text-green-700 font-semibold"
-                  : "text-red-700 font-semibold"
-              }
-            >
-              {staff.is_active ? "✓ Active" : "✕ Inactive"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Display a single read-only field in the details pane
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-5">
-      <label className="text-sm text-gray-500 font-medium">{label}</label>
-      <p className="text-base text-gray-900 mt-1">{value}</p>
-    </div>
-  );
-}
-
-// Edit Form Component - Handles staff creation and editing with validation
-// Includes email validation, phone format validation, and change detection
-function EditPane({
+// Staff Modal - Centered Rectangle Modal
+function StaffModal({
   staff,
   originalStaff,
+  mode,
   updateField,
   save,
   remove,
@@ -486,10 +411,12 @@ function EditPane({
   errorMsg,
   successMsg,
   onCancel,
+  onEdit,
   isNewStaff,
 }: {
   staff: Staff;
   originalStaff: Staff | null;
+  mode: "view" | "edit";
   updateField: (key: keyof Staff, value: any) => void;
   save: () => void;
   remove: () => void;
@@ -497,149 +424,331 @@ function EditPane({
   errorMsg: string | null;
   successMsg: string | null;
   onCancel: () => void;
+  onEdit: () => void;
   isNewStaff: boolean;
 }) {
-  // Check if there are any changes
   const hasChanges =
     isNewStaff ||
     !originalStaff ||
     JSON.stringify(staff) !== JSON.stringify(originalStaff);
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-gray-200">
-        <h3 className="text-4xl font-bold">
-          {isNewStaff ? "Add New Staff" : "Edit Staff"}
-        </h3>
+
+  const getRoleBadgeColor = (role: string) => {
+    const colors: Record<string, string> = {
+      admin: "bg-red-100 text-red-800",
+      cashier: "bg-blue-100 text-blue-800",
+      attendant: "bg-green-100 text-green-800",
+      rider: "bg-purple-100 text-purple-800",
+      cashier_attendant: "bg-indigo-100 text-indigo-800",
+    };
+    return colors[role] || "bg-gray-100 text-gray-800";
+  };
+
+  if (mode === "view") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+            <h2 className="text-lg font-bold text-gray-900">
+              {staff.first_name} {staff.last_name}
+            </h2>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6">
+            {/* Role Badge */}
+            <div className="mb-6">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
+                  staff.role
+                )}`}
+              >
+                {staff.role
+                  .replace(/_/g, " ")
+                  .split(" ")
+                  .map(
+                    (word) =>
+                      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                  )
+                  .join(" ")}
+              </span>
+            </div>
+
+            {/* Contact Info */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="text-xs font-semibold text-gray-600 mb-1">
+                  Email
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {staff.email_address || "—"}
+                </div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="text-xs font-semibold text-gray-600 mb-1">
+                  Phone
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {staff.phone_number || "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Status Badge */}
+            <div className="mb-6">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  staff.is_active
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {staff.is_active ? "Active" : "Inactive"}
+              </span>
+            </div>
+
+            {/* Personal Information */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    First Name
+                  </div>
+                  <div className="text-gray-900 mt-1">{staff.first_name}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Middle Name
+                  </div>
+                  <div className="text-gray-900 mt-1">
+                    {staff.middle_name || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Last Name
+                  </div>
+                  <div className="text-gray-900 mt-1">{staff.last_name}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Birthdate
+                  </div>
+                  <div className="text-gray-900 mt-1">
+                    {staff.birthdate || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600">Gender</div>
+                  <div className="text-gray-900 mt-1">
+                    {staff.gender
+                      ? staff.gender.charAt(0).toUpperCase() +
+                        staff.gender.slice(1)
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            {staff.address && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Address
+                </h3>
+                <p className="text-sm text-gray-700">{staff.address}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-2 justify-end">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition"
+            >
+              Close
+            </button>
+            <button
+              onClick={onEdit}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      <div className="flex-1 overflow-y-auto p-8">
-        {errorMsg && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700">
-            {errorMsg}
-          </div>
-        )}
+  // Edit Mode
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div
+        className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white shrink-0">
+          <h2 className="text-lg font-bold text-gray-900">
+            {isNewStaff ? "Add New Staff" : "Edit Staff"}
+          </h2>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600 text-xl"
+            disabled={saving}
+          >
+            ✕
+          </button>
+        </div>
 
-        {successMsg && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg text-sm text-green-700">
-            {successMsg}
-          </div>
-        )}
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              {errorMsg}
+            </div>
+          )}
 
-        <div className="grid grid-cols-2 gap-6">
-          <Field
-            label="First Name"
-            value={staff.first_name}
-            onChange={(v) => updateField("first_name", v)}
-          />
-          <Field
-            label="Middle Initial"
-            value={staff.middle_name ?? ""}
-            onChange={(v) => updateField("middle_name", v)}
-          />
-          <Field
-            label="Last Name"
-            value={staff.last_name}
-            onChange={(v) => updateField("last_name", v)}
-          />
-          <Field
-            label="Birthdate"
-            type="date"
-            value={staff.birthdate ?? ""}
-            onChange={(v) => updateField("birthdate", v)}
-            max={new Date().toISOString().split("T")[0]}
-          />
+          {successMsg && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              {successMsg}
+            </div>
+          )}
 
-          <Select
-            label="Gender"
-            value={staff.gender ?? ""}
-            onChange={(v) => updateField("gender", v || null)}
-            options={[
-              { value: "", label: "Select…" },
-              { value: "male", label: "Male" },
-              { value: "female", label: "Female" },
-            ]}
-          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="First Name"
+                value={staff.first_name}
+                onChange={(v) => updateField("first_name", v)}
+              />
+              <Field
+                label="Middle Name"
+                value={staff.middle_name ?? ""}
+                onChange={(v) => updateField("middle_name", v)}
+              />
+            </div>
 
-          <Select
-            label="Role"
-            value={staff.role}
-            onChange={(v) => updateField("role", v)}
-            options={[
-              { value: "admin", label: "Admin" },
-              { value: "cashier", label: "Cashier" },
-              { value: "attendant", label: "Attendant" },
-              { value: "rider", label: "Rider" },
-              { value: "cashier_attendant", label: "Cashier & Attendant" },
-            ]}
-          />
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="Last Name"
+                value={staff.last_name}
+                onChange={(v) => updateField("last_name", v)}
+              />
+              <Field
+                label="Birthdate"
+                type="date"
+                value={staff.birthdate ?? ""}
+                onChange={(v) => updateField("birthdate", v)}
+                max={new Date().toISOString().split("T")[0]}
+              />
+            </div>
 
-          <Field
-            label="Email Address"
-            value={staff.email_address ?? ""}
-            onChange={(v) => updateField("email_address", v)}
-          />
-          <PhoneField
-            label="Phone"
-            value={staff.phone_number ?? ""}
-            onChange={(v) => updateField("phone_number", v)}
-          />
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Gender"
+                value={staff.gender ?? ""}
+                onChange={(v) => updateField("gender", v || null)}
+                options={[
+                  { value: "", label: "Select…" },
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                ]}
+              />
+              <Select
+                label="Role"
+                value={staff.role}
+                onChange={(v) => updateField("role", v)}
+                options={[
+                  { value: "admin", label: "Admin" },
+                  { value: "cashier", label: "Cashier" },
+                  { value: "attendant", label: "Attendant" },
+                  { value: "rider", label: "Rider" },
+                  { value: "cashier_attendant", label: "Cashier & Attendant" },
+                ]}
+              />
+            </div>
 
-          <div className="col-span-2">
+            <PhoneField
+              label="Phone"
+              value={staff.phone_number ?? ""}
+              onChange={(v) => updateField("phone_number", v)}
+            />
+
+            <Field
+              label="Email Address"
+              value={staff.email_address ?? ""}
+              onChange={(v) => updateField("email_address", v)}
+            />
+
             <Field
               label="Address"
               value={staff.address ?? ""}
               onChange={(v) => updateField("address", v)}
             />
-          </div>
 
-          {isNewStaff && (
-            <div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-              <strong>📧 Account Creation:</strong> An invitation link will be
-              sent to the email address. Staff can set their password and
-              activate their account through the link.
+            {isNewStaff && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                <strong>📧 Account Creation:</strong> An invitation link will be
+                sent to the email address.
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={staff.is_active}
+                onChange={(e) => updateField("is_active", e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <label className="text-xs font-medium text-gray-900">
+                Staff member is active
+              </label>
             </div>
-          )}
-
-          <div className="col-span-2 flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={staff.is_active}
-              onChange={(e) => updateField("is_active", e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300"
-            />
-            <label className="text-sm">Active</label>
           </div>
         </div>
-      </div>
 
-      <div className="p-8 border-t border-gray-200 flex justify-end gap-4">
-        <button
-          onClick={onCancel}
-          className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 text-base font-medium w-24"
-          disabled={saving}
-        >
-          Cancel
-        </button>
-
-        {!isNewStaff && (
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-2 justify-end shrink-0">
           <button
-            onClick={remove}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 text-base font-medium w-24"
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
             disabled={saving}
           >
-            Delete
+            Cancel
           </button>
-        )}
-
-        {hasChanges && (
-          <button
-            onClick={save}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-base font-medium w-24"
-            disabled={saving}
-          >
-            {saving ? "Saving..." : isNewStaff ? "Add" : "Save"}
-          </button>
-        )}
+          {!isNewStaff && (
+            <button
+              onClick={remove}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-50"
+              disabled={saving}
+            >
+              Delete
+            </button>
+          )}
+          {hasChanges && (
+            <button
+              onClick={save}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : isNewStaff ? "Add" : "Save"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -661,14 +770,14 @@ function PhoneField({
 
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <input
         type="tel"
         value={value}
         onChange={(e) => {
-          // Only allow digits
           const digits = e.target.value.replace(/\D/g, "");
-          // Limit to 11 digits for Philippine format
           if (digits.length <= 11) {
             onChange(digits);
           }
@@ -676,7 +785,7 @@ function PhoneField({
         maxLength={11}
         disabled={disabled}
         placeholder="09XXXXXXXXX"
-        className={`border px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500 ${
+        className={`border px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500 ${
           value && !isValid
             ? "border-red-300 focus:ring-red-500"
             : "border-gray-300 focus:ring-blue-500"
@@ -709,14 +818,16 @@ function Field({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         max={max}
-        className="border border-gray-300 px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+        className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
       />
     </div>
   );
@@ -736,11 +847,13 @@ function Select({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-gray-900 mb-1">
+        {label}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-gray-300 px-3 py-2 rounded-lg mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

@@ -71,39 +71,54 @@ function Step1ServiceType({ pos }: { pos: any }) {
 function Step2Baskets({ pos }: { pos: any }) {
   // Helper to get service info from DB
   const getServiceInfo = (serviceType: string, tier?: string) => {
-    const matching = pos.services.filter((s: any) => s.service_type === serviceType);
+    const matching = pos.services.filter(
+      (s: any) => s.service_type === serviceType,
+    );
     if (!matching.length) return { name: "", price: 0, description: "" };
-    
-    const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+
+    const service =
+      matching.find((s: any) => !tier || s.tier === tier) || matching[0];
     return {
       name: service.name || "",
       price: service.base_price || 0,
-      description: service.description || ""
+      description: service.description || "",
     };
   };
 
   // Helper to get additional dry time info from dry service modifiers
   const getAdditionalDryTimeInfo = () => {
     const dryService = pos.services.find((s: any) => s.service_type === "dry");
-    if (!dryService) return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
-    
+    if (!dryService)
+      return {
+        price_per_increment: 15,
+        minutes_per_increment: 8,
+        max_increments: 3,
+      };
+
     try {
-      const modifiers = typeof dryService.modifiers === "string" 
-        ? JSON.parse(dryService.modifiers)
-        : dryService.modifiers;
-      
+      const modifiers =
+        typeof dryService.modifiers === "string"
+          ? JSON.parse(dryService.modifiers)
+          : dryService.modifiers;
+
       if (modifiers?.additional_dry_time) {
         return {
-          price_per_increment: modifiers.additional_dry_time.price_per_increment || 15,
-          minutes_per_increment: modifiers.additional_dry_time.minutes_per_increment || 8,
-          max_increments: modifiers.additional_dry_time.max_increments || 3
+          price_per_increment:
+            modifiers.additional_dry_time.price_per_increment || 15,
+          minutes_per_increment:
+            modifiers.additional_dry_time.minutes_per_increment || 8,
+          max_increments: modifiers.additional_dry_time.max_increments || 3,
         };
       }
     } catch (e) {
       console.error("Error parsing dry service modifiers:", e);
     }
-    
-    return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
+
+    return {
+      price_per_increment: 15,
+      minutes_per_increment: 8,
+      max_increments: 3,
+    };
   };
 
   if (pos.baskets.length === 0) {
@@ -160,16 +175,18 @@ function Step2Baskets({ pos }: { pos: any }) {
                   value: "basic",
                   label: `Basic`,
                   emoji: "🌊",
-                  tier: "basic"
+                  tier: "basic",
                 },
                 {
                   value: "premium",
                   label: `Premium`,
                   emoji: "✨",
-                  tier: "premium"
+                  tier: "premium",
                 },
               ].map((opt) => {
-                const info = opt.tier ? getServiceInfo("wash", opt.tier) : { name: "", price: 0 };
+                const info = opt.tier
+                  ? getServiceInfo("wash", opt.tier)
+                  : { name: "", price: 0 };
                 return (
                   <button
                     key={opt.value}
@@ -223,16 +240,18 @@ function Step2Baskets({ pos }: { pos: any }) {
                   value: "basic",
                   label: "Basic",
                   emoji: "💨",
-                  tier: "basic"
+                  tier: "basic",
                 },
                 {
                   value: "premium",
                   label: "Premium",
                   emoji: "🔥",
-                  tier: "premium"
+                  tier: "premium",
                 },
               ].map((opt) => {
-                const info = opt.tier ? getServiceInfo("dry", opt.tier) : { name: "", price: 0 };
+                const info = opt.tier
+                  ? getServiceInfo("dry", opt.tier)
+                  : { name: "", price: 0 };
                 return (
                   <button
                     key={opt.value}
@@ -279,7 +298,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                       <div className="text-sm font-semibold text-slate-700">
                         ₱
                         {(
-                          ((activeBasket.services?.additionalDryMinutes || 0) / minutes) *
+                          ((activeBasket.services?.additionalDryMinutes || 0) /
+                            minutes) *
                           price
                         ).toFixed(2)}
                       </div>
@@ -307,7 +327,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                           if (activeBasket.services?.dry !== "off") {
                             const curr =
                               activeBasket.services?.additionalDryMinutes || 0;
-                            const maxMinutes = minutes * dryTimeInfo.max_increments;
+                            const maxMinutes =
+                              minutes * dryTimeInfo.max_increments;
                             if (curr < maxMinutes)
                               pos.updateActiveBasketService?.(
                                 "additionalDryMinutes",
@@ -346,15 +367,17 @@ function Step2Baskets({ pos }: { pos: any }) {
                     <div className="text-center min-w-20 border-l border-slate-300 pl-4">
                       <div className="text-sm font-semibold text-slate-700">
                         ₱
-                        {((activeBasket.services?.iron_weight_kg || 0) * ironInfo.price).toFixed(
-                          2,
-                        )}
+                        {(
+                          (activeBasket.services?.iron_weight_kg || 0) *
+                          ironInfo.price
+                        ).toFixed(2)}
                       </div>
                     </div>
                     <div className="flex gap-2 border-l border-slate-300 pl-4 h-full">
                       <button
                         onClick={() => {
-                          const curr = activeBasket.services?.iron_weight_kg || 0;
+                          const curr =
+                            activeBasket.services?.iron_weight_kg || 0;
                           if (curr > 0) {
                             const newVal = curr === 2 ? 0 : curr - 1;
                             pos.updateActiveBasketService?.(
@@ -369,7 +392,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                       </button>
                       <button
                         onClick={() => {
-                          const curr = activeBasket.services?.iron_weight_kg || 0;
+                          const curr =
+                            activeBasket.services?.iron_weight_kg || 0;
                           if (curr < 8) {
                             const newVal = curr === 0 ? 2 : curr + 1;
                             pos.updateActiveBasketService?.(
@@ -393,8 +417,10 @@ function Step2Baskets({ pos }: { pos: any }) {
           <div className="flex-1 flex flex-col">
             {(() => {
               // Get plastic bags from products (it should be a product item)
-              const plasticBagProduct = pos.products.find((p: any) => 
-                p.item_name.toLowerCase().includes("bag") || p.item_name.toLowerCase().includes("plastic")
+              const plasticBagProduct = pos.products.find(
+                (p: any) =>
+                  p.item_name.toLowerCase().includes("bag") ||
+                  p.item_name.toLowerCase().includes("plastic"),
               );
               const bagPrice = plasticBagProduct?.unit_price || 5;
               return (
@@ -411,7 +437,10 @@ function Step2Baskets({ pos }: { pos: any }) {
                     </div>
                     <div className="text-center min-w-20 border-l border-slate-300 pl-4">
                       <div className="text-sm font-semibold text-slate-700">
-                        ₱{((activeBasket.services?.plastic_bags || 0) * bagPrice).toFixed(2)}
+                        ₱
+                        {(
+                          (activeBasket.services?.plastic_bags || 0) * bagPrice
+                        ).toFixed(2)}
                       </div>
                     </div>
                     <div className="flex gap-2 border-l border-slate-300 pl-4 h-full">
@@ -419,7 +448,10 @@ function Step2Baskets({ pos }: { pos: any }) {
                         onClick={() => {
                           const curr = activeBasket.services?.plastic_bags || 0;
                           if (curr > 0)
-                            pos.updateActiveBasketService?.("plastic_bags", curr - 1);
+                            pos.updateActiveBasketService?.(
+                              "plastic_bags",
+                              curr - 1,
+                            );
                         }}
                         className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 font-bold text-sm rounded flex items-center justify-center"
                       >
@@ -428,7 +460,10 @@ function Step2Baskets({ pos }: { pos: any }) {
                       <button
                         onClick={() => {
                           const curr = activeBasket.services?.plastic_bags || 0;
-                          pos.updateActiveBasketService?.("plastic_bags", curr + 1);
+                          pos.updateActiveBasketService?.(
+                            "plastic_bags",
+                            curr + 1,
+                          );
                         }}
                         className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 font-bold text-sm rounded flex items-center justify-center"
                       >
@@ -826,7 +861,9 @@ function Step4Customer({ pos }: { pos: any }) {
 function Step5Handling({ pos }: { pos: any }) {
   // Get delivery fee from services table
   const getDeliveryFeeDefault = () => {
-    const deliveryService = pos.services.find((s: any) => s.service_type === "delivery");
+    const deliveryService = pos.services.find(
+      (s: any) => s.service_type === "delivery",
+    );
     return deliveryService?.base_price || 50;
   };
 
@@ -938,49 +975,58 @@ function OrderSummary({
   setKeypadFocus: any;
 }) {
   const breakdown = pos.calculateOrderTotal();
-  const steps = [
-    "Service",
-    "Baskets",
-    "Products",
-    "Customer",
-    "Handling",
-  ];
+  const steps = ["Service", "Baskets", "Products", "Customer", "Handling"];
 
   // Helper to get service info from DB
   const getServiceInfo = (serviceType: string, tier?: string) => {
-    const matching = pos.services.filter((s: any) => s.service_type === serviceType);
+    const matching = pos.services.filter(
+      (s: any) => s.service_type === serviceType,
+    );
     if (!matching.length) return { name: "", price: 0, description: "" };
-    
-    const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+
+    const service =
+      matching.find((s: any) => !tier || s.tier === tier) || matching[0];
     return {
       name: service.name || "",
       price: service.base_price || 0,
-      description: service.description || ""
+      description: service.description || "",
     };
   };
 
   // Helper to get additional dry time info from dry service modifiers
   const getAdditionalDryTimeInfo = () => {
     const dryService = pos.services.find((s: any) => s.service_type === "dry");
-    if (!dryService) return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
-    
+    if (!dryService)
+      return {
+        price_per_increment: 15,
+        minutes_per_increment: 8,
+        max_increments: 3,
+      };
+
     try {
-      const modifiers = typeof dryService.modifiers === "string" 
-        ? JSON.parse(dryService.modifiers)
-        : dryService.modifiers;
-      
+      const modifiers =
+        typeof dryService.modifiers === "string"
+          ? JSON.parse(dryService.modifiers)
+          : dryService.modifiers;
+
       if (modifiers?.additional_dry_time) {
         return {
-          price_per_increment: modifiers.additional_dry_time.price_per_increment || 15,
-          minutes_per_increment: modifiers.additional_dry_time.minutes_per_increment || 8,
-          max_increments: modifiers.additional_dry_time.max_increments || 3
+          price_per_increment:
+            modifiers.additional_dry_time.price_per_increment || 15,
+          minutes_per_increment:
+            modifiers.additional_dry_time.minutes_per_increment || 8,
+          max_increments: modifiers.additional_dry_time.max_increments || 3,
         };
       }
     } catch (e) {
       console.error("Error parsing dry service modifiers:", e);
     }
-    
-    return { price_per_increment: 15, minutes_per_increment: 8, max_increments: 3 };
+
+    return {
+      price_per_increment: 15,
+      minutes_per_increment: 8,
+      max_increments: 3,
+    };
   };
 
   return (
@@ -1017,40 +1063,82 @@ function OrderSummary({
                   </div>
                   {basket?.services && (
                     <>
-                      {basket.services.wash && basket.services.wash !== "off" && (
-                        <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>🧺 Wash ({basket.services.wash})</span>
-                          <span className="font-semibold">₱{getServiceInfo("wash", basket.services.wash).price.toFixed(2)}</span>
-                        </div>
-                      )}
+                      {basket.services.wash &&
+                        basket.services.wash !== "off" && (
+                          <div className="flex justify-between text-xs ml-3 text-slate-600">
+                            <span>🧺 Wash ({basket.services.wash})</span>
+                            <span className="font-semibold">
+                              ₱
+                              {getServiceInfo(
+                                "wash",
+                                basket.services.wash,
+                              ).price.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       {basket.services.spin && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>🌀 Spin</span>
-                          <span className="font-semibold">₱{getServiceInfo("spin").price.toFixed(2)}</span>
+                          <span className="font-semibold">
+                            ₱{getServiceInfo("spin").price.toFixed(2)}
+                          </span>
                         </div>
                       )}
                       {basket.services.dry && basket.services.dry !== "off" && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>💨 Dry ({basket.services.dry})</span>
-                          <span className="font-semibold">₱{getServiceInfo("dry", basket.services.dry).price.toFixed(2)}</span>
+                          <span className="font-semibold">
+                            ₱
+                            {getServiceInfo(
+                              "dry",
+                              basket.services.dry,
+                            ).price.toFixed(2)}
+                          </span>
                         </div>
                       )}
                       {(basket.services.additionalDryMinutes || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>⏱️ Extra Dry ({basket.services.additionalDryMinutes}m)</span>
-                          <span className="font-semibold">₱{(((basket.services.additionalDryMinutes || 0) / getAdditionalDryTimeInfo().minutes_per_increment) * getAdditionalDryTimeInfo().price_per_increment).toFixed(2)}</span>
+                          <span>
+                            ⏱️ Extra Dry ({basket.services.additionalDryMinutes}
+                            m)
+                          </span>
+                          <span className="font-semibold">
+                            ₱
+                            {(
+                              ((basket.services.additionalDryMinutes || 0) /
+                                getAdditionalDryTimeInfo()
+                                  .minutes_per_increment) *
+                              getAdditionalDryTimeInfo().price_per_increment
+                            ).toFixed(2)}
+                          </span>
                         </div>
                       )}
                       {(basket.services.iron_weight_kg || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>👔 Iron ({basket.services.iron_weight_kg}kg)</span>
-                          <span className="font-semibold">₱{((basket.services.iron_weight_kg || 0) * getServiceInfo("iron").price).toFixed(2)}</span>
+                          <span>
+                            👔 Iron ({basket.services.iron_weight_kg}kg)
+                          </span>
+                          <span className="font-semibold">
+                            ₱
+                            {(
+                              (basket.services.iron_weight_kg || 0) *
+                              getServiceInfo("iron").price
+                            ).toFixed(2)}
+                          </span>
                         </div>
                       )}
                       {(basket.services.plastic_bags || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>🛍️ Bags ({basket.services.plastic_bags}pc)</span>
-                          <span className="font-semibold">₱{((basket.services.plastic_bags || 0) * getServiceInfo("plastic_bags").price).toFixed(2)}</span>
+                          <span>
+                            🛍️ Bags ({basket.services.plastic_bags}pc)
+                          </span>
+                          <span className="font-semibold">
+                            ₱
+                            {(
+                              (basket.services.plastic_bags || 0) *
+                              getServiceInfo("plastic_bags").price
+                            ).toFixed(2)}
+                          </span>
                         </div>
                       )}
                     </>
@@ -1115,9 +1203,80 @@ function OrderSummary({
           <span>VAT (12%)</span>
           <span>₱{breakdown.summary.vat_amount.toFixed(2)}</span>
         </div>
+
+        {/* LOYALTY POINTS SECTION */}
+        {pos.customer && (pos.customer.loyalty_points || 0) > 0 && (
+          <div className="border border-[#c41d7f] rounded p-2 bg-pink-50 space-y-2">
+            <div className="text-xs text-slate-600 font-semibold uppercase">
+              💎 Loyalty Points: {pos.customer.loyalty_points || 0} pts
+            </div>
+            
+            {/* Tier 1: 10 points for 5% discount */}
+            {(pos.customer.loyalty_points || 0) >= 10 && (
+              <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
+                <input
+                  type="radio"
+                  name="loyaltyTier"
+                  checked={pos.loyaltyDiscountTier === 'tier1'}
+                  onChange={() => pos.setLoyaltyDiscountTier('tier1')}
+                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
+                />
+                <div className="flex-1 text-xs">
+                  <div className="font-semibold text-slate-900">10 pts → 5% OFF</div>
+                  <div className="text-slate-600">Save ₱{(breakdown.summary.total * 0.05).toFixed(2)}</div>
+                </div>
+              </label>
+            )}
+            
+            {/* Tier 2: 20 points for 15% discount */}
+            {(pos.customer.loyalty_points || 0) >= 20 && (
+              <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
+                <input
+                  type="radio"
+                  name="loyaltyTier"
+                  checked={pos.loyaltyDiscountTier === 'tier2'}
+                  onChange={() => pos.setLoyaltyDiscountTier('tier2')}
+                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
+                />
+                <div className="flex-1 text-xs">
+                  <div className="font-semibold text-slate-900">20 pts → 15% OFF</div>
+                  <div className="text-slate-600">Save ₱{(breakdown.summary.total * 0.15).toFixed(2)}</div>
+                </div>
+              </label>
+            )}
+            
+            {/* No discount option */}
+            <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
+              <input
+                type="radio"
+                name="loyaltyTier"
+                checked={pos.loyaltyDiscountTier === null}
+                onChange={() => pos.setLoyaltyDiscountTier(null)}
+                className="w-4 h-4 accent-[#c41d7f] rounded"
+              />
+              <span className="text-xs font-semibold text-slate-700">
+                Don't use loyalty points
+              </span>
+            </label>
+          </div>
+        )}
+
+        {pos.loyaltyDiscountTier && pos.customer && (
+          <div className="flex justify-between text-amber-700 font-semibold text-sm">
+            <span>Loyalty Discount</span>
+            <span>-₱{(pos.loyaltyDiscountTier === 'tier1' ? breakdown.summary.total * 0.05 : breakdown.summary.total * 0.15).toFixed(2)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between font-bold text-base text-amber-700 bg-slate-100 rounded px-2 py-1">
           <span>TOTAL</span>
-          <span>₱{breakdown.summary.total.toFixed(2)}</span>
+          <span>₱{(() => {
+            let discountPercent = 0;
+            if (pos.loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
+            if (pos.loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
+            const totalAmount = pos.customer && pos.loyaltyDiscountTier ? breakdown.summary.total * (1 - discountPercent) : breakdown.summary.total;
+            return totalAmount.toFixed(2);
+          })()}</span>
         </div>
 
         <div className="text-xs font-bold uppercase tracking-wider text-slate-500 pt-2">
@@ -1132,7 +1291,9 @@ function OrderSummary({
               onChange={() => pos.setPaymentMethod("cash")}
               className="w-4 h-4 accent-[#c41d7f]"
             />
-            <span className="text-sm font-semibold text-slate-900">💵 Cash</span>
+            <span className="text-sm font-semibold text-slate-900">
+              💵 Cash
+            </span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
@@ -1142,7 +1303,9 @@ function OrderSummary({
               onChange={() => pos.setPaymentMethod("gcash")}
               className="w-4 h-4 accent-[#c41d7f]"
             />
-            <span className="text-sm font-semibold text-slate-900">💳 GCash</span>
+            <span className="text-sm font-semibold text-slate-900">
+              💳 GCash
+            </span>
           </label>
         </div>
 
@@ -1168,12 +1331,21 @@ function OrderSummary({
               onBlur={() => setKeypadFocus(null)}
               className="w-full border-2 border-slate-300 rounded px-3 py-2 text-sm"
             />
-            {pos.amountPaid > 0 && pos.amountPaid >= breakdown.summary.total && (
-              <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
-                Change: ₱
-                {Math.max(0, pos.amountPaid - breakdown.summary.total).toFixed(2)}
-              </div>
-            )}
+            {pos.amountPaid > 0 && (() => {
+              let discountPercent = 0;
+              if (pos.loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
+              if (pos.loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
+              const totalAmount = pos.customer && pos.loyaltyDiscountTier ? breakdown.summary.total * (1 - discountPercent) : breakdown.summary.total;
+              return pos.amountPaid >= totalAmount ? (
+                <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
+                  Change: ₱
+                  {Math.max(
+                    0,
+                    pos.amountPaid - totalAmount,
+                  ).toFixed(2)}
+                </div>
+              ) : null;
+            })()}
           </div>
         )}
 
@@ -1238,8 +1410,8 @@ function OrderSummary({
               }}
               className="py-2 bg-slate-200 hover:bg-slate-300 rounded font-bold"
             >
-        0
-      </button>
+              0
+            </button>
             <button
               onClick={() => {
                 if (pos.paymentMethod === "cash") {

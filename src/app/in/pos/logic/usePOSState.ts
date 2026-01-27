@@ -13,6 +13,64 @@ const createNewBasket = (basketNumber: number): Basket => ({
   subtotal: 0,
 });
 
+// Format receipt content for display
+function formatOrderReceipt(orderId: string, breakdown: any, loyaltyTier: null | 'tier1' | 'tier2'): string {
+  const now = new Date().toISOString();
+  let receipt = `\n========================================\n`;
+  receipt += `           KATFLIX LAUNDRY RECEIPT\n`;
+  receipt += `========================================\n\n`;
+  receipt += `Order ID: ${orderId}\n`;
+  receipt += `Date: ${now}\n\n`;
+  
+  // Baskets & Services
+  if (breakdown.baskets && breakdown.baskets.length > 0) {
+    receipt += `--------LAUNDRY SERVICES--------\n`;
+    breakdown.baskets.forEach((basket: any, idx: number) => {
+      receipt += `Basket ${idx + 1} (${basket.weight_kg}kg): ₱${basket.subtotal.toFixed(2)}\n`;
+    });
+    receipt += `\n`;
+  }
+  
+  // Products
+  if (breakdown.items && breakdown.items.length > 0) {
+    receipt += `--------PRODUCTS--------\n`;
+    breakdown.items.forEach((item: any) => {
+      receipt += `${item.product_name} x${item.quantity}\n`;
+      receipt += `  ₱${item.unit_price.toFixed(2)} × ${item.quantity} = ₱${(item.unit_price * item.quantity).toFixed(2)}\n`;
+    });
+    receipt += `\n`;
+  }
+  
+  // Summary
+  receipt += `--------SUMMARY--------\n`;
+  if (breakdown.summary.subtotal_products > 0) {
+    receipt += `Products:        ₱${breakdown.summary.subtotal_products.toFixed(2)}\n`;
+  }
+  if (breakdown.summary.subtotal_services > 0) {
+    receipt += `Services:        ₱${breakdown.summary.subtotal_services.toFixed(2)}\n`;
+  }
+  if (breakdown.summary.staff_service_fee > 0) {
+    receipt += `Staff Fee:       ₱${breakdown.summary.staff_service_fee.toFixed(2)}\n`;
+  }
+  if (breakdown.summary.delivery_fee > 0) {
+    receipt += `Delivery Fee:    ₱${breakdown.summary.delivery_fee.toFixed(2)}\n`;
+  }
+  
+  receipt += `VAT (12%):       ₱${breakdown.summary.vat_amount.toFixed(2)}\n`;
+  
+  // Loyalty Discount
+  if (breakdown.summary.loyalty_discount && breakdown.summary.loyalty_discount > 0) {
+    const discountPercent = loyaltyTier === 'tier1' ? '5%' : '15%';
+    receipt += `\nLoyalty Discount (${discountPercent}): -₱${breakdown.summary.loyalty_discount.toFixed(2)}\n`;
+  }
+  
+  receipt += `\n========================================\n`;
+  receipt += `TOTAL: ₱${breakdown.summary.total.toFixed(2)}\n`;
+  receipt += `========================================\n`;
+  
+  return receipt;
+}
+
 export function usePOSState() {
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(0);
   const [serviceType, setServiceType] = useState<ServiceType>("self_service");
@@ -38,6 +96,7 @@ export function usePOSState() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastOrderId, setLastOrderId] = useState<string | null>(null);
   const [receiptContent, setReceiptContent] = useState("");
+  const [loyaltyDiscountTier, setLoyaltyDiscountTier] = useState<null | 'tier1' | 'tier2'>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -115,7 +174,7 @@ export function usePOSState() {
   }, []);
 
   const selectCustomer = useCallback((customer: POSCustomer) => {
-    setCustomer({ id: customer.id, first_name: customer.first_name, last_name: customer.last_name, phone_number: customer.phone_number, email: customer.email_address });
+    setCustomer({ id: customer.id, first_name: customer.first_name, last_name: customer.last_name, phone_number: customer.phone_number, email: customer.email_address, loyalty_points: customer.loyalty_points || 0 });
     setCustomerSearch("");
     setCustomerSuggestions([]);
     setShowCustomerForm(false);
@@ -148,16 +207,37 @@ export function usePOSState() {
   const isPaymentValid = useCallback((): boolean => {
     if (paymentMethod === "cash") {
       const breakdown = calculateOrderTotal();
-      return isAmountSufficient(amountPaid, breakdown.summary.total);
+      let discountPercent = 0;
+      if (loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
+      if (loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
+      const totalAmount = customer && loyaltyDiscountTier ? breakdown.summary.total * (1 - discountPercent) : breakdown.summary.total;
+      return isAmountSufficient(amountPaid, totalAmount);
     }
     if (paymentMethod === "gcash") return gcashReference.trim().length > 0;
     return false;
-  }, [paymentMethod, amountPaid, gcashReference, calculateOrderTotal]);
+  }, [paymentMethod, amountPaid, gcashReference, calculateOrderTotal, loyaltyDiscountTier, customer]);
 
   const createOrder = useCallback(async () => {
     setIsProcessing(true);
     try {
-      const breakdown = calculateOrderTotal();
+      let breakdown = calculateOrderTotal();
+      let discountPercent = 0;
+      
+      // Apply loyalty discount tier if selected
+      if (loyaltyDiscountTier && customer) {
+        if (loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
+        if (loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
+        const discountAmount = breakdown.summary.total * discountPercent;
+        breakdown = {
+          ...breakdown,
+          summary: {
+            ...breakdown.summary,
+            loyalty_discount: discountAmount,
+            total: breakdown.summary.total - discountAmount,
+          },
+        };
+      }
+      
       const handling: OrderHandling = {
         service_type: serviceType,
         handling_type: deliveryType,
@@ -184,6 +264,9 @@ export function usePOSState() {
           },
           breakdown: breakdown,
           handling: handling,
+          loyalty: {
+            discount_tier: loyaltyDiscountTier,
+          },
         }),
       });
 
@@ -198,7 +281,10 @@ export function usePOSState() {
       }
 
       setLastOrderId(responseData.order_id);
-      setReceiptContent(JSON.stringify(breakdown, null, 2));
+      
+      // Format receipt content with all order details including loyalty discount
+      const formattedReceipt = formatOrderReceipt(responseData.order_id, breakdown, loyaltyDiscountTier);
+      setReceiptContent(formattedReceipt);
       setShowReceiptModal(true);
       resetOrder();
     } catch (error) {
@@ -207,7 +293,7 @@ export function usePOSState() {
     } finally {
       setIsProcessing(false);
     }
-  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer]);
+  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer, loyaltyDiscountTier]);
 
   const resetOrder = useCallback(() => {
     setStep(0);
@@ -224,6 +310,7 @@ export function usePOSState() {
     setPaymentMethod("cash");
     setAmountPaid(0);
     setGcashReference("");
+    setLoyaltyDiscountTier(null);
   }, []);
 
   return {
@@ -233,6 +320,7 @@ export function usePOSState() {
     customer, setCustomer, customerSearch, setCustomerSearch, customerSuggestions, selectCustomer, clearCustomer, showCustomerForm, setShowCustomerForm, newCustomerForm, setNewCustomerForm, createNewCustomer,
     deliveryType, setDeliveryType, deliveryAddress, setDeliveryAddress, deliveryFeeOverride, setDeliveryFeeOverride, specialInstructions, setSpecialInstructions,
     paymentMethod, setPaymentMethod, amountPaid, setAmountPaid, gcashReference, setGcashReference,
+    loyaltyDiscountTier, setLoyaltyDiscountTier,
     calculateOrderTotal, isPaymentValid, createOrder, resetOrder, isProcessing,
     showReceiptModal, setShowReceiptModal, lastOrderId, receiptContent, services,
   };
