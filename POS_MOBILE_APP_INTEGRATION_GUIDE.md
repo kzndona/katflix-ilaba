@@ -1,6 +1,7 @@
 # POS Mobile App Integration Guide
 
 ## Overview
+
 This document provides complete specifications for integrating the Katflix Laundry POS system with a mobile app. The POS system follows a 5-step order creation workflow with comprehensive API endpoints for data loading and order processing.
 
 ---
@@ -8,6 +9,7 @@ This document provides complete specifications for integrating the Katflix Laund
 ## 1. ORDER CREATION PROCESS
 
 ### Flow Overview
+
 ```
 Step 1: Service Type Selection
     ↓
@@ -25,18 +27,22 @@ Receipt Generation
 ```
 
 ### Step 1: Service Type Selection
+
 **Purpose**: Determine if order is self-service or staff-assisted
 
 **User Input**:
+
 - Select `self_service` (customer handles laundry) OR
 - Select `staff_service` (staff handles laundry, +₱40.00 fee added to order)
 
 **Data Stored**:
+
 ```typescript
 pos.serviceType: "self_service" | "staff_service"
 ```
 
 **UI Guidance**:
+
 - Large clickable buttons showing both options
 - Visual distinction with emoji icons (👤 for self-service, 👥 for staff-service)
 - Clear display of fee for staff service
@@ -44,9 +50,11 @@ pos.serviceType: "self_service" | "staff_service"
 ---
 
 ### Step 2: Basket Configuration (Services)
+
 **Purpose**: Configure laundry services for one or more baskets
 
 **Basket Services Options** (per basket):
+
 - **Wash**: `off` | `basic` | `premium`
 - **Wash Cycles**: 1, 2, or 3 (only if wash != "off")
 - **Dry**: `off` | `basic` | `premium`
@@ -57,12 +65,14 @@ pos.serviceType: "self_service" | "staff_service"
 - **Plastic Bags**: quantity (integer, 0 or more)
 
 **Key Rules**:
+
 - Each basket can hold max 8kg of laundry
 - Iron requires minimum 2kg (automatically skipped if < 2kg)
 - Plastic bags are deducted from inventory and charged at product price
 - Multiple baskets auto-created when weight exceeds 8kg
 
 **Data Stored**:
+
 ```typescript
 pos.baskets: Array<{
   basket_number: number;
@@ -83,6 +93,7 @@ pos.baskets: Array<{
 ```
 
 **Pricing Calculation**:
+
 - Wash (basic/premium): Fixed price from `services` table
 - Dry (basic/premium): Fixed price from `services` table
 - Spin: ₱20.00
@@ -92,6 +103,7 @@ pos.baskets: Array<{
 - Plastic Bags: Unit price from `products` table (₱0.50 default)
 
 **UI Guidance**:
+
 - Show service selection with pricing for each option
 - Display running total for each basket
 - Allow adding multiple baskets
@@ -101,28 +113,34 @@ pos.baskets: Array<{
 ---
 
 ### Step 3: Products Selection
+
 **Purpose**: Add retail products to the order (detergent, fabric softener, etc.)
 
 **Available Products**:
+
 - Loaded from `products` table (is_active = true)
 - Includes: id, item_name, unit_price, quantity_in_stock, image_url, reorder_level
 
 **User Input**:
+
 - Select product
 - Enter quantity
 - Add to order
 
 **Data Stored**:
+
 ```typescript
 pos.selectedProducts: Record<string, number> // {product_id: quantity}
 ```
 
 **Key Rules**:
+
 - Check inventory before allowing order
 - Inventory deducted from `products.quantity` table when order created
 - Product transaction logged in `product_transactions` table
 
 **UI Guidance**:
+
 - Display product grid/list with images and prices
 - Show "In Stock" status with quantity available
 - Spinner or + button to add products and adjust quantities
@@ -131,24 +149,28 @@ pos.selectedProducts: Record<string, number> // {product_id: quantity}
 ---
 
 ### Step 4: Customer Information
+
 **Purpose**: Associate order with customer or create new customer
 
 **Two Paths**:
 
 **Path A: Existing Customer**
+
 - Search for customer by phone number or name
 - Select from list
 - Load customer loyalty points
 
 **Path B: New Customer**
+
 - Enter first name, last name, phone number, email
 - Create new customer record in database
 - Start with 0 loyalty points
 
 **Customer Data Loaded**:
+
 ```typescript
 {
-  id: string (UUID);
+  id: string(UUID);
   first_name: string;
   last_name: string;
   phone_number: string;
@@ -158,6 +180,7 @@ pos.selectedProducts: Record<string, number> // {product_id: quantity}
 ```
 
 **Loyalty Feature**:
+
 - Display customer's current loyalty points
 - Show available redemption tiers:
   - **Tier 1**: 10 points = 5% discount
@@ -167,6 +190,7 @@ pos.selectedProducts: Record<string, number> // {product_id: quantity}
 - Discount applied at order creation
 
 **Data Stored**:
+
 ```typescript
 pos.customer: CustomerData; // Selected/created customer
 pos.loyaltyDiscountTier: null | 'tier1' | 'tier2'; // Selected discount
@@ -179,6 +203,7 @@ pos.newCustomerForm: { // For new customer
 ```
 
 **UI Guidance**:
+
 - Customer search with autocomplete
 - Form fields for new customer creation
 - Display loyalty points prominently
@@ -188,29 +213,35 @@ pos.newCustomerForm: { // For new customer
 ---
 
 ### Step 5: Handling & Payment
+
 **Purpose**: Configure delivery/pickup and payment method
 
 **Service Type Options**:
+
 - **Pickup**: Customer picks up order (no delivery fee)
 - **Delivery**: Staff delivers to address (₱50.00 minimum fee, can override)
 
 **If Delivery Selected**:
+
 - Enter delivery address
 - Optional: Override delivery fee (minimum ₱50.00)
 
 **Payment Method Options**:
-- **Cash**: 
+
+- **Cash**:
   - Enter amount paid
   - Auto-calculate change
   - Show required payment
-- **GCash**: 
+- **GCash**:
   - Enter GCash reference number
   - Validate reference provided
 
 **Special Instructions**:
+
 - Optional: Add order-level notes (e.g., "Dry clean only", "Special folding")
 
 **Data Stored**:
+
 ```typescript
 pos.deliveryType: "pickup" | "delivery";
 pos.deliveryAddress: string | null; // If delivery
@@ -222,6 +253,7 @@ pos.gcashReference: string; // If GCash
 ```
 
 **UI Guidance**:
+
 - Large buttons for pickup vs. delivery
 - Conditional address input field
 - Payment method selector
@@ -236,7 +268,9 @@ pos.gcashReference: string; // If GCash
 ### Key Display Elements
 
 #### Order Summary Panel
+
 Located in sidebar, shows real-time calculation of:
+
 - **Baskets** (grouped)
   - Services breakdown (Wash, Dry, Spin, Iron, Fold, Dry Time, Bags)
   - Subtotal per basket
@@ -252,12 +286,14 @@ Located in sidebar, shows real-time calculation of:
   - Final total after discount
 
 #### Step Navigation
+
 - Numbered steps 1-5
 - Current step highlighted
 - Can jump backward to previous steps
 - Cannot jump forward until current step complete
 
 #### Real-Time Pricing
+
 - All prices calculated and displayed immediately
 - Updates when:
   - Services changed
@@ -267,6 +303,7 @@ Located in sidebar, shows real-time calculation of:
   - Delivery method changed
 
 ### Mobile-Specific Considerations
+
 - **Responsive Layout**: Stack vertically on mobile, sidebar on desktop
 - **Touch-Friendly**: Large buttons and input fields
 - **Minimal Scrolling**: Keep critical info visible
@@ -278,12 +315,15 @@ Located in sidebar, shows real-time calculation of:
 ## 3. API ENDPOINTS: DATA LOADING
 
 ### Initial POS Load
+
 These endpoints are called when POS page first loads or when data needs refresh.
 
 #### GET `/api/auth/user`
+
 **Purpose**: Get authenticated staff user information
 
 **Request**:
+
 ```
 GET /api/auth/user
 Headers: {
@@ -293,6 +333,7 @@ Credentials: include
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "staff_id": "uuid",
@@ -302,6 +343,7 @@ Credentials: include
 ```
 
 **Response** (401 Unauthorized):
+
 ```json
 {
   "error": "Unauthorized"
@@ -313,9 +355,11 @@ Credentials: include
 ---
 
 #### GET `/api/orders`
+
 **Purpose**: Fetch all orders (used for sales reports and order history)
 
 **Request**:
+
 ```
 GET /api/orders
 Query Parameters (optional):
@@ -330,6 +374,7 @@ Credentials: include
 ```
 
 **Response** (200 OK):
+
 ```json
 [
   {
@@ -386,6 +431,7 @@ Credentials: include
 ```
 
 **Usage**: Called for:
+
 - Daily sales report (filtered by staffId and today's date)
 - Order history view
 - Order details modal
@@ -393,9 +439,11 @@ Credentials: include
 ---
 
 #### Implicit Data Loads (via usePOSState hook)
+
 These are loaded by the React hook when component mounts:
 
 ##### Services Data
+
 ```typescript
 // Loaded from Supabase table: services
 // Called internally by usePOSState.ts
@@ -404,6 +452,7 @@ SELECT: id, service_type, tier, name, base_price, duration_minutes
 ```
 
 **Data Structure**:
+
 ```typescript
 pos.services: Array<{
   id: string;
@@ -416,6 +465,7 @@ pos.services: Array<{
 ```
 
 ##### Products Data
+
 ```typescript
 // Loaded from Supabase table: products
 // Called internally by usePOSState.ts
@@ -425,6 +475,7 @@ ORDER BY: item_name
 ```
 
 **Data Structure**:
+
 ```typescript
 pos.products: Array<{
   id: string;
@@ -437,6 +488,7 @@ pos.products: Array<{
 ```
 
 ##### Customers Data
+
 ```typescript
 // Loaded on demand when customer search/selection occurs
 // Can be filtered by phone_number or name
@@ -446,6 +498,7 @@ ORDER BY: last_name
 ```
 
 **Data Structure**:
+
 ```typescript
 customers: Array<{
   id: string;
@@ -454,7 +507,7 @@ customers: Array<{
   phone_number: string;
   email_address: string;
   loyalty_points: number; // Current loyalty points balance
-}>
+}>;
 ```
 
 ---
@@ -546,8 +599,8 @@ customers: Array<{
         "product_id": "660e8400-e29b-41d4-a716-446655440000",
         "product_name": "Laundry Detergent",
         "quantity": 1,
-        "unit_price": 150.00,
-        "total_price": 150.00
+        "unit_price": 150.0,
+        "total_price": 150.0
       }
     ],
     "baskets": [
@@ -565,28 +618,28 @@ customers: Array<{
           "plastic_bags": 2
         },
         "notes": "Dry clean only",
-        "subtotal": 495.00
+        "subtotal": 495.0
       }
     ],
     "fees": [
       {
         "type": "staff_service_fee",
-        "amount": 40.00,
+        "amount": 40.0,
         "description": "Staff service fee"
       },
       {
         "type": "vat",
-        "amount": 57.60,
+        "amount": 57.6,
         "description": "VAT (12% inclusive)"
       }
     ],
     "summary": {
-      "subtotal_products": 150.00,
-      "subtotal_services": 495.00,
-      "staff_service_fee": 40.00,
-      "delivery_fee": 0.00,
-      "subtotal_before_vat": 685.00,
-      "vat_amount": 57.60,
+      "subtotal_products": 150.0,
+      "subtotal_services": 495.0,
+      "staff_service_fee": 40.0,
+      "delivery_fee": 0.0,
+      "subtotal_before_vat": 685.0,
+      "vat_amount": 57.6,
       "loyalty_discount": 34.25,
       "total": 650.75
     }
@@ -598,7 +651,7 @@ customers: Array<{
     "delivery_fee_override": null,
     "special_instructions": "Fold neatly please",
     "payment_method": "cash",
-    "amount_paid": 700.00,
+    "amount_paid": 700.0,
     "gcash_reference": null
   },
   "loyalty": {
@@ -638,10 +691,12 @@ customers: Array<{
 **Purpose**: Create a complete POS order transactionally
 
 **Authentication**:
+
 - Required: Valid Supabase session (staff user)
 - Verified via `auth.getUser()` and staff table lookup
 
 **Request**:
+
 ```
 POST /api/orders/pos/create
 Headers: {
@@ -700,6 +755,7 @@ Body: [See payload structure above]
    - Return success, order_id, receipt data
 
 **Response** (201 Created):
+
 ```json
 {
   "success": true,
@@ -718,6 +774,7 @@ Body: [See payload structure above]
 ```
 
 **Response** (400 Bad Request):
+
 ```json
 {
   "success": false,
@@ -726,12 +783,14 @@ Body: [See payload structure above]
 ```
 
 Examples:
+
 - "Customer not found"
 - "Insufficient inventory for product: Detergent"
 - "Invalid payment method: invalid_type"
 - "Delivery fee override below minimum ₱50"
 
 **Response** (401 Unauthorized):
+
 ```json
 {
   "success": false,
@@ -740,6 +799,7 @@ Examples:
 ```
 
 **Response** (500 Internal Server Error):
+
 ```json
 {
   "success": false,
@@ -748,13 +808,16 @@ Examples:
 ```
 
 ### Error Handling & Rollback
+
 - Any failure during the transaction rolls back all changes
 - No partial orders created
 - Inventory remains unchanged if any step fails
 - Clear error message returned to client
 
 ### Receipt Format
+
 The response includes formatted receipt with:
+
 - Order ID
 - Timestamp
 - Basket breakdown (number, weight, subtotal)
@@ -770,12 +833,14 @@ The response includes formatted receipt with:
 ## 6. MOBILE APP IMPLEMENTATION CHECKLIST
 
 ### Data Loading
+
 - [ ] GET `/api/auth/user` on app startup (get current user info)
 - [ ] Load services from local cache or API
 - [ ] Load products from local cache or API
 - [ ] Load customers data on demand (search)
 
 ### UI Implementation
+
 - [ ] Step 1: Service Type selector (self-service vs staff-service)
 - [ ] Step 2: Basket configuration (services per basket)
 - [ ] Step 3: Products selection (shopping cart)
@@ -785,6 +850,7 @@ The response includes formatted receipt with:
 - [ ] Loyalty points display and tier selection
 
 ### Order Creation
+
 - [ ] Build breakdown object with pricing calculations
 - [ ] Build handling object from user selections
 - [ ] POST to `/api/orders/pos/create`
@@ -793,6 +859,7 @@ The response includes formatted receipt with:
 - [ ] Print receipt or save to file
 
 ### Offline Capability (Optional)
+
 - [ ] Cache services and products locally
 - [ ] Queue orders for sync when offline
 - [ ] Sync when connection restored
@@ -802,12 +869,14 @@ The response includes formatted receipt with:
 ## 7. KEY PRICING RULES FOR MOBILE IMPLEMENTATION
 
 ### VAT (Tax)
+
 - **12% Inclusive Tax** (not added on top)
 - Calculated on subtotal_before_vat
 - Included in final total
 - Formula: subtotal_before_vat × (1 + 0.12) = final_total (approximately, due to inclusive nature)
 
 ### Service Pricing
+
 - **Wash**: Fixed price per tier (basic vs premium)
 - **Dry**: Fixed price per tier (basic vs premium)
 - **Spin**: ₱20.00 flat
@@ -817,16 +886,19 @@ The response includes formatted receipt with:
 - **Plastic Bags**: From products table unit_price (₱0.50 default)
 
 ### Fees
+
 - **Staff Service Fee**: ₱40.00 per order (flat, not per basket)
 - **Delivery Fee**: ₱50.00 minimum, configurable override
 
 ### Loyalty Discounts
+
 - **Award**: 1 point per completed order
 - **Tier 1 Redemption**: 10 points = 5% discount
 - **Tier 2 Redemption**: 20 points = 15% discount
 - Discount applies to order total (after all services/fees/VAT)
 
 ### Basket Weight Limits
+
 - **Maximum**: 8 kg per basket
 - Auto-create new basket if weight exceeds 8kg
 
@@ -835,6 +907,7 @@ The response includes formatted receipt with:
 ## 8. DATABASE SCHEMA REFERENCE
 
 ### orders table
+
 ```sql
 id UUID PRIMARY KEY
 customer_id UUID FOREIGN KEY (nullable, for anonymous orders)
@@ -847,6 +920,7 @@ updated_at TIMESTAMP
 ```
 
 ### customers table
+
 ```sql
 id UUID PRIMARY KEY
 first_name TEXT
@@ -860,6 +934,7 @@ is_active BOOLEAN
 ```
 
 ### products table
+
 ```sql
 id UUID PRIMARY KEY
 item_name TEXT
@@ -873,6 +948,7 @@ is_active BOOLEAN
 ```
 
 ### services table
+
 ```sql
 id UUID PRIMARY KEY
 service_type TEXT (wash, dry, spin, iron, fold, etc.)
@@ -886,6 +962,7 @@ is_active BOOLEAN
 ```
 
 ### product_transactions table
+
 ```sql
 id UUID PRIMARY KEY
 order_id UUID FOREIGN KEY (orders.id)
@@ -895,6 +972,7 @@ created_at TIMESTAMP
 ```
 
 ### basket_service_status table
+
 ```sql
 id UUID PRIMARY KEY
 order_id UUID FOREIGN KEY (orders.id)
@@ -913,6 +991,7 @@ notes TEXT (nullable)
 ## 9. TESTING SCENARIOS FOR MOBILE
 
 ### Scenario 1: Basic Self-Service Order
+
 1. Select self-service
 2. Create 1 basket: Basic wash, basic dry, spin
 3. No products
@@ -922,6 +1001,7 @@ notes TEXT (nullable)
 **Expected Total**: Services subtotal + VAT
 
 ### Scenario 2: Staff Service with Delivery & Loyalty
+
 1. Select staff-service (+₱40)
 2. Create 1 basket: Premium wash, premium dry, 3kg iron, 2 plastic bags
 3. Add detergent product
@@ -932,6 +1012,7 @@ notes TEXT (nullable)
 **Expected Total**: Services + Products + Staff Fee + Delivery + VAT - Loyalty Discount (if applied)
 
 ### Scenario 3: Multiple Baskets
+
 1. Select self-service
 2. Create basket 1 (4kg) with services
 3. Create basket 2 (5kg) with different services
@@ -941,11 +1022,13 @@ notes TEXT (nullable)
 **Expected**: Two basket subtotals summed
 
 ### Scenario 4: Inventory Management
+
 1. Order plastic bags (5 units)
 2. Check product inventory decremented
 3. Order again, verify correct remaining inventory
 
 ### Scenario 5: Loyalty Points
+
 1. Existing customer with 15 points
 2. Select tier1 discount (10 points)
 3. Verify 5% discount applied
@@ -956,6 +1039,7 @@ notes TEXT (nullable)
 ## Contact & Support
 
 For questions about POS integration, refer to:
+
 - `/src/app/in/pos/logic/posTypes.ts` - Type definitions
 - `/src/app/in/pos/logic/posHelpers.ts` - Calculation logic
 - `/src/app/api/orders/pos/create/route.ts` - Order creation logic

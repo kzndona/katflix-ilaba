@@ -762,7 +762,8 @@ export default function BasketsPage() {
                             (order.handling.delivery.status === "pending" ||
                               order.handling.delivery.status ===
                                 "in_progress" ||
-                              order.handling.delivery.status === "completed") && (
+                              order.handling.delivery.status ===
+                                "completed") && (
                               <div
                                 className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-medium transition ${
                                   order.handling.delivery.status ===
@@ -977,18 +978,28 @@ export default function BasketsPage() {
                       <img
                         src={
                           mobileOrderModal.gcash_receipt_url.startsWith("http")
-                            ? mobileOrderModal.gcash_receipt_url
-                            : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gcash-receipts/${mobileOrderModal.gcash_receipt_url}`
+                            ? `/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url.split("/").pop()}`
+                            : `/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url}`
                         }
                         alt="GCash Receipt"
                         className="flex-1 w-full object-contain"
+                        onLoad={() => {
+                          console.log("[GCASH] ✅ Image loaded successfully");
+                        }}
                         onError={(e) => {
-                          console.error(
-                            "Image failed to load:",
-                            (e.target as HTMLImageElement).src,
-                          );
-                          (e.target as HTMLImageElement).src =
-                            "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2216%22 fill=%22%23999%22%3EImage failed to load%3C/text%3E%3C/svg%3E";
+                          const img = e.target as HTMLImageElement;
+                          console.warn("[GCASH] ⚠️ Image load error (will retry):", img.src);
+                          
+                          // Don't immediately show fallback - let browser retry
+                          // Only show fallback after a delay if it still fails
+                          setTimeout(() => {
+                            // Check if image is still broken
+                            if (!img.complete || img.naturalHeight === 0) {
+                              console.error("[GCASH] ❌ Image failed to load after retry");
+                              img.src =
+                                "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2216%22 fill=%22%23999%22%3EImage not available%3C/text%3E%3C/svg%3E";
+                            }
+                          }, 1000);
                         }}
                       />
                     </div>
