@@ -10,7 +10,7 @@
  * - Basket weight: max 8kg (auto-create new basket if exceeded)
  */
 
-import { Basket, BasketServices, Service, OrderBreakdown, Fee } from "./posTypes";
+import { Basket, BasketServices, Service, OrderBreakdown, Fee, POSProduct } from "./posTypes";
 
 // ============================================================================
 // CONSTANTS
@@ -89,7 +89,8 @@ export function getServiceDuration(
  */
 export function calculateBasketSubtotal(
   basket: Basket,
-  services: Service[]
+  services: Service[],
+  products: POSProduct[]
 ): number {
   let total = 0;
 
@@ -134,6 +135,15 @@ export function calculateBasketSubtotal(
   // Additional dry time
   const dryTimeLevels = basket.services.additional_dry_time_minutes / 8; // 0, 1, 2, or 3
   total += dryTimeLevels * PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL;
+
+  // Plastic bags - included in services subtotal
+  if ((basket.services.plastic_bags || 0) > 0) {
+    const plasticBagProduct = products.find(
+      (p: any) => p.item_name?.toLowerCase().includes("plastic") || p.item_name?.toLowerCase().includes("bag")
+    );
+    const plasticBagPrice = plasticBagProduct?.unit_price || 0.50;
+    total += (basket.services.plastic_bags || 0) * plasticBagPrice;
+  }
 
   return total;
 }
@@ -238,7 +248,8 @@ export function buildOrderBreakdown(
   isStaffService: boolean,
   isDelivery: boolean,
   deliveryFeeOverride: number | null,
-  services: Service[]
+  services: Service[],
+  products: POSProduct[]
 ): OrderBreakdown {
   // Calculate product subtotal
   const itemsArray = items.map((item) => ({
@@ -256,7 +267,7 @@ export function buildOrderBreakdown(
   // Calculate basket subtotals
   const basketsWithSubtotals = baskets.map((basket) => ({
     ...basket,
-    subtotal: calculateBasketSubtotal(basket, services),
+    subtotal: calculateBasketSubtotal(basket, services, products),
   }));
   const subtotalServices = basketsWithSubtotals.reduce(
     (sum, basket) => sum + basket.subtotal,

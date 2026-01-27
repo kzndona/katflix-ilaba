@@ -64,7 +64,11 @@ export default function StaffPage() {
             `${staff.first_name} ${staff.last_name}`.toLowerCase();
           const email = (staff.email_address || "").toLowerCase();
           const phone = (staff.phone_number || "").toLowerCase();
-          return fullName.includes(query) || email.includes(query) || phone.includes(query);
+          return (
+            fullName.includes(query) ||
+            email.includes(query) ||
+            phone.includes(query)
+          );
         });
         setFilteredRows(filtered);
       }
@@ -281,7 +285,9 @@ export default function StaffPage() {
         {/* Success Message */}
         {successMsg && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-            <div className="text-green-800 text-xs font-medium">{successMsg}</div>
+            <div className="text-green-800 text-xs font-medium">
+              {successMsg}
+            </div>
           </div>
         )}
 
@@ -342,7 +348,7 @@ export default function StaffPage() {
                             .map(
                               (word) =>
                                 word.charAt(0).toUpperCase() +
-                                word.slice(1).toLowerCase()
+                                word.slice(1).toLowerCase(),
                             )
                             .join(" ")}
                         </span>
@@ -469,7 +475,7 @@ function StaffModal({
             <div className="mb-6">
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
-                  staff.role
+                  staff.role,
                 )}`}
               >
                 {staff.role
@@ -477,7 +483,8 @@ function StaffModal({
                   .split(" ")
                   .map(
                     (word) =>
-                      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                      word.charAt(0).toUpperCase() +
+                      word.slice(1).toLowerCase(),
                   )
                   .join(" ")}
               </span>
@@ -551,7 +558,9 @@ function StaffModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-600">Gender</div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Gender
+                  </div>
                   <div className="text-gray-900 mt-1">
                     {staff.gender
                       ? staff.gender.charAt(0).toUpperCase() +

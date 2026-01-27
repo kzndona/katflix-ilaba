@@ -28,7 +28,9 @@ export default function CustomersPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(null);
+  const [originalCustomer, setOriginalCustomer] = useState<Customer | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   // Load customers on component mount
@@ -48,7 +50,11 @@ export default function CustomersPage() {
             `${customer.first_name} ${customer.last_name}`.toLowerCase();
           const email = (customer.email_address || "").toLowerCase();
           const phone = (customer.phone_number || "").toLowerCase();
-          return fullName.includes(query) || email.includes(query) || phone.includes(query);
+          return (
+            fullName.includes(query) ||
+            email.includes(query) ||
+            phone.includes(query)
+          );
         });
         setFilteredRows(filtered);
       }
@@ -271,7 +277,9 @@ export default function CustomersPage() {
         {/* Success Message */}
         {successMsg && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-            <div className="text-green-800 text-xs font-medium">{successMsg}</div>
+            <div className="text-green-800 text-xs font-medium">
+              {successMsg}
+            </div>
           </div>
         )}
 
@@ -468,7 +476,9 @@ function CustomerModal({
                   <div className="text-xs font-medium text-gray-600">
                     First Name
                   </div>
-                  <div className="text-gray-900 mt-1">{customer.first_name}</div>
+                  <div className="text-gray-900 mt-1">
+                    {customer.first_name}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs font-medium text-gray-600">
@@ -493,7 +503,9 @@ function CustomerModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-600">Gender</div>
+                  <div className="text-xs font-medium text-gray-600">
+                    Gender
+                  </div>
                   <div className="text-gray-900 mt-1">
                     {customer.gender
                       ? customer.gender.charAt(0).toUpperCase() +

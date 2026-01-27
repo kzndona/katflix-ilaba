@@ -993,6 +993,14 @@ function OrderSummary({
     };
   };
 
+  // Helper to get plastic bags product price from products table
+  const getPlasticBagsPrice = () => {
+    const plasticBagProduct = pos.products.find(
+      (p: any) => p.item_name?.toLowerCase().includes("plastic") || p.item_name?.toLowerCase().includes("bag")
+    );
+    return plasticBagProduct?.unit_price || 0.50; // Default to 0.50 if not found
+  };
+
   // Helper to get additional dry time info from dry service modifiers
   const getAdditionalDryTimeInfo = () => {
     const dryService = pos.services.find((s: any) => s.service_type === "dry");
@@ -1136,7 +1144,7 @@ function OrderSummary({
                             ₱
                             {(
                               (basket.services.plastic_bags || 0) *
-                              getServiceInfo("plastic_bags").price
+                              getPlasticBagsPrice()
                             ).toFixed(2)}
                           </span>
                         </div>
@@ -1210,41 +1218,49 @@ function OrderSummary({
             <div className="text-xs text-slate-600 font-semibold uppercase">
               💎 Loyalty Points: {pos.customer.loyalty_points || 0} pts
             </div>
-            
+
             {/* Tier 1: 10 points for 5% discount */}
             {(pos.customer.loyalty_points || 0) >= 10 && (
               <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
                 <input
                   type="radio"
                   name="loyaltyTier"
-                  checked={pos.loyaltyDiscountTier === 'tier1'}
-                  onChange={() => pos.setLoyaltyDiscountTier('tier1')}
+                  checked={pos.loyaltyDiscountTier === "tier1"}
+                  onChange={() => pos.setLoyaltyDiscountTier("tier1")}
                   className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
                 />
                 <div className="flex-1 text-xs">
-                  <div className="font-semibold text-slate-900">10 pts → 5% OFF</div>
-                  <div className="text-slate-600">Save ₱{(breakdown.summary.total * 0.05).toFixed(2)}</div>
+                  <div className="font-semibold text-slate-900">
+                    10 pts → 5% OFF
+                  </div>
+                  <div className="text-slate-600">
+                    Save ₱{(breakdown.summary.total * 0.05).toFixed(2)}
+                  </div>
                 </div>
               </label>
             )}
-            
+
             {/* Tier 2: 20 points for 15% discount */}
             {(pos.customer.loyalty_points || 0) >= 20 && (
               <label className="flex items-start gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
                 <input
                   type="radio"
                   name="loyaltyTier"
-                  checked={pos.loyaltyDiscountTier === 'tier2'}
-                  onChange={() => pos.setLoyaltyDiscountTier('tier2')}
+                  checked={pos.loyaltyDiscountTier === "tier2"}
+                  onChange={() => pos.setLoyaltyDiscountTier("tier2")}
                   className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
                 />
                 <div className="flex-1 text-xs">
-                  <div className="font-semibold text-slate-900">20 pts → 15% OFF</div>
-                  <div className="text-slate-600">Save ₱{(breakdown.summary.total * 0.15).toFixed(2)}</div>
+                  <div className="font-semibold text-slate-900">
+                    20 pts → 15% OFF
+                  </div>
+                  <div className="text-slate-600">
+                    Save ₱{(breakdown.summary.total * 0.15).toFixed(2)}
+                  </div>
                 </div>
               </label>
             )}
-            
+
             {/* No discount option */}
             <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-pink-100 border border-pink-200">
               <input
@@ -1264,19 +1280,31 @@ function OrderSummary({
         {pos.loyaltyDiscountTier && pos.customer && (
           <div className="flex justify-between text-amber-700 font-semibold text-sm">
             <span>Loyalty Discount</span>
-            <span>-₱{(pos.loyaltyDiscountTier === 'tier1' ? breakdown.summary.total * 0.05 : breakdown.summary.total * 0.15).toFixed(2)}</span>
+            <span>
+              -₱
+              {(pos.loyaltyDiscountTier === "tier1"
+                ? breakdown.summary.total * 0.05
+                : breakdown.summary.total * 0.15
+              ).toFixed(2)}
+            </span>
           </div>
         )}
 
         <div className="flex justify-between font-bold text-base text-amber-700 bg-slate-100 rounded px-2 py-1">
           <span>TOTAL</span>
-          <span>₱{(() => {
-            let discountPercent = 0;
-            if (pos.loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
-            if (pos.loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
-            const totalAmount = pos.customer && pos.loyaltyDiscountTier ? breakdown.summary.total * (1 - discountPercent) : breakdown.summary.total;
-            return totalAmount.toFixed(2);
-          })()}</span>
+          <span>
+            ₱
+            {(() => {
+              let discountPercent = 0;
+              if (pos.loyaltyDiscountTier === "tier1") discountPercent = 0.05;
+              if (pos.loyaltyDiscountTier === "tier2") discountPercent = 0.15;
+              const totalAmount =
+                pos.customer && pos.loyaltyDiscountTier
+                  ? breakdown.summary.total * (1 - discountPercent)
+                  : breakdown.summary.total;
+              return totalAmount.toFixed(2);
+            })()}
+          </span>
         </div>
 
         <div className="text-xs font-bold uppercase tracking-wider text-slate-500 pt-2">
@@ -1331,21 +1359,22 @@ function OrderSummary({
               onBlur={() => setKeypadFocus(null)}
               className="w-full border-2 border-slate-300 rounded px-3 py-2 text-sm"
             />
-            {pos.amountPaid > 0 && (() => {
-              let discountPercent = 0;
-              if (pos.loyaltyDiscountTier === 'tier1') discountPercent = 0.05;
-              if (pos.loyaltyDiscountTier === 'tier2') discountPercent = 0.15;
-              const totalAmount = pos.customer && pos.loyaltyDiscountTier ? breakdown.summary.total * (1 - discountPercent) : breakdown.summary.total;
-              return pos.amountPaid >= totalAmount ? (
-                <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
-                  Change: ₱
-                  {Math.max(
-                    0,
-                    pos.amountPaid - totalAmount,
-                  ).toFixed(2)}
-                </div>
-              ) : null;
-            })()}
+            {pos.amountPaid > 0 &&
+              (() => {
+                let discountPercent = 0;
+                if (pos.loyaltyDiscountTier === "tier1") discountPercent = 0.05;
+                if (pos.loyaltyDiscountTier === "tier2") discountPercent = 0.15;
+                const totalAmount =
+                  pos.customer && pos.loyaltyDiscountTier
+                    ? breakdown.summary.total * (1 - discountPercent)
+                    : breakdown.summary.total;
+                return pos.amountPaid >= totalAmount ? (
+                  <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
+                    Change: ₱
+                    {Math.max(0, pos.amountPaid - totalAmount).toFixed(2)}
+                  </div>
+                ) : null;
+              })()}
           </div>
         )}
 
@@ -1452,10 +1481,37 @@ export default function POSPage() {
   const [keypadFocus, setKeypadFocus] = React.useState<
     "amount" | "gcash" | null
   >(null);
+  const [staffName, setStaffName] = React.useState<string>("");
+  const [staffId, setStaffId] = React.useState<string>("");
+  const [showSalesReport, setShowSalesReport] = React.useState(false);
+  const [reportOrders, setReportOrders] = React.useState<any[]>([]);
+  const [reportLoading, setReportLoading] = React.useState(false);
 
   useEffect(() => {
     setMounted(true);
     if (pos.step === 0) pos.setStep(1);
+    
+    // Fetch staff info from session
+    const fetchStaffInfo = async () => {
+      try {
+        const res = await fetch("/api/auth/user");
+        if (res.ok) {
+          const data = await res.json();
+          console.log("[POS] Auth user data:", data);
+          const name = data.staff_name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || "Staff";
+          setStaffName(name);
+          setStaffId(data.staff_id || "");
+          console.log("[POS] Set staffId:", data.staff_id);
+          console.log("[POS] Set staffName:", name);
+        } else {
+          console.error("[POS] Failed to fetch auth user, status:", res.status);
+        }
+      } catch (err) {
+        console.error("[POS] Failed to fetch staff info:", err);
+      }
+    };
+    
+    fetchStaffInfo();
   }, []);
 
   if (!mounted) return null;
@@ -1469,39 +1525,88 @@ export default function POSPage() {
     <Step5Handling pos={pos} />,
   ];
 
+  const handleDailySalesReport = async () => {
+    setShowSalesReport(true);
+    setReportLoading(true);
+    
+    try {
+      // Get today's date range
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Fetch all orders and filter by cashier
+      const res = await fetch("/api/orders", {
+        credentials: "include",
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[Sales Report] Total orders fetched:", data.length);
+        console.log("[Sales Report] Current staffId:", staffId);
+        
+        // Filter by cashier and today's date
+        const filteredOrders = (data || []).filter((order: any) => {
+          const orderDate = order.created_at ? new Date(order.created_at) : null;
+          const matchesCashier = order.cashier_id === staffId;
+          const isToday = orderDate && orderDate >= today && orderDate < tomorrow;
+          
+          if (!matchesCashier && order.cashier_id) {
+            console.log(`[Sales Report] Order ${order.id.slice(0, 8)} cashier_id: ${order.cashier_id}, not matching ${staffId}`);
+          }
+          
+          return matchesCashier && isToday;
+        });
+        
+        console.log("[Sales Report] Filtered orders:", filteredOrders.length);
+        
+        setReportOrders(filteredOrders.sort((a: any, b: any) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeB - timeA; // Most recent first
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch sales report:", err);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* LEFT: Sidebar - Steps & Baskets */}
-      {currentStep >= 2 && (
-        <div className="w-48 bg-slate-800 text-slate-50 border-r border-slate-700 p-4 flex flex-col gap-4 overflow-y-auto">
-          {/* Step Navigation Tabs */}
-          <div className="space-y-2 pb-4 border-b border-slate-700">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Steps
+        {/* LEFT: Sidebar - Steps & Baskets */}
+        {currentStep >= 2 && (
+          <div className="w-48 bg-slate-800 text-slate-50 border-r border-slate-700 p-4 flex flex-col gap-4 overflow-y-auto">
+            {/* Step Navigation Tabs */}
+            <div className="space-y-2 pb-4 border-b border-slate-700">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Steps
+              </div>
+              {[
+                { num: 1, label: "Service" },
+                { num: 2, label: "Baskets" },
+                { num: 3, label: "Products" },
+                { num: 4, label: "Customer" },
+                { num: 5, label: "Handling" },
+              ].map((step) => (
+                <button
+                  key={step.num}
+                  onClick={() => pos.setStep(step.num as any)}
+                  className={`w-full px-3 py-2 text-sm font-bold rounded-lg transition text-left ${
+                    currentStep === step.num
+                      ? "text-white rounded-lg"
+                      : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  }`}
+                  style={
+                    currentStep === step.num ? { backgroundColor: "#c41d7f" } : {}
+                  }
+                >
+                  {step.label}
+                </button>
+              ))}
             </div>
-            {[
-              { num: 1, label: "Service" },
-              { num: 2, label: "Baskets" },
-              { num: 3, label: "Products" },
-              { num: 4, label: "Customer" },
-              { num: 5, label: "Handling" },
-            ].map((step) => (
-              <button
-                key={step.num}
-                onClick={() => pos.setStep(step.num as any)}
-                className={`w-full px-3 py-2 text-sm font-bold rounded-lg transition text-left ${
-                  currentStep === step.num
-                    ? "text-white rounded-lg"
-                    : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-                }`}
-                style={
-                  currentStep === step.num ? { backgroundColor: "#c41d7f" } : {}
-                }
-              >
-                {step.label}
-              </button>
-            ))}
-          </div>
 
           {/* Add/Remove Basket Buttons */}
           <div className="space-y-2 pb-4 border-b border-slate-700">
@@ -1545,6 +1650,16 @@ export default function POSPage() {
               </button>
             ))}
           </div>
+
+          {/* Daily Sales Report Button */}
+          <div className="pt-4 border-t border-slate-700">
+            <button
+              onClick={handleDailySalesReport}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition"
+            >
+              📊 Daily Sales Report
+            </button>
+          </div>
         </div>
       )}
 
@@ -1561,6 +1676,133 @@ export default function POSPage() {
           setKeypadFocus={setKeypadFocus}
         />
       </div>
+
+      {/* Daily Sales Report Modal */}
+      {showSalesReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Daily Sales Report</h2>
+                <p className="text-xs text-gray-600">Cashier: {staffName}</p>
+              </div>
+              <button
+                onClick={() => setShowSalesReport(false)}
+                className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto">
+              {reportLoading ? (
+                <div className="p-8 text-center text-gray-500">
+                  Loading transactions...
+                </div>
+              ) : reportOrders.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No transactions found for today
+                </div>
+              ) : (
+                <div className="p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          <th className="text-left px-4 py-2 font-semibold text-gray-700">Order ID</th>
+                          <th className="text-left px-4 py-2 font-semibold text-gray-700">Customer</th>
+                          <th className="text-center px-4 py-2 font-semibold text-gray-700">Time</th>
+                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportOrders.map((order: any, idx: number) => (
+                          <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="px-4 py-2 text-gray-900 font-mono text-xs">
+                              {order.id.slice(0, 8)}
+                            </td>
+                            <td className="px-4 py-2 text-gray-700">
+                              {order.customers
+                                ? `${order.customers.first_name} ${order.customers.last_name}`
+                                : "Walk-in"}
+                            </td>
+                            <td className="px-4 py-2 text-gray-600 text-center">
+                              {new Date(order.created_at).toLocaleTimeString("en-PH", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </td>
+                            <td className="px-4 py-2 text-right text-gray-900 font-semibold">
+                              ₱{order.total_amount.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                        {/* Total Row */}
+                        <tr className="bg-blue-50 border-t-2 border-blue-300 font-bold">
+                          <td colSpan={3} className="px-4 py-3 text-right text-gray-900">
+                            TOTAL
+                          </td>
+                          <td className="px-4 py-3 text-right text-blue-700 text-lg">
+                            ₱
+                            {reportOrders
+                              .reduce((sum: number, order: any) => sum + order.total_amount, 0)
+                              .toFixed(2)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="mt-6 grid grid-cols-3 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 mb-1">Transaction Count</p>
+                      <p className="text-2xl font-bold text-gray-900">{reportOrders.length}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-2xl font-bold text-blue-700">
+                        ₱
+                        {reportOrders
+                          .reduce((sum: number, order: any) => sum + order.total_amount, 0)
+                          .toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 mb-1">Average Transaction</p>
+                      <p className="text-2xl font-bold text-green-700">
+                        ₱
+                        {(
+                          reportOrders.reduce((sum: number, order: any) => sum + order.total_amount, 0) /
+                          (reportOrders.length || 1)
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 flex justify-end gap-2">
+              <button
+                onClick={() => setShowSalesReport(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+              >
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

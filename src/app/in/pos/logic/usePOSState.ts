@@ -201,7 +201,7 @@ export function usePOSState() {
       if (!product) return null;
       return { product_id: productId, product_name: product.item_name, unit_price: product.unit_price, quantity: qty };
     }).filter(Boolean) as OrderItem[];
-    return buildOrderBreakdown(baskets, items, serviceType === "staff_service", deliveryType === "delivery", deliveryFeeOverride, services);
+    return buildOrderBreakdown(baskets, items, serviceType === "staff_service", deliveryType === "delivery", deliveryFeeOverride, services, products);
   }, [baskets, selectedProducts, serviceType, deliveryType, deliveryFeeOverride, services, products]);
 
   const isPaymentValid = useCallback((): boolean => {

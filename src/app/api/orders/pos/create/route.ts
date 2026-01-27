@@ -397,8 +397,49 @@ export async function POST(request: NextRequest) {
     const orderId = newOrder.id;
 
     // STEP 4: Deduct inventory (product_transactions)
-    for (const item of body.breakdown.items || []) {
-      // 4a. Create product transaction record
+    // Collect all items to deduct: regular items + plastic bags from baskets
+    const itemsToDeduct = [...(body.breakdown.items || [])];
+    
+    // Add plastic bags to deduction list
+    if (body.breakdown.baskets && Array.isArray(body.breakdown.baskets)) {
+      const totalPlasticBags = body.breakdown.baskets.reduce(
+        (sum: number, basket: any) => sum + (basket.services?.plastic_bags || 0),
+        0
+      );
+      
+      if (totalPlasticBags > 0) {
+        // Find plastic bag product
+        const { data: plasticBagProduct } = await supabase
+          .from("products")
+          .select("id")
+          .or("item_name.ilike.%plastic%,item_name.ilike.%bag%")
+          .limit(1)
+          .single();
+        
+        if (plasticBagProduct) {
+          // Check if already in items list
+          const existingIndex = itemsToDeduct.findIndex(
+            (item: any) => item.product_id === plasticBagProduct.id
+          );
+          
+          if (existingIndex >= 0) {
+            itemsToDeduct[existingIndex].quantity += totalPlasticBags;
+          } else {
+            itemsToDeduct.push({
+              product_id: plasticBagProduct.id,
+              product_name: "Plastic Bags",
+              unit_price: 0.50,
+              quantity: totalPlasticBags,
+              subtotal: totalPlasticBags * 0.50,
+            });
+          }
+        }
+      }
+    }
+    
+    // Deduct all items including plastic bags
+    for (const item of itemsToDeduct) {
+      // Create product transaction record
       const { error: txError } = await supabase
         .from("product_transactions")
         .insert({
@@ -420,7 +461,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 4b. Get current quantity before updating
+      // Get current quantity before updating
       const { data: currentProduct, error: getError } = await supabase
         .from("products")
         .select("quantity")
@@ -437,7 +478,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 4c. Update product stock (direct SQL update)
+      // Update product stock
       const newQuantity = currentProduct.quantity - item.quantity;
       const { error: updateError } = await supabase
         .from("products")

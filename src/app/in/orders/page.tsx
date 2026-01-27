@@ -122,22 +122,32 @@ export default function OrdersPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [cashierFilter, setCashierFilter] = useState<string>("");
 
   const ROWS_PER_PAGE = 10;
 
   useEffect(() => {
+    // Check URL params for pre-set filters
+    const params = new URLSearchParams(window.location.search);
+    const urlDateFrom = params.get("dateFrom");
+    const urlDateTo = params.get("dateTo");
+    const urlCashierId = params.get("cashierId");
+
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    setDateFrom(yesterday.toISOString().split("T")[0]);
-    setDateTo(today.toISOString().split("T")[0]);
+    setDateFrom(urlDateFrom || yesterday.toISOString().split("T")[0]);
+    setDateTo(urlDateTo || today.toISOString().split("T")[0]);
+    if (urlCashierId) {
+      setCashierFilter(urlCashierId);
+    }
     load();
   }, []);
 
   useEffect(() => {
     filterAndSort();
-  }, [rows, searchQuery, sortConfig, dateFrom, dateTo]);
+  }, [rows, searchQuery, sortConfig, dateFrom, dateTo, cashierFilter]);
 
   async function load() {
     setLoading(true);
@@ -180,6 +190,11 @@ export default function OrdersPage() {
         const orderDate = order.created_at ? new Date(order.created_at) : null;
         return orderDate && orderDate <= to;
       });
+    }
+
+    // Apply cashier filter
+    if (cashierFilter) {
+      result = result.filter((order) => order.cashier_id === cashierFilter);
     }
 
     // Apply search filter
@@ -892,14 +907,20 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
                                       <span>Duration: </span>
                                       <span className="text-gray-900 font-medium">
                                         {(() => {
-                                          const start = new Date(log.started_at);
-                                          const end = new Date(log.completed_at);
+                                          const start = new Date(
+                                            log.started_at,
+                                          );
+                                          const end = new Date(
+                                            log.completed_at,
+                                          );
                                           const diffMs =
                                             end.getTime() - start.getTime();
                                           const diffMins = Math.round(
                                             diffMs / 60000,
                                           );
-                                          const hours = Math.floor(diffMins / 60);
+                                          const hours = Math.floor(
+                                            diffMins / 60,
+                                          );
                                           const mins = diffMins % 60;
                                           return hours > 0
                                             ? `${hours}h ${mins}m`
