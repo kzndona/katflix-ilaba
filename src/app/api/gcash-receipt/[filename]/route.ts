@@ -24,40 +24,41 @@ export async function GET(
       .from("gcash-receipts")
       .download(filename);
 
-    console.log("[GCASH RECEIPT PROXY] Download result:", {
-      success: !error,
-      error: error?.message,
-      dataType: data?.type,
-      dataSize: data?.size,
-    });
-
     if (error || !data) {
       console.error("[GCASH RECEIPT] Download error:", error);
-      return NextResponse.json(
-        { error: `Receipt not found: ${error?.message || "Unknown error"}` },
-        { status: 404 }
-      );
+      return new NextResponse("File not found", { status: 404 });
     }
 
-    // Convert blob to buffer
-    const buffer = await data.arrayBuffer();
+    // Detect content type from file extension
+    let contentType = "image/jpeg";
+    const filename_lower = filename.toLowerCase();
+    
+    if (filename_lower.endsWith(".heic") || filename_lower.endsWith(".heif")) {
+      contentType = "image/heic";
+    } else if (filename_lower.endsWith(".png")) {
+      contentType = "image/png";
+    } else if (filename_lower.endsWith(".gif")) {
+      contentType = "image/gif";
+    } else if (filename_lower.endsWith(".webp")) {
+      contentType = "image/webp";
+    }
 
-    console.log("[GCASH RECEIPT PROXY] Returning image, size:", buffer.byteLength);
+    // Convert blob to array buffer and then to Uint8Array
+    const arrayBuffer = await data.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Return image with proper CORS headers
-    return new NextResponse(buffer, {
+    console.log("[GCASH RECEIPT PROXY] Returning image, size:", uint8Array.length, "type:", contentType);
+
+    return new NextResponse(uint8Array, {
       status: 200,
       headers: {
-        "Content-Type": data.type || "image/jpeg",
-        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
-        "Access-Control-Allow-Origin": "*",
+        "Content-Type": contentType,
+        "Content-Length": uint8Array.length.toString(),
+        "Cache-Control": "public, max-age=86400",
       },
     });
   } catch (error) {
     console.error("[GCASH RECEIPT] Proxy error:", error);
-    return NextResponse.json(
-      { error: `Failed to fetch receipt: ${error instanceof Error ? error.message : "Unknown"}` },
-      { status: 500 }
-    );
+    return new NextResponse("Error fetching receipt", { status: 500 });
   }
 }

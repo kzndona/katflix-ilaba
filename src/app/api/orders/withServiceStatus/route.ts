@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .in("status", ["pending", "for_pick-up", "processing", "for_delivery"])
+      .in("status", ["pending", "processing", "for_delivery"])
       .order("created_at", { ascending: false });
 
     if (orderError) {

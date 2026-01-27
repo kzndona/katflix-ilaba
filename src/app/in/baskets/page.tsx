@@ -1,16 +1,26 @@
 "use client";
 
+// Suppress Next.js async params warnings in development
+if (typeof window !== "undefined") {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (
+      typeof args[0] === "string" &&
+      (args[0].includes("params are being enumerated") ||
+        args[0].includes("searchParams") ||
+        args[0].includes("React.use()"))
+    ) {
+      return; // Suppress these warnings
+    }
+    originalWarn(...args);
+  };
+}
+
 import { useEffect, useState } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
 
 // Status filter type
-type StatusFilter =
-  | "pending"
-  | "for_pick-up"
-  | "processing"
-  | "for_delivery"
-  | "completed"
-  | "cancelled";
+type StatusFilter = "pending" | "processing" | "completed" | "cancelled";
 
 // Order type matching updated schema
 type Order = {
@@ -86,9 +96,7 @@ export default function BasketsPage() {
   const [currentTime, setCurrentTime] = useState<string>("");
   const [selectedStatuses, setSelectedStatuses] = useState<StatusFilter[]>([
     "pending",
-    "for_pick-up",
     "processing",
-    "for_delivery",
   ]);
 
   // Get authenticated staff user
@@ -177,14 +185,21 @@ export default function BasketsPage() {
         throw new Error(response.error || "Failed to load orders");
       }
 
+      console.log("[LOAD ORDERS] Total orders from API:", response.data.length);
+      response.data.forEach((o: any) => {
+        console.log(`[LOAD ORDERS] Order ${o.id}: status="${o.status}"`);
+      });
+
       // Filter only non-completed processing orders
       const processingOrders = response.data.filter(
         (o: any) =>
           o.status !== "completed" &&
-          (o.status === "pending" ||
-            o.status === "for_pick-up" ||
-            o.status === "processing" ||
-            o.status === "for_delivery"),
+          (o.status === "pending" || o.status === "processing"),
+      );
+
+      console.log(
+        "[LOAD ORDERS] Filtered processing orders:",
+        processingOrders.length,
       );
 
       setOrders(processingOrders);
@@ -355,6 +370,14 @@ export default function BasketsPage() {
     serviceType?: string,
   ) {
     setProcessingId(orderId);
+    console.log("[UPDATE SERVICE] Starting:", {
+      orderId,
+      basketNumber,
+      handlingType,
+      action,
+      serviceType,
+    });
+
     try {
       if (serviceType && basketNumber !== null) {
         // Service status update via new endpoint
@@ -375,6 +398,7 @@ export default function BasketsPage() {
           const error = await res.json();
           throw new Error(error.error || "Failed to update service");
         }
+        console.log("[UPDATE SERVICE] Service updated successfully");
       } else {
         // Handling (pickup/delivery) update via old endpoint
         const body: any = {
@@ -389,20 +413,28 @@ export default function BasketsPage() {
           body.handlingType = handlingType;
         }
 
+        console.log("[UPDATE SERVICE] Calling handling endpoint with:", body);
         const res = await fetch(`/api/orders/${orderId}/serviceStatus`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
 
+        const responseData = await res.json();
+        console.log("[UPDATE SERVICE] Response from endpoint:", responseData);
+
         if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || "Failed to update service");
+          throw new Error(
+            responseData.error || "Failed to update service",
+          );
         }
       }
 
+      console.log("[UPDATE SERVICE] Reloading orders...");
       await load();
+      console.log("[UPDATE SERVICE] Orders reloaded successfully");
     } catch (err: any) {
+      console.error("[UPDATE SERVICE] Error:", err);
       setErrorMsg(err.message);
     } finally {
       setProcessingId(null);
@@ -491,27 +523,6 @@ export default function BasketsPage() {
               </span>
             </button>
 
-            {/* For Pickup Filter */}
-            <button
-              onClick={() => toggleStatus("for_pick-up")}
-              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
-                selectedStatuses.includes("for_pick-up")
-                  ? "bg-yellow-100 text-yellow-900 shadow-md hover:shadow-lg"
-                  : "bg-transparent text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={selectedStatuses.includes("for_pick-up")}
-                onChange={() => {}}
-                className="w-5 h-5 rounded border-2 border-yellow-400 cursor-pointer"
-              />
-              <span>Pickup</span>
-              <span className="text-xs bg-yellow-200 text-yellow-900 px-2 py-0.5 rounded-full font-bold">
-                {countByStatus("for_pick-up")}
-              </span>
-            </button>
-
             {/* Processing Filter */}
             <button
               onClick={() => toggleStatus("processing")}
@@ -530,27 +541,6 @@ export default function BasketsPage() {
               <span>Processing</span>
               <span className="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">
                 {countByStatus("processing")}
-              </span>
-            </button>
-
-            {/* For Delivery Filter */}
-            <button
-              onClick={() => toggleStatus("for_delivery")}
-              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
-                selectedStatuses.includes("for_delivery")
-                  ? "bg-violet-100 text-violet-900 shadow-md hover:shadow-lg"
-                  : "bg-transparent text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={selectedStatuses.includes("for_delivery")}
-                onChange={() => {}}
-                className="w-5 h-5 rounded border-2 border-violet-400 cursor-pointer"
-              />
-              <span>Delivery</span>
-              <span className="text-xs bg-violet-200 text-violet-900 px-2 py-0.5 rounded-full font-bold">
-                {countByStatus("for_delivery")}
               </span>
             </button>
           </div>
@@ -796,7 +786,14 @@ export default function BasketsPage() {
                             {order.source === "mobile" &&
                             order.status === "pending" ? (
                               <button
-                                onClick={() => setMobileOrderModal(order)}
+                                onClick={() => {
+                                  console.log("[MODAL] Opening mobile order:", {
+                                    orderId: order.id,
+                                    hasReceiptUrl: !!order.gcash_receipt_url,
+                                    receiptUrl: order.gcash_receipt_url,
+                                  });
+                                  setMobileOrderModal(order);
+                                }}
                                 disabled={processingId === order.id}
                                 className="w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
                               >
@@ -970,36 +967,27 @@ export default function BasketsPage() {
 
                 {/* Right Panel - GCash Receipt */}
                 <div className="w-1/2 bg-gray-50 overflow-hidden p-6 flex flex-col items-center justify-center">
+                  {(() => {
+                    console.log("[MODAL RENDER] gcash_receipt_url:", mobileOrderModal.gcash_receipt_url);
+                    return null;
+                  })()}
                   {mobileOrderModal.gcash_receipt_url ? (
                     <div className="w-full h-full flex flex-col items-center justify-center">
                       <h3 className="font-semibold text-gray-900 mb-3 shrink-0">
                         💳 GCash Receipt
                       </h3>
                       <img
-                        src={
-                          mobileOrderModal.gcash_receipt_url.startsWith("http")
-                            ? `/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url.split("/").pop()}`
-                            : `/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url}`
-                        }
+                        src={`/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url.split("/").pop()}`}
                         alt="GCash Receipt"
                         className="flex-1 w-full object-contain"
                         onLoad={() => {
-                          console.log("[GCASH] ✅ Image loaded successfully");
+                          console.log("[IMG] Image loaded successfully");
                         }}
                         onError={(e) => {
+                          console.log("[IMG ERROR] Image failed to load", e);
                           const img = e.target as HTMLImageElement;
-                          console.warn("[GCASH] ⚠️ Image load error (will retry):", img.src);
-                          
-                          // Don't immediately show fallback - let browser retry
-                          // Only show fallback after a delay if it still fails
-                          setTimeout(() => {
-                            // Check if image is still broken
-                            if (!img.complete || img.naturalHeight === 0) {
-                              console.error("[GCASH] ❌ Image failed to load after retry");
-                              img.src =
-                                "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2216%22 fill=%22%23999%22%3EImage not available%3C/text%3E%3C/svg%3E";
-                            }
-                          }, 1000);
+                          img.src =
+                            "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2245%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2216%22 font-weight=%22bold%22 fill=%22%23374151%22%3EReceipt Image%3C/text%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2214%22 fill=%22%236b7280%22%3EUnavailable%3C/text%3E%3C/svg%3E";
                         }}
                       />
                     </div>
