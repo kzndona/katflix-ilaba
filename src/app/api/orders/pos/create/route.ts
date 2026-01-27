@@ -162,12 +162,36 @@ export async function POST(request: NextRequest) {
     }
 
     // === VALIDATE INPUT ===
-    if (!body.breakdown || !body.handling) {
+    if (!body.breakdown) {
       return NextResponse.json(
-        { success: false, error: "Missing breakdown or handling data" },
+        { success: false, error: "Missing breakdown data" },
         { status: 400 }
       );
     }
+
+    // === BUILD HANDLING STRUCTURE ===
+    // For POS orders, pickup is always from "store"
+    // Delivery can be "store" (in-store) or a real address from the request
+    const handling = {
+      pickup: {
+        address: "store",
+        status: "pending" as const,
+        started_at: null,
+        completed_at: null,
+      },
+      delivery: {
+        address: body.handling?.delivery_address || "store",
+        status: "pending" as const,
+        started_at: null,
+        completed_at: null,
+      },
+      // Include payment info if provided
+      payment_method: body.handling?.payment_method || null,
+      amount_paid: body.handling?.amount_paid || null,
+    };
+
+    // Replace body.handling with the properly structured version
+    body.handling = handling;
 
     // Validate baskets have services object
     if (body.breakdown.baskets && Array.isArray(body.breakdown.baskets)) {

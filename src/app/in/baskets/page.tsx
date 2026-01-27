@@ -232,7 +232,7 @@ export default function BasketsPage() {
   };
 
   // Get the next pending item in the timeline (pickup → services → delivery)
-  // If pickup address is "In-store", skip the pickup phase entirely
+  // If pickup address is "In-store" or "store" (POS), skip the pickup phase entirely
   const getTimelineNextAction = (
     order: Order,
     basket: any,
@@ -248,11 +248,13 @@ export default function BasketsPage() {
       return null;
     }
 
-    // Check if pickup is "In-store" - if so, skip pickup phase and go straight to services
-    const isInStorePickup = order.handling.pickup.address?.toLowerCase() === "in-store";
+    // Check if pickup is "In-store" or "store" (POS) - if so, skip pickup phase and go straight to services
+    const pickupAddr = order.handling.pickup.address?.toLowerCase() || "";
+    const isStorePickup =
+      pickupAddr === "in-store" || pickupAddr === "store";
 
-    // STEP 1: Check if pickup is pending (unless In-store)
-    if (!isInStorePickup && order.handling.pickup.status === "pending") {
+    // STEP 1: Check if pickup is pending (unless store pickup)
+    if (!isStorePickup && order.handling.pickup.status === "pending") {
       return {
         label: "Start Pickup",
         action: "start",
@@ -260,7 +262,7 @@ export default function BasketsPage() {
       };
     }
 
-    if (!isInStorePickup && order.handling.pickup.status === "in_progress") {
+    if (!isStorePickup && order.handling.pickup.status === "in_progress") {
       return {
         label: "Complete Pickup",
         action: "complete",
@@ -268,7 +270,7 @@ export default function BasketsPage() {
       };
     }
 
-    // STEP 2: If pickup is done (or In-store), check basket services
+    // STEP 2: If pickup is done (or store pickup), check basket services
     const services = basket.services || [];
 
     // Check for in-progress service
@@ -633,9 +635,12 @@ export default function BasketsPage() {
 
                         {/* Timeline */}
                         <div className="space-y-1.5 mb-3">
-                          {/* PICKUP - Skip if address is "In-store" */}
+                          {/* PICKUP - Skip if address is "In-store" or "store" (POS) */}
                           {order.handling?.pickup &&
-                            order.handling.pickup.address?.toLowerCase() !== "in-store" &&
+                            order.handling.pickup.address?.toLowerCase() !==
+                              "in-store" &&
+                            order.handling.pickup.address?.toLowerCase() !==
+                              "store" &&
                             (order.handling.pickup.status === "pending" ||
                               order.handling.pickup.status === "in_progress" ||
                               order.handling.pickup.status === "completed") && (

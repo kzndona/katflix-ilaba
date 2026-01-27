@@ -93,11 +93,12 @@ export async function PATCH(
       );
     }
 
-    // === AUTO-SKIP PICKUP IF IN-STORE ===
-    // If pickup address is "In-store", auto-mark pickup as skipped on first service action
-    const isInStorePickup = order.handling?.pickup?.address?.toLowerCase() === "in-store";
-    if (isInStorePickup && order.handling?.pickup?.status === "pending") {
-      console.log(`[In-Store Pickup] Order ${orderId} - Auto-skipping pickup phase`);
+    // === AUTO-SKIP PICKUP IF IN-STORE OR STORE (POS) ===
+    // If pickup address is "In-store" or "store" (POS), auto-mark pickup as skipped on first service action
+    const pickupAddr = order.handling?.pickup?.address?.toLowerCase() || "";
+    const isStorePickup = pickupAddr === "in-store" || pickupAddr === "store";
+    if (isStorePickup && order.handling?.pickup?.status === "pending") {
+      console.log(`[Store Pickup] Order ${orderId} - Auto-skipping pickup phase`);
       
       // Update the order's handling to mark pickup as skipped
       const updatedHandling = {
@@ -115,10 +116,10 @@ export async function PATCH(
         .eq("id", orderId);
 
       if (handlingError) {
-        console.warn("[In-Store Pickup] Failed to auto-skip pickup:", handlingError);
+        console.warn("[Store Pickup] Failed to auto-skip pickup:", handlingError);
         // Don't fail - continue with service update
       } else {
-        console.log(`[In-Store Pickup] Order ${orderId} pickup marked as skipped`);
+        console.log(`[Store Pickup] Order ${orderId} pickup marked as skipped`);
       }
     }
 
