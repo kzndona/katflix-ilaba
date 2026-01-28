@@ -17,6 +17,12 @@ export async function PATCH(
     const body = await request.json();
     const { status } = body;
 
+    console.log("[UPDATE-STATUS] Request received:", {
+      orderId,
+      status,
+      timestamp: new Date().toISOString(),
+    });
+
     // Validate status
     if (!status || !VALID_STATUSES.includes(status)) {
       return NextResponse.json(
@@ -37,19 +43,26 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error("Update error:", updateError);
+      console.error("[UPDATE-STATUS] Update error:", updateError);
       return NextResponse.json(
-        { error: "Failed to update order" },
+        { error: "Failed to update order", details: updateError.message },
         { status: 500 }
       );
     }
 
     if (!updatedOrder) {
+      console.warn("[UPDATE-STATUS] Order not found:", orderId);
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
       );
     }
+
+    console.log("[UPDATE-STATUS] Success:", {
+      orderId,
+      newStatus: status,
+      timestamp: updatedOrder.updated_at,
+    });
 
     return NextResponse.json({
       success: true,
@@ -61,9 +74,9 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error("Update status error:", error);
+    console.error("[UPDATE-STATUS] Exception:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: String(error) },
       { status: 500 }
     );
   }

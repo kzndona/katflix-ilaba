@@ -38,7 +38,9 @@ export default function IssuesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newStatus, setNewStatus] = useState<"open" | "resolved" | "cancelled">("open");
+  const [newStatus, setNewStatus] = useState<"open" | "resolved" | "cancelled">(
+    "open",
+  );
   const [updating, setUpdating] = useState(false);
 
   const ROWS_PER_PAGE = 10;
@@ -100,7 +102,10 @@ export default function IssuesPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, rows, sortConfig, filterStatus, filterSeverity]);
 
-  async function updateIssueStatus(issueId: string, status: "open" | "resolved" | "cancelled") {
+  async function updateIssueStatus(
+    issueId: string,
+    status: "open" | "resolved" | "cancelled",
+  ) {
     setUpdating(true);
     setErrorMsg(null);
     try {
@@ -120,7 +125,7 @@ export default function IssuesPage() {
     } catch (err) {
       console.error(err);
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to update issue status"
+        err instanceof Error ? err.message : "Failed to update issue status",
       );
     } finally {
       setUpdating(false);
@@ -140,9 +145,7 @@ export default function IssuesPage() {
       setRows(data.issues || []);
     } catch (err) {
       console.error(err);
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to load issues"
-      );
+      setErrorMsg(err instanceof Error ? err.message : "Failed to load issues");
     } finally {
       setLoading(false);
     }
@@ -220,9 +223,7 @@ export default function IssuesPage() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Issues Report
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Issues Report</h1>
             <p className="text-gray-500 text-xs mt-0.5">
               {filteredRows.length} issue
               {filteredRows.length !== 1 ? "s" : ""} found
@@ -359,15 +360,22 @@ export default function IssuesPage() {
                           {formatDate(issue.created_at)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          <div className="max-w-xs truncate" title={issue.description}>
+                          <div
+                            className="max-w-xs truncate"
+                            title={issue.description}
+                          >
                             {issue.description}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {issue.customer_name ? (
                             <div>
-                              <div className="font-medium">{issue.customer_name}</div>
-                              <div className="text-xs text-gray-500">{issue.customer_phone || "—"}</div>
+                              <div className="font-medium">
+                                {issue.customer_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {issue.customer_phone || "—"}
+                              </div>
                             </div>
                           ) : (
                             "—"
@@ -380,7 +388,14 @@ export default function IssuesPage() {
                           {editingId === issue.id ? (
                             <select
                               value={newStatus}
-                              onChange={(e) => setNewStatus(e.target.value as "open" | "resolved" | "cancelled")}
+                              onChange={(e) =>
+                                setNewStatus(
+                                  e.target.value as
+                                    | "open"
+                                    | "resolved"
+                                    | "cancelled",
+                                )
+                              }
                               className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="open">Open</option>
@@ -390,7 +405,7 @@ export default function IssuesPage() {
                           ) : (
                             <span
                               className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border cursor-pointer hover:shadow-md transition ${getStatusColor(
-                                issue.status
+                                issue.status,
                               )}`}
                               onClick={() => {
                                 setEditingId(issue.id);
@@ -411,7 +426,9 @@ export default function IssuesPage() {
                           {editingId === issue.id ? (
                             <div className="flex gap-2">
                               <button
-                                onClick={() => updateIssueStatus(issue.id, newStatus)}
+                                onClick={() =>
+                                  updateIssueStatus(issue.id, newStatus)
+                                }
                                 disabled={updating}
                                 className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50 transition"
                               >
