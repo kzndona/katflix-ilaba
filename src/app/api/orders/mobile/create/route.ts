@@ -138,6 +138,8 @@ export async function POST(request: NextRequest) {
         status: "pending" as const,
         started_at: null,
         completed_at: null,
+        lng: body.handling?.delivery_lng || null,
+        lat: body.handling?.delivery_lat || null,
       },
       // Include payment info if provided
       payment_method: body.handling?.payment_method || null,
