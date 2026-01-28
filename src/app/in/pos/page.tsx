@@ -1607,10 +1607,10 @@ export default function POSPage() {
 
   const currentStep = Math.max(1, Math.min(5, pos.step || 1));
   const steps = [
+    <Step4Customer pos={pos} />,
     <Step1ServiceType pos={pos} />,
     <Step2Baskets pos={pos} />,
     <Step3Products pos={pos} />,
-    <Step4Customer pos={pos} />,
     <Step5Handling
       pos={pos}
       showLocationPicker={showLocationPicker}
@@ -1677,7 +1677,7 @@ export default function POSPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* LEFT: Sidebar - Steps & Baskets */}
-      {currentStep >= 2 && (
+      {true && (
         <div className="w-48 bg-slate-800 text-slate-50 border-r border-slate-700 p-4 flex flex-col gap-4 overflow-y-auto">
           {/* Step Navigation Tabs */}
           <div className="space-y-2 pb-4 border-b border-slate-700">
@@ -1685,10 +1685,10 @@ export default function POSPage() {
               Steps
             </div>
             {[
-              { num: 1, label: "Service" },
-              { num: 2, label: "Baskets" },
-              { num: 3, label: "Products" },
-              { num: 4, label: "Customer" },
+              { num: 1, label: "Customer" },
+              { num: 2, label: "Service" },
+              { num: 3, label: "Baskets" },
+              { num: 4, label: "Products" },
               { num: 5, label: "Handling" },
             ].map((step) => (
               <button
