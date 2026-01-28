@@ -507,7 +507,12 @@ export default function BasketsPage() {
         unit_price: item.unit_price,
         subtotal: item.unit_price * item.quantity,
       })),
-      baskets: order.breakdown?.baskets || [],
+      baskets: (order.breakdown?.baskets || []).map((basket) => ({
+        basket_number: basket.basket_number,
+        weight_kg: basket.weight,
+        subtotal: basket.total,
+        services: basket.services,
+      })),
       total: order.total_amount,
       timestamp: new Date(order.created_at).toISOString(),
       paymentMethod: order.handling?.payment_method?.toUpperCase() || "MOBILE",
