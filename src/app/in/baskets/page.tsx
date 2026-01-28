@@ -598,11 +598,13 @@ export default function BasketsPage() {
           >
             ↻ Refresh
           </button>
-          
+
           {/* Auto-refresh indicator */}
           <div className="text-gray-500 text-xs font-mono">
             {lastRefresh && (
-              <span>Auto-refreshing (Last: {lastRefresh.toLocaleTimeString()})</span>
+              <span>
+                Auto-refreshing (Last: {lastRefresh.toLocaleTimeString()})
+              </span>
             )}
           </div>
         </div>

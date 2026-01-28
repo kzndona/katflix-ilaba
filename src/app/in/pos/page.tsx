@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { usePOSState } from "./logic/usePOSState";
+import { LocationPicker, LocationCoords } from "../../components/LocationPicker";
 import ReceiptModal from "./components/receiptModal";
 
 /**
@@ -871,7 +872,55 @@ function Step4Customer({ pos }: { pos: any }) {
 // STEP 5: HANDLING
 // ============================================================================
 
-function Step5Handling({ pos }: { pos: any }) {
+function Step5Handling({
+  pos,
+  showLocationPicker,
+  setShowLocationPicker,
+}: {
+  pos: any;
+  showLocationPicker: boolean;
+  setShowLocationPicker: (show: boolean) => void;
+}) {
+  const addressInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Setup Places Autocomplete on address field
+  React.useEffect(() => {
+    if (!addressInputRef.current || !window.google?.maps?.places) return;
+
+    const caloocanBounds = new window.google.maps.LatLngBounds(
+      new window.google.maps.LatLng(14.5800, 120.8900),
+      new window.google.maps.LatLng(14.7600, 121.0800)
+    );
+
+    const autocomplete = new window.google.maps.places.Autocomplete(
+      addressInputRef.current,
+      {
+        fields: ["geometry", "formatted_address", "name"],
+        bounds: caloocanBounds,
+        strictBounds: false,
+        componentRestrictions: { country: "ph" },
+      }
+    );
+
+    autocomplete.setBounds(caloocanBounds);
+
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry?.location) return;
+
+      const coords = {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+        address: place.formatted_address,
+      };
+
+      pos.setDeliveryAddress(place.formatted_address);
+      pos.setDeliveryLat(coords.lat);
+      pos.setDeliveryLng(coords.lng);
+      console.log("Address field updated location:", coords);
+    });
+  }, [pos]);
+
   // Get delivery fee from services table
   const getDeliveryFeeDefault = () => {
     const deliveryService = pos.services.find(
@@ -919,13 +968,27 @@ function Step5Handling({ pos }: { pos: any }) {
       {/* Delivery details when delivery is selected */}
       {pos.deliveryType === "delivery" && (
         <div className="space-y-3 bg-slate-50 border-2 border-slate-300 rounded-lg p-4 w-full">
-          <input
-            type="text"
-            placeholder="Address"
-            value={pos.deliveryAddress}
-            onChange={(e) => pos.setDeliveryAddress(e.target.value)}
-            className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 text-sm"
-          />
+          <div className="flex gap-2">
+            <input
+              ref={addressInputRef}
+              type="text"
+              placeholder="Address"
+              value={pos.deliveryAddress}
+              onChange={(e) => pos.setDeliveryAddress(e.target.value)}
+              className="flex-1 border-2 border-slate-300 rounded-lg px-4 py-3 text-sm"
+            />
+            <button
+              onClick={() => setShowLocationPicker(true)}
+              className="px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition whitespace-nowrap"
+            >
+              📍 Pin Location
+            </button>
+          </div>
+          {pos.deliveryLng && pos.deliveryLat && (
+            <div className="text-xs text-green-700 font-medium">
+              ✓ Location pinned: {pos.deliveryLat.toFixed(6)}, {pos.deliveryLng.toFixed(6)}
+            </div>
+          )}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-700">
               Delivery Fee (minimum ₱{deliveryFeeDefault.toFixed(2)})
@@ -1495,15 +1558,16 @@ function OrderSummary({
 
 export default function POSPage() {
   const pos = usePOSState();
-  const [mounted, setMounted] = React.useState(false);
-  const [keypadFocus, setKeypadFocus] = React.useState<
+  const [mounted, setMounted] = useState(false);
+  const [keypadFocus, setKeypadFocus] = useState<
     "amount" | "gcash" | null
   >(null);
-  const [staffName, setStaffName] = React.useState<string>("");
-  const [staffId, setStaffId] = React.useState<string>("");
-  const [showSalesReport, setShowSalesReport] = React.useState(false);
-  const [reportOrders, setReportOrders] = React.useState<any[]>([]);
-  const [reportLoading, setReportLoading] = React.useState(false);
+  const [staffName, setStaffName] = useState<string>("");
+  const [staffId, setStaffId] = useState<string>("");
+  const [showSalesReport, setShowSalesReport] = useState(false);
+  const [reportOrders, setReportOrders] = useState<any[]>([]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -1543,7 +1607,11 @@ export default function POSPage() {
     <Step2Baskets pos={pos} />,
     <Step3Products pos={pos} />,
     <Step4Customer pos={pos} />,
-    <Step5Handling pos={pos} />,
+    <Step5Handling
+      pos={pos}
+      showLocationPicker={showLocationPicker}
+      setShowLocationPicker={setShowLocationPicker}
+    />,
   ];
 
   const handleDailySalesReport = async () => {
@@ -1875,6 +1943,28 @@ export default function POSPage() {
         orderId={pos.lastOrderId || ""}
         onClose={() => pos.setShowReceiptModal(false)}
       />
+
+      {/* Location Picker Modal */}
+      {showLocationPicker && (
+        <LocationPicker
+          onSelect={(coords: LocationCoords) => {
+            pos.setDeliveryLng(coords.lng);
+            pos.setDeliveryLat(coords.lat);
+            setShowLocationPicker(false);
+          }}
+          onClose={() => setShowLocationPicker(false)}
+          title="Pin Delivery Location"
+          defaultLocation={
+            pos.deliveryLng && pos.deliveryLat
+              ? { lat: pos.deliveryLat, lng: pos.deliveryLng }
+              : undefined
+          }
+          storeLocation={{
+            lat: parseFloat(process.env.NEXT_PUBLIC_KATFLIX_LATITUDE || "14.5994"),
+            lng: parseFloat(process.env.NEXT_PUBLIC_KATFLIX_LONGITUDE || "120.9842"),
+          }}
+        />
+      )}
     </div>
   );
 }

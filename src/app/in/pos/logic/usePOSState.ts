@@ -29,6 +29,8 @@ export function usePOSState() {
   const [newCustomerForm, setNewCustomerForm] = useState({ first_name: "", last_name: "", phone_number: "", email_address: "" });
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
+  const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<number | null>(null);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -196,6 +198,8 @@ export function usePOSState() {
         service_type: serviceType,
         handling_type: deliveryType,
         delivery_address: deliveryAddress || null,
+        delivery_lng: deliveryLng,
+        delivery_lat: deliveryLat,
         delivery_fee_override: deliveryFeeOverride,
         special_instructions: specialInstructions,
         payment_method: paymentMethod,
@@ -291,6 +295,8 @@ export function usePOSState() {
     setCustomerSearch("");
     setDeliveryType("pickup");
     setDeliveryAddress("");
+    setDeliveryLng(null);
+    setDeliveryLat(null);
     setDeliveryFeeOverride(null);
     setSpecialInstructions("");
     setPaymentMethod("cash");
@@ -304,7 +310,7 @@ export function usePOSState() {
     updateActiveBasketService, updateActiveBasketWeight, updateActiveBasketNotes, addNewBasket, deleteBasket,
     products, loadingProducts, selectedProducts, addProductToOrder, removeProductFromOrder, setProductQuantity,
     customer, setCustomer, customerSearch, setCustomerSearch, customerSuggestions, selectCustomer, clearCustomer, showCustomerForm, setShowCustomerForm, newCustomerForm, setNewCustomerForm, createNewCustomer,
-    deliveryType, setDeliveryType, deliveryAddress, setDeliveryAddress, deliveryFeeOverride, setDeliveryFeeOverride, specialInstructions, setSpecialInstructions,
+    deliveryType, setDeliveryType, deliveryAddress, setDeliveryAddress, deliveryLng, setDeliveryLng, deliveryLat, setDeliveryLat, deliveryFeeOverride, setDeliveryFeeOverride, specialInstructions, setSpecialInstructions,
     paymentMethod, setPaymentMethod, amountPaid, setAmountPaid, gcashReference, setGcashReference,
     loyaltyDiscountTier, setLoyaltyDiscountTier,
     calculateOrderTotal, isPaymentValid, createOrder, resetOrder, isProcessing,

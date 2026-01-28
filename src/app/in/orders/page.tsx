@@ -1390,13 +1390,16 @@ function BasketCard({
       service.serviceType === "additional_dry_time"
         ? service.total_price || 0
         : service.base_price || 0;
-    
+
     // For iron service, multiply by iron_weight_kg
-    if (service.serviceType === "iron" && (servicesObj as any)?.iron_weight_kg) {
+    if (
+      service.serviceType === "iron" &&
+      (servicesObj as any)?.iron_weight_kg
+    ) {
       const weight = (servicesObj as any).iron_weight_kg as number;
       price = price * weight;
     }
-    
+
     console.log(`[BasketCard] Service ${service.serviceType}: price=${price}`);
     return sum + price;
   }, 0);
@@ -1465,12 +1468,15 @@ function BasketCard({
               const serviceName = pricing.name || pricing.serviceType;
               const basePrice = pricing.base_price || 0;
               const tier = pricing.tier ? ` (${pricing.tier})` : "";
-              
+
               // For iron service, multiply by iron_weight_kg
               let displayPrice = basePrice;
               let displayLabel = serviceName + tier;
-              
-              if (pricing.serviceType === "iron" && (servicesObj as any)?.iron_weight_kg) {
+
+              if (
+                pricing.serviceType === "iron" &&
+                (servicesObj as any)?.iron_weight_kg
+              ) {
                 const weight = (servicesObj as any).iron_weight_kg as number;
                 displayPrice = basePrice * weight;
                 displayLabel = `${serviceName} (${weight}kg)`;
@@ -1481,9 +1487,7 @@ function BasketCard({
                   key={pricing.key}
                   className="text-xs text-gray-700 grid grid-cols-[1fr_80px] gap-2"
                 >
-                  <span className="font-medium truncate">
-                    {displayLabel}
-                  </span>
+                  <span className="font-medium truncate">{displayLabel}</span>
                   <span className="font-medium text-right">
                     ₱{(displayPrice as number).toFixed(2)}
                   </span>

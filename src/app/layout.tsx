@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito_Sans, Noto_Sans_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const nunitoSans = Nunito_Sans({
@@ -22,8 +23,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   return (
     <html lang="en">
+      <head>
+        {googleMapsApiKey && (
+          <Script
+            src={`https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places,geometry`}
+            strategy="lazyOnload"
+            async
+            defer
+          />
+        )}
+      </head>
       <body
         className={`${nunitoSans.variable} ${notoSansMono.variable} antialiased`}
       >

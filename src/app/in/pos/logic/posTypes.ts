@@ -91,6 +91,8 @@ export interface OrderHandling {
   service_type: ServiceType;              // self_service or staff_service
   handling_type: HandlingType;            // pickup or delivery
   delivery_address: string | null;        // If delivery
+  delivery_lng?: number | null;           // Delivery location longitude
+  delivery_lat?: number | null;           // Delivery location latitude
   delivery_fee_override: number | null;   // Cashier override (min 50 if delivery)
   special_instructions: string;           // Order-level notes
   payment_method: PaymentMethod;
