@@ -89,7 +89,10 @@ export default function RiderPage() {
       mapInstanceRef.current = map;
 
       // Add delivery marker (red)
-      if (selectedOrder.handling?.delivery_lat && selectedOrder.handling?.delivery_lng) {
+      if (
+        selectedOrder.handling?.delivery_lat &&
+        selectedOrder.handling?.delivery_lng
+      ) {
         new window.google.maps.Marker({
           position: deliveryLocation,
           map: map,
@@ -107,7 +110,10 @@ export default function RiderPage() {
       });
 
       // Draw route if both locations exist
-      if (selectedOrder.handling?.delivery_lat && selectedOrder.handling?.delivery_lng) {
+      if (
+        selectedOrder.handling?.delivery_lat &&
+        selectedOrder.handling?.delivery_lng
+      ) {
         const directionsService = new window.google.maps.DirectionsService();
         const directionsRenderer = new window.google.maps.DirectionsRenderer({
           map: map,
@@ -124,7 +130,7 @@ export default function RiderPage() {
             if (status === "OK") {
               directionsRenderer.setDirections(result);
             }
-          }
+          },
         );
       }
     };
@@ -164,7 +170,9 @@ export default function RiderPage() {
         {/* Orders List */}
         <div className="flex-1 bg-white rounded-lg shadow overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-center text-gray-500">Loading orders...</div>
+            <div className="p-4 text-center text-gray-500">
+              Loading orders...
+            </div>
           ) : orders.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
               No pending delivery orders

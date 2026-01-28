@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { usePOSState } from "./logic/usePOSState";
-import { LocationPicker, LocationCoords } from "../../components/LocationPicker";
+import {
+  LocationPicker,
+  LocationCoords,
+} from "../../components/LocationPicker";
 import ReceiptModal from "./components/receiptModal";
 
 /**
@@ -888,8 +891,8 @@ function Step5Handling({
     if (!addressInputRef.current || !window.google?.maps?.places) return;
 
     const caloocanBounds = new window.google.maps.LatLngBounds(
-      new window.google.maps.LatLng(14.5800, 120.8900),
-      new window.google.maps.LatLng(14.7600, 121.0800)
+      new window.google.maps.LatLng(14.58, 120.89),
+      new window.google.maps.LatLng(14.76, 121.08),
     );
 
     const autocomplete = new window.google.maps.places.Autocomplete(
@@ -899,7 +902,7 @@ function Step5Handling({
         bounds: caloocanBounds,
         strictBounds: false,
         componentRestrictions: { country: "ph" },
-      }
+      },
     );
 
     autocomplete.setBounds(caloocanBounds);
@@ -986,7 +989,8 @@ function Step5Handling({
           </div>
           {pos.deliveryLng && pos.deliveryLat && (
             <div className="text-xs text-green-700 font-medium">
-              ✓ Location pinned: {pos.deliveryLat.toFixed(6)}, {pos.deliveryLng.toFixed(6)}
+              ✓ Location pinned: {pos.deliveryLat.toFixed(6)},{" "}
+              {pos.deliveryLng.toFixed(6)}
             </div>
           )}
           <div className="space-y-1">
@@ -1559,9 +1563,9 @@ function OrderSummary({
 export default function POSPage() {
   const pos = usePOSState();
   const [mounted, setMounted] = useState(false);
-  const [keypadFocus, setKeypadFocus] = useState<
-    "amount" | "gcash" | null
-  >(null);
+  const [keypadFocus, setKeypadFocus] = useState<"amount" | "gcash" | null>(
+    null,
+  );
   const [staffName, setStaffName] = useState<string>("");
   const [staffId, setStaffId] = useState<string>("");
   const [showSalesReport, setShowSalesReport] = useState(false);
@@ -1960,8 +1964,12 @@ export default function POSPage() {
               : undefined
           }
           storeLocation={{
-            lat: parseFloat(process.env.NEXT_PUBLIC_KATFLIX_LATITUDE || "14.5994"),
-            lng: parseFloat(process.env.NEXT_PUBLIC_KATFLIX_LONGITUDE || "120.9842"),
+            lat: parseFloat(
+              process.env.NEXT_PUBLIC_KATFLIX_LATITUDE || "14.5994",
+            ),
+            lng: parseFloat(
+              process.env.NEXT_PUBLIC_KATFLIX_LONGITUDE || "120.9842",
+            ),
           }}
         />
       )}

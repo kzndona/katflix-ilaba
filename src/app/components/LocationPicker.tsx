@@ -35,8 +35,9 @@ export function LocationPicker({
   const polylineRef = useRef<any>(null);
   const autocompleteRef = useRef<any>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  
-  const [selectedLocation, setSelectedLocation] = useState<LocationCoords | null>(defaultLocation || null);
+
+  const [selectedLocation, setSelectedLocation] =
+    useState<LocationCoords | null>(defaultLocation || null);
   const [distance, setDistance] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,8 +160,8 @@ export function LocationPicker({
         if (searchInputRef.current) {
           // Caloocan bounds (approximate)
           const caloocanBounds = new window.google.maps.LatLngBounds(
-            new window.google.maps.LatLng(14.5800, 120.8900), // SW corner
-            new window.google.maps.LatLng(14.7600, 121.0800)   // NE corner
+            new window.google.maps.LatLng(14.58, 120.89), // SW corner
+            new window.google.maps.LatLng(14.76, 121.08), // NE corner
           );
 
           const autocomplete = new window.google.maps.places.Autocomplete(
@@ -170,7 +171,7 @@ export function LocationPicker({
               bounds: caloocanBounds,
               strictBounds: false, // Allow results outside but prefer within bounds
               componentRestrictions: { country: "ph" }, // Philippines only
-            }
+            },
           );
 
           autocompleteRef.current = autocomplete;
@@ -217,7 +218,11 @@ export function LocationPicker({
               };
 
               service.textSearch(request, (results: any, status: any) => {
-                if (status === window.google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                if (
+                  status === window.google.maps.places.PlacesServiceStatus.OK &&
+                  results &&
+                  results.length > 0
+                ) {
                   const firstResult = results[0];
                   if (firstResult.geometry && firstResult.geometry.location) {
                     const coords = {
@@ -240,7 +245,7 @@ export function LocationPicker({
         // Listen to idle event to calculate distance after 3 seconds
         map.addListener("idle", () => {
           console.log("Map idle, scheduling distance calculation...");
-          
+
           // Clear previous timer
           if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
@@ -255,10 +260,12 @@ export function LocationPicker({
             };
             console.log("Calculating distance for:", coords);
             setSelectedLocation(coords);
-            
+
             // Don't calculate distance if at store
             if (isAtStore(coords)) {
-              console.log("Location is at store, skipping distance calculation");
+              console.log(
+                "Location is at store, skipping distance calculation",
+              );
               setDistance(null);
               setDuration(null);
               if (polylineRef.current) {
@@ -301,7 +308,10 @@ export function LocationPicker({
     };
   }, [scriptLoaded]);
 
-  const calculateDistanceAndRoute = async (coords: LocationCoords, map: any) => {
+  const calculateDistanceAndRoute = async (
+    coords: LocationCoords,
+    map: any,
+  ) => {
     try {
       const res = await fetch("/api/maps/distance", {
         method: "POST",
@@ -336,7 +346,8 @@ export function LocationPicker({
 
     try {
       // Decode polyline
-      const polylinePath = window.google.maps.geometry.encoding.decodePath(polylineEncoded);
+      const polylinePath =
+        window.google.maps.geometry.encoding.decodePath(polylineEncoded);
 
       // Draw new polyline
       const polyline = new window.google.maps.Polyline({
@@ -408,10 +419,10 @@ export function LocationPicker({
               <div className="text-gray-600">Loading map...</div>
             </div>
           )}
-          <div 
-            ref={mapRef} 
-            className="w-full h-full" 
-            style={{ minHeight: '400px' }}
+          <div
+            ref={mapRef}
+            className="w-full h-full"
+            style={{ minHeight: "400px" }}
           />
           {/* Fixed Pin at Map Center */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -419,8 +430,10 @@ export function LocationPicker({
               {/* Pin Icon */}
               <div className="text-red-500 text-4xl drop-shadow-lg">📍</div>
               {/* Crosshair */}
-              <div className="absolute w-0 h-0 border-2 border-red-400 rounded-full opacity-40" 
-                   style={{ width: '60px', height: '60px' }} />
+              <div
+                className="absolute w-0 h-0 border-2 border-red-400 rounded-full opacity-40"
+                style={{ width: "60px", height: "60px" }}
+              />
             </div>
           </div>
         </div>
@@ -447,21 +460,21 @@ export function LocationPicker({
                 </div>
               </div>
               <div className="bg-blue-50 rounded p-2 border border-blue-200 mt-1">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600 text-xs">Distance:</span>
-                      <p className="font-bold text-green-700 text-base">
-                        {(distance / 1000).toFixed(2)} km
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600 text-xs">Time:</span>
-                      <p className="font-bold text-blue-700 text-base">
-                        {Math.round(duration / 60)} min
-                      </p>
-                    </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-gray-600 text-xs">Distance:</span>
+                    <p className="font-bold text-green-700 text-base">
+                      {(distance / 1000).toFixed(2)} km
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-xs">Time:</span>
+                    <p className="font-bold text-blue-700 text-base">
+                      {Math.round(duration / 60)} min
+                    </p>
                   </div>
                 </div>
+              </div>
             </div>
           )}
         </div>

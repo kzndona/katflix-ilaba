@@ -4,7 +4,7 @@
 **Status**: Implementation Ready  
 **Backend API**: Complete ✅  
 **POS Web**: Complete ✅  
-**Rider Web App**: Complete ✅  
+**Rider Web App**: Complete ✅
 
 ---
 
@@ -13,12 +13,14 @@
 The backend and web platforms now have Google Maps integration for location pinning. The mobile app (Flutter) needs to implement the **customer-side location picker** for both pickup and delivery locations.
 
 **What's Complete:**
+
 - ✅ POS cashier can pin delivery location with distance calculation
 - ✅ Rider app displays orders on map with route visualization
 - ✅ Coordinates stored in orders table under `handling.delivery_lng` and `handling.delivery_lat`
 - ✅ Distance calculation API ready
 
 **What's Needed (Mobile Team):**
+
 - 🎯 Customer location picker in booking flow
 - 🎯 Store location selection
 - 🎯 Distance display in order summary
@@ -34,14 +36,14 @@ The `handling` JSONB field now includes:
 
 ```json
 {
-  "handling_type": "delivery",           // "pickup" or "delivery"
-  "delivery_address": "123 Main St",     // User-entered address
-  "delivery_lng": 120.9842,              // Longitude coordinate
-  "delivery_lat": 14.5994,               // Latitude coordinate
-  "pickup_address": "Store",             // Always "Store" for pickup
-  "pickup_lng": null,                    // Always null (store has fixed coordinates)
-  "pickup_lat": null,                    // Always null
-  "delivery_fee_override": 50.00,        // Optional override
+  "handling_type": "delivery", // "pickup" or "delivery"
+  "delivery_address": "123 Main St", // User-entered address
+  "delivery_lng": 120.9842, // Longitude coordinate
+  "delivery_lat": 14.5994, // Latitude coordinate
+  "pickup_address": "Store", // Always "Store" for pickup
+  "pickup_lng": null, // Always null (store has fixed coordinates)
+  "pickup_lat": null, // Always null
+  "delivery_fee_override": 50.0, // Optional override
   "special_instructions": "Leave at door"
 }
 ```
@@ -53,24 +55,26 @@ The `handling` JSONB field now includes:
 ### 1. **POST `/api/maps/distance`** - Distance Calculation
 
 **Request:**
+
 ```json
 {
   "delivery": {
-    "lat": 14.5850,
-    "lng": 120.9950
+    "lat": 14.585,
+    "lng": 120.995
   }
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
-  "distance": 5250,              // meters
-  "duration": 900,               // seconds  
+  "distance": 5250, // meters
+  "duration": 900, // seconds
   "distanceKm": "5.25",
   "durationMinutes": 15,
-  "polyline": "..."              // encoded polyline for route visualization
+  "polyline": "..." // encoded polyline for route visualization
 }
 ```
 
@@ -83,6 +87,7 @@ The `handling` JSONB field now includes:
 **Current Endpoint**: Already accepts location data
 
 **Request Structure** (relevant fields):
+
 ```json
 {
   "customer_id": "uuid",
@@ -107,6 +112,7 @@ The `handling` JSONB field now includes:
 ### Step 1: Add Google Maps to Flutter Project
 
 In `pubspec.yaml`:
+
 ```yaml
 dependencies:
   google_maps_flutter: ^2.5.0
@@ -121,13 +127,14 @@ class LocationPickerWidget extends StatefulWidget {
   final Function(double lat, double lng, String address) onLocationSelected;
   final String title;
   final LatLng? initialLocation;
-  
+
   @override
   State<LocationPickerWidget> createState() => _LocationPickerWidgetState();
 }
 ```
 
 **Features needed:**
+
 - ✅ Display Google Map
 - ✅ Allow user to tap/drag to select location
 - ✅ Show marker on selected location
@@ -141,6 +148,7 @@ class LocationPickerWidget extends StatefulWidget {
 In `mobile_booking_payment_step.dart` (or equivalent):
 
 **For Delivery Address:**
+
 ```dart
 // When user selects "Delivery"
 1. Show LocationPickerWidget
@@ -156,6 +164,7 @@ In `mobile_booking_payment_step.dart` (or equivalent):
 ```
 
 **For Pickup Address:**
+
 ```dart
 // When user selects "Pickup"
 1. Show store location on map (pre-pinned)
@@ -180,14 +189,14 @@ class OrderHandling {
   final double? pickup_lat;          // null
   final double? delivery_fee_override;
   final String? special_instructions;
-  
+
   OrderHandling({
     required this.delivery_address,
     required this.delivery_lng,
     required this.delivery_lat,
     ...
   });
-  
+
   Map<String, dynamic> toJson() => {
     'delivery_address': delivery_address,
     'delivery_lng': delivery_lng,
@@ -215,17 +224,17 @@ Future<void> calculateDeliveryDistance(double lat, double lng) async {
         'delivery': {'lat': lat, 'lng': lng}
       }),
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
+
       // Update breakdown with distance info
       _deliveryDistance = data['distanceKm'];
       _deliveryDuration = data['durationMinutes'];
-      
+
       // Optionally update delivery fee based on distance
       // _breakdown.summary.delivery_fee = calculateFeeByDistance(data['distance']);
-      
+
       notifyListeners();
     }
   } catch (e) {
@@ -241,7 +250,7 @@ void setDeliveryLocation(double lat, double lng, String address) {
       delivery_lat: lat,
     ),
   );
-  
+
   calculateDeliveryDistance(lat, lng);
   notifyListeners();
 }
@@ -250,6 +259,7 @@ void setDeliveryLocation(double lat, double lng, String address) {
 ### Step 6: Update UI
 
 **Booking Flow - Address Input:**
+
 ```dart
 // Old: Simple text input
 // New: Combination of text + map button
@@ -310,6 +320,7 @@ The mobile app needs the same Google Maps API key used for web:
 ```
 
 **Maps APIs Required:**
+
 - ✅ Maps SDK for Android
 - ✅ Maps SDK for iOS
 - ✅ Directions API (for route/distance)
@@ -332,6 +343,7 @@ The mobile app needs the same Google Maps API key used for web:
 ## API Response Examples
 
 ### Successful Location Calculation
+
 ```json
 {
   "success": true,
@@ -344,6 +356,7 @@ The mobile app needs the same Google Maps API key used for web:
 ```
 
 ### Order Creation with Location
+
 ```json
 {
   "success": true,
@@ -357,16 +370,19 @@ The mobile app needs the same Google Maps API key used for web:
 ## Troubleshooting
 
 **Issue**: Distance API returns error
+
 - Check API key is valid
 - Verify Directions API is enabled in Google Cloud Console
 - Ensure coordinates are valid (lat: -90 to 90, lng: -180 to 180)
 
 **Issue**: Map not displaying
+
 - Verify API key in app configuration
 - Check Maps SDK is properly initialized
 - Review Android/iOS permissions for location
 
-**Issue**: Coordinates not saving in order**
+**Issue**: Coordinates not saving in order\*\*
+
 - Verify `delivery_lng` and `delivery_lat` are included in request
 - Check order creation endpoint accepts these fields (it does ✅)
 - Debug: Log the request/response from order creation API
@@ -400,6 +416,7 @@ The mobile app needs the same Google Maps API key used for web:
 ## Questions?
 
 Contact the backend team for:
+
 - Changes to API response format
 - Modifications to coordinate storage
 - Integration with distance-based pricing

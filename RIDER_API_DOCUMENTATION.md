@@ -9,9 +9,11 @@
 **Endpoint:** `GET /deliveries/list`
 
 **Query Parameters (Optional):**
+
 - `status` - Filter by status: `pending` or `processing`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -26,7 +28,7 @@
       "lat": 14.5948,
       "lng": 120.9892,
       "items_count": 3,
-      "total_amount": 1250.50,
+      "total_amount": 1250.5,
       "status": "pending",
       "created_at": "2026-01-29T10:30:00Z",
       "handling_type": "delivery"
@@ -36,6 +38,7 @@
 ```
 
 **Usage (Mobile App):**
+
 ```dart
 // Dart example
 final response = await http.get(
@@ -52,9 +55,11 @@ List<Delivery> deliveries = data['deliveries'];
 **Endpoint:** `GET /orders/delivery-details/:orderId`
 
 **Path Parameters:**
+
 - `orderId` - UUID of the order
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -117,6 +122,7 @@ List<Delivery> deliveries = data['deliveries'];
 ```
 
 **Error Response (404):**
+
 ```json
 {
   "error": "Order not found"
@@ -124,6 +130,7 @@ List<Delivery> deliveries = data['deliveries'];
 ```
 
 **Usage (Mobile App):**
+
 ```dart
 final response = await http.get(
   Uri.parse('http://localhost:3000/api/orders/delivery-details/$orderId'),
@@ -147,9 +154,11 @@ for (var basket in order.baskets) {
 **Endpoint:** `PATCH /orders/update-status/:orderId`
 
 **Path Parameters:**
+
 - `orderId` - UUID of the order
 
 **Request Body:**
+
 ```json
 {
   "status": "completed"
@@ -157,12 +166,14 @@ for (var basket in order.baskets) {
 ```
 
 **Valid Status Values:**
+
 - `pending` - Order created, waiting to start
 - `processing` - Rider picked up order
 - `completed` - Delivery completed
 - `cancelled` - Order cancelled
 
 **Response (Success):**
+
 ```json
 {
   "success": true,
@@ -176,6 +187,7 @@ for (var basket in order.baskets) {
 ```
 
 **Error Response (400):**
+
 ```json
 {
   "error": "Invalid status. Must be one of: pending, processing, completed, cancelled"
@@ -183,6 +195,7 @@ for (var basket in order.baskets) {
 ```
 
 **Error Response (404):**
+
 ```json
 {
   "error": "Order not found"
@@ -190,6 +203,7 @@ for (var basket in order.baskets) {
 ```
 
 **Usage (Mobile App):**
+
 ```dart
 // Mark order as picked up
 final response = await http.patch(
@@ -227,11 +241,13 @@ final response = await http.patch(
 ## 🗺️ Map Integration
 
 The API returns `lat` and `lng` for each delivery. Use Google Maps or your preferred map SDK to:
+
 - Display pins for all deliveries
 - Draw route from rider → delivery location
 - Show distance and ETA
 
 **Example (Flutter):**
+
 ```dart
 // Fetch deliveries
 final deliveries = await getDeliveries();
@@ -253,6 +269,7 @@ for (var delivery in deliveries) {
 ## ⚠️ Error Handling
 
 All endpoints return standard HTTP status codes:
+
 - `200` - Success
 - `400` - Bad request (invalid parameters)
 - `404` - Not found
@@ -265,9 +282,11 @@ Always check `response.statusCode` before processing the response.
 ## 🔄 Real-time Updates (Future)
 
 Current implementation:
+
 - Pull model: App polls `/deliveries/list` every 30 seconds
 
 Future enhancement:
+
 - Push model: WebSocket for real-time order updates
 - GPS tracking: `POST /deliveries/location` for rider location
 
