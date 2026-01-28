@@ -27,6 +27,7 @@ export interface BasketData {
     plastic_bags?: number;
     additional_dry_time_minutes?: number;
     additional_dry_time_pricing?: { base_price: number; name?: string };
+    staff_service_pricing?: { base_price: number; name?: string };
   };
 }
 
@@ -113,38 +114,44 @@ export function formatReceiptAsPlaintext(receipt: CompactReceipt): string {
           const price = services.wash_pricing?.base_price || 0;
           const name = services.wash_pricing?.name || services.wash;
           lines.push(
-            `  🧺 Wash (${name})      ₱${price.toFixed(2)}`
+            `  Wash (${name})        ₱${price.toFixed(2)}`
           );
         }
 
         if (services.spin) {
           const price = services.spin_pricing?.base_price || 0;
-          lines.push(`  🌀 Spin               ₱${price.toFixed(2)}`);
+          lines.push(`  Spin                  ₱${price.toFixed(2)}`);
         }
 
         if (services.dry && services.dry !== "off") {
           const price = services.dry_pricing?.base_price || 0;
           const name = services.dry_pricing?.name || services.dry;
           lines.push(
-            `  💨 Dry (${name})       ₱${price.toFixed(2)}`
+            `  Dry (${name})         ₱${price.toFixed(2)}`
           );
         }
 
         if (services.additional_dry_time_minutes && services.additional_dry_time_minutes > 0) {
           const minutes = services.additional_dry_time_minutes;
           const price = services.additional_dry_time_pricing?.base_price || 0;
-          lines.push(`  ⏱️  Extra Dry (${minutes}m)    ₱${price.toFixed(2)}`);
+          lines.push(`  Extra Dry (${minutes}m)      ₱${price.toFixed(2)}`);
         }
 
         if (services.iron_weight_kg && services.iron_weight_kg > 0) {
           const kg = services.iron_weight_kg;
           const price = services.iron_pricing?.base_price || 0;
           const totalPrice = price * kg;
-          lines.push(`  👔 Iron (${kg}kg)       ₱${totalPrice.toFixed(2)}`);
+          lines.push(`  Iron (${kg}kg)        ₱${totalPrice.toFixed(2)}`);
         }
 
         if (services.plastic_bags && services.plastic_bags > 0) {
-          lines.push(`  🛍️  Bags (${services.plastic_bags}pc)`);
+          lines.push(`  Bags (${services.plastic_bags}pc)`);
+        }
+
+        if (services.staff_service_pricing && services.staff_service_pricing.base_price > 0) {
+          const price = services.staff_service_pricing.base_price;
+          const name = services.staff_service_pricing.name || "Staff Service";
+          lines.push(`  ${name}           ₱${price.toFixed(2)}`);
         }
       }
 

@@ -114,9 +114,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // CASHIER - Can only access POS
+    // CASHIER - Can access POS, Orders, and Baskets
     if (roles.includes('cashier') && !roles.includes('admin') && !roles.includes('attendant')) {
-      if (request.nextUrl.pathname.startsWith('/in/') && !request.nextUrl.pathname.startsWith('/in/pos')) {
+      const allowedPaths = ['/in/pos', '/in/orders', '/in/baskets']
+      const isAllowed = allowedPaths.some(path => request.nextUrl.pathname.startsWith(path))
+      
+      if (request.nextUrl.pathname.startsWith('/in/') && !isAllowed) {
         const url = request.nextUrl.clone()
         url.pathname = '/in/pos'
         console.log(`PROXY: Cashier unauthorized access, redirecting to /in/pos`)

@@ -274,11 +274,91 @@ export function buildOrderBreakdown(
     0
   );
 
-  // Calculate basket subtotals
-  const basketsWithSubtotals = baskets.map((basket) => ({
-    ...basket,
-    subtotal: calculateBasketSubtotal(basket, services, products),
-  }));
+  // Calculate basket subtotals and enrich with pricing information
+  const basketsWithSubtotals = baskets.map((basket) => {
+    // Enrich services with pricing objects for receipt display
+    const enrichedServices = { ...basket.services };
+    
+    // Add wash pricing
+    if (basket.services.wash && basket.services.wash !== "off") {
+      const washTier = basket.services.wash as "basic" | "premium";
+      const washService = services.find(s => s.service_type === "wash" && s.tier === washTier);
+      if (washService) {
+        enrichedServices.wash_pricing = {
+          name: washService.name,
+          tier: washService.tier,
+          base_price: washService.base_price,
+          service_type: "wash"
+        };
+      }
+    }
+    
+    // Add dry pricing
+    if (basket.services.dry && basket.services.dry !== "off") {
+      const dryTier = basket.services.dry as "basic" | "premium";
+      const dryService = services.find(s => s.service_type === "dry" && s.tier === dryTier);
+      if (dryService) {
+        enrichedServices.dry_pricing = {
+          name: dryService.name,
+          tier: dryService.tier,
+          base_price: dryService.base_price,
+          service_type: "dry"
+        };
+      }
+    }
+    
+    // Add spin pricing
+    if (basket.services.spin) {
+      const spinService = services.find(s => s.service_type === "spin");
+      if (spinService) {
+        enrichedServices.spin_pricing = {
+          name: spinService.name,
+          tier: spinService.tier,
+          base_price: spinService.base_price,
+          service_type: "spin"
+        };
+      }
+    }
+    
+    // Add iron pricing
+    if (basket.services.iron_weight_kg >= PRICING.IRON_WEIGHT_MIN) {
+      const ironService = services.find(s => s.service_type === "iron");
+      if (ironService) {
+        enrichedServices.iron_pricing = {
+          name: ironService.name,
+          tier: ironService.tier,
+          base_price: ironService.base_price,
+          service_type: "iron"
+        };
+      }
+    }
+    
+    // Add additional dry time pricing
+    if (basket.services.additional_dry_time_minutes > 0) {
+      enrichedServices.additional_dry_time_pricing = {
+        name: "Additional Dry Time",
+        tier: null,
+        base_price: PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL,
+        service_type: "additional_dry_time"
+      };
+    }
+    
+    // Add staff service pricing
+    if (isStaffService) {
+      enrichedServices.staff_service_pricing = {
+        name: "Staff Service",
+        tier: null,
+        base_price: PRICING.STAFF_SERVICE_FEE,
+        service_type: "staff_service"
+      };
+    }
+    
+    return {
+      ...basket,
+      services: enrichedServices,
+      subtotal: calculateBasketSubtotal(basket, services, products),
+    };
+  });
   const subtotalServices = basketsWithSubtotals.reduce(
     (sum, basket) => sum + basket.subtotal,
     0

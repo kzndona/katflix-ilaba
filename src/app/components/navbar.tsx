@@ -95,9 +95,10 @@ export default function Navbar() {
   const canAccessOrders =
     userRoles.includes("admin") ||
     userRoles.includes("attendant") ||
+    userRoles.includes("cashier") ||
     userRoles.includes("rider");
   const canAccessBaskets =
-    userRoles.includes("admin") || userRoles.includes("attendant");
+    userRoles.includes("admin") || userRoles.includes("attendant") || userRoles.includes("cashier");
   const canAccessManage =
     userRoles.includes("admin") || userRoles.includes("attendant");
   const canAccessAccounts = userRoles.includes("admin");
