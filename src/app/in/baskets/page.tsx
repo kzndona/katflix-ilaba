@@ -40,6 +40,7 @@ type Order = {
   handling: {
     service_type?: string;
     handling_type?: string;
+    payment_method?: string;
     pickup_address?: string;
     delivery_address?: string;
     pickup: {
