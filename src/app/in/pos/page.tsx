@@ -511,15 +511,23 @@ function Step3Products({ pos }: { pos: any }) {
                   : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {/* Image Placeholder */}
+              {/* Product Image */}
               <div
-                className={`w-full flex-1 rounded mb-2 flex items-center justify-center text-3xl font-semibold ${
+                className={`w-full flex-1 rounded mb-2 flex items-center justify-center text-3xl font-semibold overflow-hidden ${
                   pos.selectedProducts[p.id]
                     ? "bg-white bg-opacity-20 text-white"
                     : "bg-slate-300 text-slate-600"
                 }`}
               >
-                📦
+                {p.image_url ? (
+                  <img
+                    src={p.image_url}
+                    alt={p.item_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  "📦"
+                )}
               </div>
 
               {/* Name | Quantity (horizontal) */}

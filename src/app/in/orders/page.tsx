@@ -611,12 +611,14 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Failed to cancel order (${res.status})`);
+        throw new Error(
+          body?.error || `Failed to cancel order (${res.status})`,
+        );
       }
 
       setCancelSuccess(true);
       setShowCancelConfirm(false);
-      
+
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose();
@@ -1037,10 +1039,14 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
         <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-between gap-2 shrink-0">
           <div className="flex-1">
             {cancelError && (
-              <div className="text-red-600 text-xs font-medium">{cancelError}</div>
+              <div className="text-red-600 text-xs font-medium">
+                {cancelError}
+              </div>
             )}
             {cancelSuccess && (
-              <div className="text-green-600 text-xs font-medium">✓ Order cancelled successfully</div>
+              <div className="text-green-600 text-xs font-medium">
+                ✓ Order cancelled successfully
+              </div>
             )}
           </div>
           <div className="flex gap-2 ml-auto">

@@ -66,18 +66,21 @@ export async function POST(request: NextRequest) {
       .from("product-images")
       .getPublicUrl(filePath);
 
-    // Update product with image URL using service role
-    const { error: updateError } = await supabase
-      .from("products")
-      .update({ image_url: publicUrl.publicUrl })
-      .eq("id", productId);
+    // Only update product in database if it's not a temporary ID
+    // (for new products, the image URL will be saved when the product is created)
+    if (!productId.startsWith("temp-")) {
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ image_url: publicUrl.publicUrl })
+        .eq("id", productId);
 
-    if (updateError) {
-      console.error("Database update error:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update product" },
-        { status: 500 }
-      );
+      if (updateError) {
+        console.error("Database update error:", updateError);
+        return NextResponse.json(
+          { error: "Failed to update product" },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({

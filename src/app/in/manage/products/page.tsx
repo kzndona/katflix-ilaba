@@ -40,8 +40,11 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedProductForView, setSelectedProductForView] = useState<Product | null>(null);
-  const [adjustmentTransactions, setAdjustmentTransactions] = useState<any[]>([]);
+  const [selectedProductForView, setSelectedProductForView] =
+    useState<Product | null>(null);
+  const [adjustmentTransactions, setAdjustmentTransactions] = useState<any[]>(
+    [],
+  );
   const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const ROWS_PER_PAGE = 10;
@@ -292,7 +295,9 @@ export default function ProductsPage() {
   // Calculate dashboard metrics
   const totalProducts = rows.length;
   const totalStock = rows.reduce((sum, p) => sum + parseInt(p.quantity), 0);
-  const lowStockItems = rows.filter((p) => parseInt(p.quantity) <= parseInt(p.reorder_level)).length;
+  const lowStockItems = rows.filter(
+    (p) => parseInt(p.quantity) <= parseInt(p.reorder_level),
+  ).length;
   const visibleCount = filteredRows.length;
 
   // Calculate transaction summary
@@ -322,22 +327,38 @@ export default function ProductsPage() {
         {/* Mini Dashboard Cards */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-white rounded-lg border border-slate-300 p-4">
-            <div className="text-sm text-slate-600 font-semibold">Total Products</div>
-            <div className="text-3xl font-bold text-slate-900 mt-1">{totalProducts}</div>
+            <div className="text-sm text-slate-600 font-semibold">
+              Total Products
+            </div>
+            <div className="text-3xl font-bold text-slate-900 mt-1">
+              {totalProducts}
+            </div>
           </div>
           <div className="bg-white rounded-lg border border-slate-300 p-4">
-            <div className="text-sm text-slate-600 font-semibold">Total Stock</div>
-            <div className="text-3xl font-bold text-blue-600 mt-1">{totalStock}</div>
+            <div className="text-sm text-slate-600 font-semibold">
+              Total Stock
+            </div>
+            <div className="text-3xl font-bold text-blue-600 mt-1">
+              {totalStock}
+            </div>
           </div>
           <div className="bg-white rounded-lg border border-slate-300 p-4">
-            <div className="text-sm text-slate-600 font-semibold">Low Stock Items</div>
-            <div className={`text-3xl font-bold mt-1 ${lowStockItems > 0 ? "text-red-600" : "text-green-600"}`}>
+            <div className="text-sm text-slate-600 font-semibold">
+              Low Stock Items
+            </div>
+            <div
+              className={`text-3xl font-bold mt-1 ${lowStockItems > 0 ? "text-red-600" : "text-green-600"}`}
+            >
               {lowStockItems}
             </div>
           </div>
           <div className="bg-white rounded-lg border border-slate-300 p-4">
-            <div className="text-sm text-slate-600 font-semibold">Visible Count</div>
-            <div className="text-3xl font-bold text-slate-900 mt-1">{visibleCount}</div>
+            <div className="text-sm text-slate-600 font-semibold">
+              Visible Count
+            </div>
+            <div className="text-3xl font-bold text-slate-900 mt-1">
+              {visibleCount}
+            </div>
           </div>
         </div>
 
@@ -382,23 +403,48 @@ export default function ProductsPage() {
                   <div
                     key={product.id}
                     onClick={() => setSelectedProductForView(product)}
-                    className={`p-3 border border-slate-200 rounded cursor-pointer hover:bg-blue-50 transition ${
+                    className={`p-3 border border-slate-200 rounded cursor-pointer hover:bg-blue-50 transition flex gap-3 ${
                       selectedProductForView?.id === product.id
                         ? "bg-blue-100 border-blue-400"
                         : ""
                     }`}
                   >
-                    <div className="font-semibold text-slate-900 text-sm">
-                      {product.item_name}
+                    {/* Product Thumbnail */}
+                    <div className="w-12 h-12 bg-slate-100 rounded overflow-hidden shrink-0">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.item_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          📦
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      SKU: {product.sku || "—"}
-                    </div>
-                    <div className="flex justify-between mt-2 text-xs">
-                      <span>Stock: <span className="font-bold">{product.quantity}</span></span>
-                      <span className={product.is_active ? "text-green-600" : "text-red-600"}>
-                        {product.is_active ? "✓ Active" : "✗ Inactive"}
-                      </span>
+                    
+                    {/* Product Info */}
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-900 text-sm">
+                        {product.item_name}
+                      </div>
+                      <div className="text-xs text-slate-600 mt-1">
+                        SKU: {product.sku || "—"}
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs">
+                        <span>
+                          Stock:{" "}
+                          <span className="font-bold">{product.quantity}</span>
+                        </span>
+                        <span
+                          className={
+                            product.is_active ? "text-green-600" : "text-red-600"
+                          }
+                        >
+                          {product.is_active ? "✓ Active" : "✗ Inactive"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -441,8 +487,21 @@ export default function ProductsPage() {
               <>
                 {/* Product Details Card */}
                 <div className="bg-slate-50 border border-slate-200 rounded p-4 space-y-3">
+                  {/* Image Preview */}
+                  {selectedProductForView.image_url && (
+                    <div className="w-full bg-slate-100 rounded overflow-hidden">
+                      <img
+                        src={selectedProductForView.image_url}
+                        alt={selectedProductForView.item_name}
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  )}
+                  
                   <div>
-                    <div className="text-xs text-slate-600 font-semibold">Product Name</div>
+                    <div className="text-xs text-slate-600 font-semibold">
+                      Product Name
+                    </div>
                     <div className="text-sm font-bold text-slate-900">
                       {selectedProductForView.item_name}
                     </div>
@@ -450,7 +509,9 @@ export default function ProductsPage() {
 
                   {selectedProductForView.sku && (
                     <div>
-                      <div className="text-xs text-slate-600 font-semibold">SKU</div>
+                      <div className="text-xs text-slate-600 font-semibold">
+                        SKU
+                      </div>
                       <div className="text-sm text-slate-900">
                         {selectedProductForView.sku}
                       </div>
@@ -459,7 +520,9 @@ export default function ProductsPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-xs text-slate-600 font-semibold">Unit Cost</div>
+                      <div className="text-xs text-slate-600 font-semibold">
+                        Unit Cost
+                      </div>
                       <div className="text-sm font-bold text-blue-700">
                         {selectedProductForView.unit_cost
                           ? `₱${parseFloat(selectedProductForView.unit_cost).toFixed(2)}`
@@ -467,7 +530,9 @@ export default function ProductsPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-600 font-semibold">Unit Price</div>
+                      <div className="text-xs text-slate-600 font-semibold">
+                        Unit Price
+                      </div>
                       <div className="text-sm font-bold text-green-700">
                         {selectedProductForView.unit_price
                           ? `₱${parseFloat(selectedProductForView.unit_price).toFixed(2)}`
@@ -562,7 +627,8 @@ export default function ProductsPage() {
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="font-bold text-slate-900 text-xs">
-                                {tx.transaction_type?.toUpperCase() || "TRANSACTION"}
+                                {tx.transaction_type?.toUpperCase() ||
+                                  "TRANSACTION"}
                               </div>
                               <div
                                 className={`text-xs font-bold ${
@@ -858,11 +924,6 @@ function ImageUploadField({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
-  );
-
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setUploadError("Please upload an image file");
@@ -878,17 +939,25 @@ function ImageUploadField({
     setUploading(true);
 
     try {
+      // Upload through backend API which uses service role key
+      const formData = new FormData();
       const timestamp = Date.now();
-      const filename = `${product.id}-${timestamp}`;
+      const tempProductId = product.id || `temp-${timestamp}`;
+      formData.append("file", file);
+      formData.append("productId", tempProductId);
 
-      const { data, error } = await supabase.storage
-        .from("product-images")
-        .upload(filename, file, { upsert: true });
+      const response = await fetch("/api/manage/products/uploadImage", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Upload failed");
+      }
 
-      const imageUrl = `https://nkcfolnwxxnsskaerkyq.supabase.co/storage/v1/object/public/product-images/${data.path}`;
-      updateField("image_url", imageUrl);
+      const data = await response.json();
+      updateField("image_url", data.imageUrl);
       setUploadError(null);
     } catch (err) {
       console.error("Upload error:", err);
@@ -905,14 +974,20 @@ function ImageUploadField({
     setUploading(true);
 
     try {
-      const filename = product.image_url.split("/").pop();
-      if (!filename) throw new Error("Invalid image URL");
+      // Delete through backend API which uses service role key
+      const response = await fetch("/api/manage/products/deleteImage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          imageUrl: product.image_url,
+        }),
+      });
 
-      const { error } = await supabase.storage
-        .from("product-images")
-        .remove([filename]);
-
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Delete failed");
+      }
 
       updateField("image_url", null);
       setUploadError(null);

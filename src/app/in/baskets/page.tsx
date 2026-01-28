@@ -19,7 +19,10 @@ if (typeof window !== "undefined") {
 import { useEffect, useState } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
 import ReceiptModal from "@/src/app/in/pos/components/receiptModal";
-import { formatReceiptAsPlaintext, CompactReceipt } from "@/src/app/in/pos/logic/receiptGenerator";
+import {
+  formatReceiptAsPlaintext,
+  CompactReceipt,
+} from "@/src/app/in/pos/logic/receiptGenerator";
 
 // Status filter type
 type StatusFilter = "pending" | "processing" | "completed" | "cancelled";
@@ -483,11 +486,10 @@ export default function BasketsPage() {
     // Build receipt object from mobile order data
     const receiptData: CompactReceipt = {
       orderId: order.id,
-      customerName: 
-        order.customers 
-          ? `${order.customers.first_name} ${order.customers.last_name}` 
-          : "Customer",
-      items: (order.breakdown?.items || []).map(item => ({
+      customerName: order.customers
+        ? `${order.customers.first_name} ${order.customers.last_name}`
+        : "Customer",
+      items: (order.breakdown?.items || []).map((item) => ({
         product_name: item.product_name,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -744,19 +746,26 @@ export default function BasketsPage() {
                                 .split("_")
                                 .map(
                                   (word) =>
-                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                    word.charAt(0).toUpperCase() +
+                                    word.slice(1),
                                 )
                                 .join(" ");
 
                               // Add tier info from services_data if available
                               const servicesData = basket.services_data || {};
-                              if (service.service_type === "wash" && servicesData.wash) {
+                              if (
+                                service.service_type === "wash" &&
+                                servicesData.wash
+                              ) {
                                 const washTier = servicesData.wash;
                                 if (washTier !== "off" && washTier !== true) {
                                   serviceLabel += ` (${washTier.charAt(0).toUpperCase() + washTier.slice(1)})`;
                                 }
                               }
-                              if (service.service_type === "dry" && servicesData.dry) {
+                              if (
+                                service.service_type === "dry" &&
+                                servicesData.dry
+                              ) {
                                 const dryTier = servicesData.dry;
                                 if (dryTier !== "off" && dryTier !== true) {
                                   serviceLabel += ` (${dryTier.charAt(0).toUpperCase() + dryTier.slice(1)})`;
@@ -785,9 +794,7 @@ export default function BasketsPage() {
                                   >
                                     {isDone ? "✓" : isActive ? "●" : "○"}
                                   </span>
-                                  <span className="flex-1">
-                                    {serviceLabel}
-                                  </span>
+                                  <span className="flex-1">{serviceLabel}</span>
                                 </div>
                               );
                             })}
