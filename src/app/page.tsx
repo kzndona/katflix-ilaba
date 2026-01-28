@@ -79,19 +79,6 @@ export default function Home() {
         {/* Content */}
         <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-2 gap-16 items-center relative z-10">
           {/* Left side - Image */}
-          <div className="relative h-96 md:h-[500px] rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-500 group">
-            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-purple-200 to-pink-200">
-              <Image
-                src="/images/laundry2.jpeg"
-                alt="Laundry Service"
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-                priority
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-blue-500/30"></div>
-            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-0 group-hover:opacity-50 transition-opacity duration-300 -z-10"></div>
-          </div>
 
           {/* Right side - Text and Buttons */}
           <div className="flex flex-col gap-8 justify-center">
