@@ -68,21 +68,29 @@ export function LocationPicker({
   // Load Google Maps script as fallback if not already loaded globally
   useEffect(() => {
     const loadGoogleMapsScript = () => {
+      // Check if already loaded
       if (window.google && window.google.maps) {
-        console.log("Google Maps already loaded globally");
+        console.log("✅ Google Maps already loaded globally");
         setScriptLoaded(true);
         return;
       }
 
-      // Check if script already exists
+      // Check if script already exists in DOM
       if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-        console.log("Google Maps script already in DOM");
+        console.log("📌 Google Maps script already in DOM, waiting for load...");
         // Wait for it to load
+        let attempts = 0;
         const checkAPI = () => {
+          attempts++;
           if (window.google && window.google.maps) {
+            console.log("✅ Google Maps API loaded after waiting");
             setScriptLoaded(true);
-          } else {
+          } else if (attempts < 50) {
             setTimeout(checkAPI, 100);
+          } else {
+            console.error("❌ Google Maps API failed to load after 5 seconds");
+            setError("Google Maps API failed to load - timeout");
+            setLoading(false);
           }
         };
         checkAPI();
@@ -92,24 +100,25 @@ export function LocationPicker({
       // Load the script
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
-        console.error("Google Maps API key not found in environment variables");
+        console.error("❌ Google Maps API key not found in environment variables");
         setError("Google Maps API key is not configured");
         setLoading(false);
         return;
       }
 
+      console.log("📝 Loading Google Maps script from component...");
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry,marker`;
       script.async = true;
       script.defer = true;
 
       script.onload = () => {
-        console.log("Google Maps script loaded successfully");
+        console.log("✅ Google Maps script loaded successfully from component");
         setScriptLoaded(true);
       };
 
       script.onerror = () => {
-        console.error("Failed to load Google Maps script");
+        console.error("❌ Failed to load Google Maps script from component");
         setError("Failed to load Google Maps");
         setLoading(false);
       };

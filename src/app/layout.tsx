@@ -30,8 +30,8 @@ export default function RootLayout({
       <head>
         {googleMapsApiKey && (
           <Script
-            src={`https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places,geometry`}
-            strategy="lazyOnload"
+            src={`https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places,geometry,marker`}
+            strategy="beforeInteractive"
             async
             defer
           />
