@@ -12,6 +12,7 @@
 This guide provides complete implementation specifications for the **Flutter Rider Companion App** authentication system. It covers login flows, session management, role-based access control (Riders & Admins), and integration with the Katflix backend using **Supabase authentication** and **service key credentials**.
 
 ### Goals
+
 - ✅ Secure login/logout for Riders and Admins only
 - ✅ Role-based access control and redirection
 - ✅ Session persistence across app restarts
@@ -70,31 +71,31 @@ Add to `pubspec.yaml`:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Authentication & Storage
-  supabase_flutter: ^2.0.0        # Supabase client
-  local_auth: ^2.1.0              # Biometric auth
-  shared_preferences: ^2.1.0       # Session persistence
-  flutter_secure_storage: ^9.0.0   # Secure token storage
-  
+  supabase_flutter: ^2.0.0 # Supabase client
+  local_auth: ^2.1.0 # Biometric auth
+  shared_preferences: ^2.1.0 # Session persistence
+  flutter_secure_storage: ^9.0.0 # Secure token storage
+
   # UI & State Management
-  provider: ^6.0.0                # State management
-  flutter_riverpod: ^2.4.0         # Alternative state management
-  go_router: ^13.0.0               # Navigation
-  
+  provider: ^6.0.0 # State management
+  flutter_riverpod: ^2.4.0 # Alternative state management
+  go_router: ^13.0.0 # Navigation
+
   # HTTP & Networking
-  http: ^1.1.0                    # HTTP client
-  dio: ^5.3.0                      # Advanced HTTP
-  
+  http: ^1.1.0 # HTTP client
+  dio: ^5.3.0 # Advanced HTTP
+
   # UI Components
-  google_fonts: ^5.1.0             # Typography
-  intl: ^0.18.0                   # Localization
-  
+  google_fonts: ^5.1.0 # Typography
+  intl: ^0.18.0 # Localization
+
   # Logging & Debugging
-  logger: ^2.0.0                  # Structured logging
-  
+  logger: ^2.0.0 # Structured logging
+
   # Environment Configuration
-  flutter_dotenv: ^5.1.0           # .env file support
+  flutter_dotenv: ^5.1.0 # .env file support
 
 dev_dependencies:
   flutter_test:
@@ -103,6 +104,7 @@ dev_dependencies:
 ```
 
 Run:
+
 ```bash
 flutter pub get
 ```
@@ -152,7 +154,7 @@ class AuthService {
   static const String _tokenKey = 'supabase_token';
   static const String _userRoleKey = 'user_role';
   static const String _userIdKey = 'user_id';
-  
+
   final _secureStorage = const FlutterSecureStorage();
 
   /// Login with email and password
@@ -163,7 +165,7 @@ class AuthService {
   }) async {
     try {
       logger.i('Attempting login for email: $email');
-      
+
       final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
@@ -175,7 +177,7 @@ class AuthService {
 
       // Get user role
       final userRole = await _getUserRole(response.user!.id);
-      
+
       // Validate that user is either rider or admin
       if (!['rider', 'admin'].contains(userRole)) {
         await supabase.auth.signOut();
@@ -190,7 +192,7 @@ class AuthService {
       );
 
       logger.i('Login successful for user: ${response.user!.id}');
-      
+
       return AuthResponse(
         user: response.user!,
         session: response.session,
@@ -227,7 +229,7 @@ class AuthService {
   Future<String> getUserRole() async {
     final user = getCurrentUser();
     if (user == null) return '';
-    
+
     return await _getUserRole(user.id);
   }
 
@@ -288,7 +290,7 @@ class AuthService {
     required String role,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     await _secureStorage.write(key: _tokenKey, value: token);
     await prefs.setString(_userIdKey, userId);
     await prefs.setString(_userRoleKey, role);
@@ -297,7 +299,7 @@ class AuthService {
   /// Clear stored session
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     await _secureStorage.delete(key: _tokenKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userRoleKey);
@@ -384,7 +386,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  
+
   bool obscurePassword = true;
   bool isLoading = false;
   String? errorMessage;
@@ -409,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      
+
       final response = await authService.login(
         email: emailController.text.trim(),
         password: passwordController.text,
@@ -447,7 +449,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-                
+
                 // Logo/Title
                 Center(
                   child: Column(
@@ -664,7 +666,7 @@ class BiometricHelper {
   static final LocalAuthentication _auth = LocalAuthentication();
   static final _secureStorage = const FlutterSecureStorage();
   static final logger = Logger();
-  
+
   static const String _bioEmailKey = 'bio_email';
   static const String _bioPasswordKey = 'bio_password';
 
@@ -1342,27 +1344,23 @@ class MyApp extends ConsumerWidget {
 ### Quick Testing Checklist (5 minutes)
 
 ```yaml
-Login Flow:
-  ✅ Email/password validation works
+Login Flow: ✅ Email/password validation works
   ✅ Rider login redirects to rider dashboard
   ✅ Admin login redirects to admin dashboard
   ✅ Invalid credentials show error message
   ✅ Logout clears session and returns to login
 
-Session Management:
-  ✅ Session persists across app restarts
+Session Management: ✅ Session persists across app restarts
   ✅ Token refresh works when expired
   ✅ Session clears on logout
   ✅ Biometric login stores credentials securely
 
-Security:
-  ✅ Password field is obscured
+Security: ✅ Password field is obscured
   ✅ Tokens stored in secure storage
   ✅ Only riders/admins can login
   ✅ API calls include auth headers
 
-UI/UX:
-  ✅ Loading states show spinner
+UI/UX: ✅ Loading states show spinner
   ✅ Error messages display clearly
   ✅ Biometric button appears if available
   ✅ Responsive design works on all screen sizes
@@ -1402,14 +1400,14 @@ flutter pub run supabase setup
 
 ## 11. Troubleshooting Guide
 
-| Issue | Solution |
-|-------|----------|
-| **Supabase connection fails** | Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env` |
-| **Login returns 401** | Check user exists in `staff` table with `role` field |
-| **Biometric not working** | Ensure `local_auth` permissions in Android/iOS manifest |
-| **Session expires immediately** | Check `SUPABASE_SERVICE_ROLE_KEY` is valid |
-| **Tokens not persisting** | Verify `flutter_secure_storage` is properly configured |
-| **Role-based redirect fails** | Ensure `_getUserRole()` query matches database schema |
+| Issue                           | Solution                                                |
+| ------------------------------- | ------------------------------------------------------- |
+| **Supabase connection fails**   | Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env` |
+| **Login returns 401**           | Check user exists in `staff` table with `role` field    |
+| **Biometric not working**       | Ensure `local_auth` permissions in Android/iOS manifest |
+| **Session expires immediately** | Check `SUPABASE_SERVICE_ROLE_KEY` is valid              |
+| **Tokens not persisting**       | Verify `flutter_secure_storage` is properly configured  |
+| **Role-based redirect fails**   | Ensure `_getUserRole()` query matches database schema   |
 
 ---
 
@@ -1460,9 +1458,10 @@ flutter pub run supabase setup
 ✅ Session management with secure storage  
 ✅ Navigation routing system  
 ✅ Auth interceptor for API calls  
-✅ Error handling & user feedback  
+✅ Error handling & user feedback
 
 **Next Steps (Future):**
+
 - Implement forget password flow
 - Add multi-factor authentication (MFA)
 - Setup push notifications for delivery updates
@@ -1472,6 +1471,7 @@ flutter pub run supabase setup
 - Add chat/messaging between riders and admin
 
 **Deployment Checklist:**
+
 - [ ] Generate signing key for Android
 - [ ] Configure iOS provisioning profiles
 - [ ] Test on real devices (iOS & Android)

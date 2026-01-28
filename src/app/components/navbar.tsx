@@ -78,6 +78,7 @@ export default function Navbar() {
   const goToProducts = () => router.push("/in/manage/products");
   const goToMachines = () => router.push("/in/manage/machines");
   const goToServices = () => router.push("/in/manage/services");
+  const goToIssues = () => router.push("/in/manage/issues");
   const goToStaff = () => router.push("/in/accounts/staff");
   const goToCustomer = () => router.push("/in/accounts/customers");
   const goToSettings = () => router.push("/in/settings");
@@ -222,6 +223,12 @@ export default function Navbar() {
               >
                 Services
               </button>
+              <button
+                onClick={goToIssues}
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
+              >
+                Issues
+              </button>
             </div>
           </div>
         )}
@@ -270,7 +277,7 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Performance - Admin only */}
+        {/* Performance - Admin only
         {canAccessAccounts && (
           <button
             onClick={goToAnalytics}
@@ -289,7 +296,7 @@ export default function Navbar() {
               }`}
             />
           </button>
-        )}
+        )} */}
       </div>
 
       {/* Right Navigation */}

@@ -77,7 +77,9 @@ export function LocationPicker({
 
       // Check if script already exists in DOM
       if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-        console.log("📌 Google Maps script already in DOM, waiting for load...");
+        console.log(
+          "📌 Google Maps script already in DOM, waiting for load...",
+        );
         // Wait for it to load
         let attempts = 0;
         const checkAPI = () => {
@@ -100,7 +102,9 @@ export function LocationPicker({
       // Load the script
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
-        console.error("❌ Google Maps API key not found in environment variables");
+        console.error(
+          "❌ Google Maps API key not found in environment variables",
+        );
         setError("Google Maps API key is not configured");
         setLoading(false);
         return;

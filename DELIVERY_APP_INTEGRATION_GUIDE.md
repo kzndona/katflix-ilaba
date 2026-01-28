@@ -13,6 +13,7 @@ This guide provides comprehensive specifications for the **Delivery/Rider Mobile
 ### What the Backend Expects
 
 The backend is fully equipped to handle:
+
 - ✅ Order status updates (pending → processing → completed/cancelled)
 - ✅ Real-time delivery tracking with coordinates
 - ✅ Order details retrieval with basket and service information
@@ -22,6 +23,7 @@ The backend is fully equipped to handle:
 ### What the Rider App Should Send
 
 The app should:
+
 - ✅ Fetch list of deliveries (filtered by status)
 - ✅ Request delivery details when a delivery is selected
 - ✅ Update order status as delivery progresses
@@ -36,39 +38,39 @@ The app should:
 
 ```typescript
 interface DeliveryOrder {
-  id: string;                    // UUID
-  source: "pos" | "mobile";      // Order origin
-  customer_id: string;           // UUID
-  customer_name: string;         // "First Last"
-  customer_phone: string;        // "+63917123456"
-  customer_email: string;        // "email@example.com"
-  
+  id: string; // UUID
+  source: "pos" | "mobile"; // Order origin
+  customer_id: string; // UUID
+  customer_name: string; // "First Last"
+  customer_phone: string; // "+63917123456"
+  customer_email: string; // "email@example.com"
+
   // Location Information
-  address: string;               // "123 Maginhawa St, Caloocan"
-  lat: number;                   // 14.5948
-  lng: number;                   // 120.9892
-  
+  address: string; // "123 Maginhawa St, Caloocan"
+  lat: number; // 14.5948
+  lng: number; // 120.9892
+
   // Order Details
-  handling_type: "delivery" | "pickup";  // Always "delivery" for this app
+  handling_type: "delivery" | "pickup"; // Always "delivery" for this app
   payment_method: "cash" | "card" | "mobile" | "gcash";
   special_instructions?: string; // "Ring doorbell twice"
-  
+
   // Amounts
-  total_amount: number;          // 1250.50 (PHP)
-  
+  total_amount: number; // 1250.50 (PHP)
+
   // Status & Timestamps
   status: "pending" | "processing" | "completed" | "cancelled";
-  created_at: string;            // ISO 8601 format
-  updated_at: string;            // ISO 8601 format
-  
+  created_at: string; // ISO 8601 format
+  updated_at: string; // ISO 8601 format
+
   // Order Contents
   baskets: BasketDetail[];
 }
 
 interface BasketDetail {
   basket_number: number;
-  weight: number;                // kg
-  total: number;                 // PHP
+  weight: number; // kg
+  total: number; // PHP
   items: OrderItem[];
   services_progress: ServiceStatus[];
 }
@@ -83,8 +85,8 @@ interface ServiceStatus {
   id: string;
   service_type: "wash" | "dry" | "spin" | "iron" | "fold";
   status: "pending" | "in_progress" | "completed" | "skipped";
-  started_at?: string;           // ISO 8601 or null
-  completed_at?: string;         // ISO 8601 or null
+  started_at?: string; // ISO 8601 or null
+  completed_at?: string; // ISO 8601 or null
   notes?: string;
 }
 
@@ -112,6 +114,7 @@ interface DeliveryListItem {
 Retrieve list of all deliveries, optionally filtered by status.
 
 **Query Parameters** (Optional):
+
 - `status` - Filter by `pending` or `processing`
 
 **Response** (200 OK):
@@ -130,7 +133,7 @@ Retrieve list of all deliveries, optionally filtered by status.
       "lat": 14.5948,
       "lng": 120.9892,
       "items_count": 3,
-      "total_amount": 1250.50,
+      "total_amount": 1250.5,
       "status": "pending",
       "created_at": "2026-01-29T10:30:00Z",
       "handling_type": "delivery"
@@ -140,10 +143,10 @@ Retrieve list of all deliveries, optionally filtered by status.
       "customer_name": "Maria Santos",
       "customer_phone": "+63917987654",
       "address": "456 Quezon Ave, Quezon City",
-      "lat": 14.5750,
-      "lng": 121.0350,
+      "lat": 14.575,
+      "lng": 121.035,
       "items_count": 2,
-      "total_amount": 890.00,
+      "total_amount": 890.0,
       "status": "processing",
       "created_at": "2026-01-29T09:15:00Z",
       "handling_type": "delivery"
@@ -167,9 +170,9 @@ Future<List<DeliveryListItem>> fetchDeliveries({String? status}) async {
   try {
     final Uri uri = Uri.parse('$API_BASE/api/deliveries/list')
         .replace(queryParameters: status != null ? {'status': status} : {});
-    
+
     final response = await http.get(uri);
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return List<DeliveryListItem>.from(
@@ -194,6 +197,7 @@ Future<List<DeliveryListItem>> fetchDeliveries({String? status}) async {
 Retrieve complete details for a specific delivery including baskets, items, and service progress.
 
 **Path Parameters**:
+
 - `orderId` - UUID of the order (string)
 
 **Response** (200 OK):
@@ -213,7 +217,7 @@ Retrieve complete details for a specific delivery including baskets, items, and 
     "handling_type": "delivery",
     "payment_method": "cash",
     "special_instructions": "Ring doorbell twice, Leave at gate if not home",
-    "total_amount": 1250.50,
+    "total_amount": 1250.5,
     "status": "pending",
     "created_at": "2026-01-29T10:30:00Z",
     "updated_at": "2026-01-29T10:30:00Z",
@@ -221,12 +225,12 @@ Retrieve complete details for a specific delivery including baskets, items, and 
       {
         "basket_number": 1,
         "weight": 6.5,
-        "total": 600.00,
+        "total": 600.0,
         "items": [
           {
             "product_name": "Shirts (5 pcs)",
             "quantity": 5,
-            "unit_price": 120.00
+            "unit_price": 120.0
           }
         ],
         "services_progress": [
@@ -251,7 +255,7 @@ Retrieve complete details for a specific delivery including baskets, items, and 
       {
         "basket_number": 2,
         "weight": 5.2,
-        "total": 650.50,
+        "total": 650.5,
         "items": [
           {
             "product_name": "Bed Sheets (2 pcs)",
@@ -291,7 +295,7 @@ Future<DeliveryOrder> fetchDeliveryDetails(String orderId) async {
     final response = await http.get(
       Uri.parse('$API_BASE/api/orders/delivery-details/$orderId'),
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return DeliveryOrder.fromJson(data['order']);
@@ -314,6 +318,7 @@ Future<DeliveryOrder> fetchDeliveryDetails(String orderId) async {
 Update the status of an order as the rider progresses through the delivery.
 
 **Path Parameters**:
+
 - `orderId` - UUID of the order (string)
 
 **Request Body**:
@@ -326,12 +331,12 @@ Update the status of an order as the rider progresses through the delivery.
 
 **Valid Status Values**:
 
-| Status | Meaning | When to Use |
-|--------|---------|------------|
-| `pending` | Order created, not yet picked up | Initial state (don't manually set) |
-| `processing` | Rider has picked up the order | When rider leaves store with order |
-| `completed` | Order delivered successfully | When customer receives order |
-| `cancelled` | Order was cancelled | If delivery cannot be completed |
+| Status       | Meaning                          | When to Use                        |
+| ------------ | -------------------------------- | ---------------------------------- |
+| `pending`    | Order created, not yet picked up | Initial state (don't manually set) |
+| `processing` | Rider has picked up the order    | When rider leaves store with order |
+| `completed`  | Order delivered successfully     | When customer receives order       |
+| `cancelled`  | Order was cancelled              | If delivery cannot be completed    |
 
 **Response** (200 OK):
 
@@ -381,7 +386,7 @@ Future<void> updateOrderStatus(String orderId, String newStatus) async {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'status': newStatus}),
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       print('Order updated: ${data['message']}');
@@ -443,7 +448,7 @@ Future<DistanceData> calculateDistance(double lat, double lng) async {
         'delivery': {'lat': lat, 'lng': lng}
       }),
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return DistanceData.fromJson(data);
@@ -747,7 +752,7 @@ class ServiceStatus {
 ```dart
 class DeliveryApiService {
   static const String baseUrl = 'https://your-domain.com/api';
-  
+
   // Or for local development:
   // static const String baseUrl = 'http://192.168.x.x:3000/api';
 
@@ -755,9 +760,9 @@ class DeliveryApiService {
     try {
       final Uri uri = Uri.parse('$baseUrl/deliveries/list')
           .replace(queryParameters: status != null ? {'status': status} : {});
-      
+
       final response = await http.get(uri);
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return List<DeliveryListItem>.from(
@@ -778,7 +783,7 @@ class DeliveryApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/orders/delivery-details/$orderId'),
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return DeliveryOrder.fromJson(data['order']);
@@ -800,7 +805,7 @@ class DeliveryApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'status': status}),
       );
-      
+
       if (response.statusCode == 200) {
         print('Order status updated successfully');
       } else if (response.statusCode == 400) {
@@ -849,7 +854,7 @@ class _DeliveryListScreenState extends State<DeliveryListScreen> {
         loading = true;
         error = null;
       });
-      
+
       final data = await ApiService.fetchDeliveries(status: 'pending');
       setState(() {
         deliveries = data;
@@ -1143,7 +1148,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   Widget _getStatusBadge(String status) {
     Color color;
     String label;
-    
+
     switch (status) {
       case 'pending':
         color = Colors.orange;
@@ -1183,13 +1188,13 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
 
 ## Error Handling Guide
 
-| HTTP Status | Meaning | Recovery Action |
-|------------|---------|-----------------|
-| 200 | Success | Process response normally |
-| 400 | Bad Request | Check request format, validate input |
-| 404 | Not Found | Order/delivery doesn't exist, refresh list |
-| 500 | Server Error | Retry after 5 seconds, contact support |
-| Network Error | No connectivity | Show offline message, enable retry |
+| HTTP Status   | Meaning         | Recovery Action                            |
+| ------------- | --------------- | ------------------------------------------ |
+| 200           | Success         | Process response normally                  |
+| 400           | Bad Request     | Check request format, validate input       |
+| 404           | Not Found       | Order/delivery doesn't exist, refresh list |
+| 500           | Server Error    | Retry after 5 seconds, contact support     |
+| Network Error | No connectivity | Show offline message, enable retry         |
 
 **Example Error Handling**:
 
@@ -1262,6 +1267,6 @@ The delivery rider app now has a complete, production-ready integration with the
 ✅ **Update** order status (picked up → delivered → completed)  
 ✅ **Navigate** to delivery locations using Google Maps  
 ✅ **Handle** errors and network issues gracefully  
-✅ **Refresh** automatically every 30 seconds  
+✅ **Refresh** automatically every 30 seconds
 
 The backend is ready for all these operations and expects no additional authentication for MVP mode.

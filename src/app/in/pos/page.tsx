@@ -51,20 +51,6 @@ function Step1ServiceType({ pos }: { pos: any }) {
           <div className="text-sm text-slate-600 mt-2">+₱40.00 fee</div>
         </button>
       </div>
-
-      <button
-        onClick={() => pos.setStep(2)}
-        className="text-white py-3 px-8 rounded font-semibold transition"
-        style={{ backgroundColor: "#c41d7f" }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.backgroundColor = "#a01860")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor = "#c41d7f")
-        }
-      >
-        Continue →
-      </button>
     </div>
   );
 }
@@ -279,10 +265,10 @@ function Step2Baskets({ pos }: { pos: any }) {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Additional Dry Time, Iron, Plastic Bags */}
+        {/* RIGHT COLUMN: Additional Dry Time, Iron */}
         <div className="space-y-3 flex flex-col">
           {/* Additional Dry Time */}
-          <div className="flex-1 flex flex-col">
+          <div className="h-32 flex flex-col">
             {(() => {
               const dryTimeInfo = getAdditionalDryTimeInfo();
               const price = dryTimeInfo.price_per_increment;
@@ -358,7 +344,7 @@ function Step2Baskets({ pos }: { pos: any }) {
           </div>
 
           {/* Iron */}
-          <div className="flex-1 flex flex-col">
+          <div className="h-32 flex flex-col">
             {(() => {
               const ironInfo = getServiceInfo("iron");
               return (
@@ -410,69 +396,6 @@ function Step2Baskets({ pos }: { pos: any }) {
                               newVal,
                             );
                           }
-                        }}
-                        className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 font-bold text-sm rounded flex items-center justify-center"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Plastic Bags */}
-          <div className="flex-1 flex flex-col">
-            {(() => {
-              // Get plastic bags from products (it should be a product item)
-              const plasticBagProduct = pos.products.find(
-                (p: any) =>
-                  p.item_name.toLowerCase().includes("bag") ||
-                  p.item_name.toLowerCase().includes("plastic"),
-              );
-              const bagPrice = plasticBagProduct?.unit_price || 5;
-              return (
-                <>
-                  <div className="text-sm font-bold text-slate-900 mb-2">
-                    🛍️ Plastic Bags @ ₱{bagPrice.toFixed(2)}/pc
-                  </div>
-                  <div className="p-3 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center gap-4 flex-1">
-                    <div className="text-center min-w-16">
-                      <div className="text-2xl font-bold text-slate-900">
-                        {activeBasket.services?.plastic_bags || 0}
-                      </div>
-                      <div className="text-xs text-slate-600">pc</div>
-                    </div>
-                    <div className="text-center min-w-20 border-l border-slate-300 pl-4">
-                      <div className="text-sm font-semibold text-slate-700">
-                        ₱
-                        {(
-                          (activeBasket.services?.plastic_bags || 0) * bagPrice
-                        ).toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 border-l border-slate-300 pl-4 h-full">
-                      <button
-                        onClick={() => {
-                          const curr = activeBasket.services?.plastic_bags || 0;
-                          if (curr > 0)
-                            pos.updateActiveBasketService?.(
-                              "plastic_bags",
-                              curr - 1,
-                            );
-                        }}
-                        className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 font-bold text-sm rounded flex items-center justify-center"
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={() => {
-                          const curr = activeBasket.services?.plastic_bags || 0;
-                          pos.updateActiveBasketService?.(
-                            "plastic_bags",
-                            curr + 1,
-                          );
                         }}
                         className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 font-bold text-sm rounded flex items-center justify-center"
                       >
@@ -998,10 +921,9 @@ function Step5Handling({
               Delivery Fee (minimum ₱{deliveryFeeDefault.toFixed(2)})
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="Fee"
-              step="0.01"
-              min={deliveryFeeDefault}
               value={(pos.deliveryFeeOverride || deliveryFeeDefault).toFixed(2)}
               onChange={(e) => {
                 const val = parseFloat(e.target.value) || deliveryFeeDefault;

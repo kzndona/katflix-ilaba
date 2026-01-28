@@ -42,7 +42,7 @@ export async function POST(
     // === FETCH CURRENT ORDER ===
     const { data: order, error: fetchError } = await supabase
       .from("orders")
-      .select("id, status")
+      .select("id, status, customer_id")
       .eq("id", orderId)
       .single();
 
@@ -68,6 +68,38 @@ export async function POST(
         { success: false, error: "Failed to reject order" },
         { status: 500 }
       );
+    }
+
+    // === SUBTRACT LOYALTY POINT FROM CUSTOMER ===
+    if (order.customer_id) {
+      // Fetch current loyalty points
+      const { data: customer, error: fetchCustomerError } = await supabase
+        .from("customers")
+        .select("loyalty_points")
+        .eq("id", order.customer_id)
+        .single();
+
+      if (!fetchCustomerError && customer) {
+        const currentPoints = customer.loyalty_points || 0;
+        const newPoints = Math.max(0, currentPoints - 1); // Subtract 1, minimum 0
+
+        const { error: loyaltyError } = await supabase
+          .from("customers")
+          .update({
+            loyalty_points: newPoints
+          })
+          .eq("id", order.customer_id);
+
+        if (loyaltyError) {
+          console.warn("[ORDER REJECT] Warning: Failed to subtract loyalty point:", loyaltyError);
+        } else {
+          console.log("[ORDER REJECT] Loyalty point subtracted for customer:", {
+            customer_id: order.customer_id,
+            previous_points: currentPoints,
+            new_points: newPoints
+          });
+        }
+      }
     }
 
     console.log("[ORDER REJECT] Success:", {
