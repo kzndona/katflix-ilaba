@@ -120,6 +120,7 @@ export default function OrdersPage() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [viewing, setViewing] = useState<Order | null>(null);
+  const [editing, setEditing] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
@@ -515,12 +516,20 @@ export default function OrdersPage() {
                             {formatToPST(order.created_at)}
                           </td>
                           <td className="px-4 py-2 text-sm">
-                            <button
-                              onClick={() => setViewing(order)}
-                              className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
-                            >
-                              View
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setViewing(order)}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => setEditing(order)}
+                                className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
+                              >
+                                Edit
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -583,10 +592,14 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
-
       {/* View Modal - Centered */}
       {viewing && (
         <ViewModal order={viewing} onClose={() => setViewing(null)} />
+      )}
+
+      {/* Edit Modal - Centered */}
+      {editing && (
+        <EditModal order={editing} onClose={() => setEditing(null)} />
       )}
     </div>
   );
@@ -1094,6 +1107,171 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
   );
 }
 
+function EditModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [editedHandling, setEditedHandling] = useState(order.handling || {});
+
+  const handleSave = async () => {
+    setSaving(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          handling: editedHandling,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          body?.error || `Failed to update order (${res.status})`,
+        );
+      }
+
+      setSuccessMsg("✓ Order updated successfully");
+
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setErrorMsg(message);
+      console.error("Save order error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateHandling = (key: string, value: string) => {
+    setEditedHandling((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const updatePickupAddress = (value: string) => {
+    setEditedHandling((prev) => ({
+      ...prev,
+      pickup: {
+        ...prev.pickup,
+        address: value,
+      },
+    }));
+  };
+
+  const updateDeliveryAddress = (value: string) => {
+    setEditedHandling((prev) => ({
+      ...prev,
+      delivery: {
+        ...prev.delivery,
+        address: value,
+      },
+    }));
+  };
+
+  const customerName = order.customers
+    ? `${order.customers.first_name} ${order.customers.last_name}`
+    : "Unknown";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      {/* Modal Centered */}
+      <div
+        className="bg-white shadow-2xl rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-amber-50 flex justify-between items-center shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Edit Order</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Order {order.id.slice(0, 8)}... • {customerName}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="text-gray-400 hover:text-gray-600 text-xl font-bold transition disabled:opacity-50"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Pickup Address */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Pickup Address
+            </label>
+            <textarea
+              value={editedHandling.pickup?.address || ""}
+              onChange={(e) => updatePickupAddress(e.target.value)}
+              disabled={saving}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-sm resize-none h-20"
+              placeholder="Enter pickup address..."
+            />
+          </div>
+
+          {/* Delivery Address */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Delivery Address
+            </label>
+            <textarea
+              value={editedHandling.delivery?.address || ""}
+              onChange={(e) => updateDeliveryAddress(e.target.value)}
+              disabled={saving}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100 text-sm resize-none h-20"
+              placeholder="Enter delivery address..."
+            />
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-between gap-2 shrink-0">
+          <div className="flex-1">
+            {errorMsg && (
+              <div className="text-red-600 text-xs font-medium">{errorMsg}</div>
+            )}
+            {successMsg && (
+              <div className="text-green-600 text-xs font-medium">
+                {successMsg}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -1208,10 +1386,17 @@ function BasketCard({
   // Calculate subtotal from pricing snapshots
   const servicesSubtotal = servicePricings.reduce((sum, service) => {
     // For additional_dry_time, use total_price; for others use base_price
-    const price =
+    let price =
       service.serviceType === "additional_dry_time"
         ? service.total_price || 0
         : service.base_price || 0;
+    
+    // For iron service, multiply by iron_weight_kg
+    if (service.serviceType === "iron" && (servicesObj as any)?.iron_weight_kg) {
+      const weight = (servicesObj as any).iron_weight_kg as number;
+      price = price * weight;
+    }
+    
     console.log(`[BasketCard] Service ${service.serviceType}: price=${price}`);
     return sum + price;
   }, 0);
@@ -1280,6 +1465,16 @@ function BasketCard({
               const serviceName = pricing.name || pricing.serviceType;
               const basePrice = pricing.base_price || 0;
               const tier = pricing.tier ? ` (${pricing.tier})` : "";
+              
+              // For iron service, multiply by iron_weight_kg
+              let displayPrice = basePrice;
+              let displayLabel = serviceName + tier;
+              
+              if (pricing.serviceType === "iron" && (servicesObj as any)?.iron_weight_kg) {
+                const weight = (servicesObj as any).iron_weight_kg as number;
+                displayPrice = basePrice * weight;
+                displayLabel = `${serviceName} (${weight}kg)`;
+              }
 
               return (
                 <div
@@ -1287,11 +1482,10 @@ function BasketCard({
                   className="text-xs text-gray-700 grid grid-cols-[1fr_80px] gap-2"
                 >
                   <span className="font-medium truncate">
-                    {serviceName}
-                    {tier}
+                    {displayLabel}
                   </span>
                   <span className="font-medium text-right">
-                    ₱{(basePrice as number).toFixed(2)}
+                    ₱{(displayPrice as number).toFixed(2)}
                   </span>
                 </div>
               );

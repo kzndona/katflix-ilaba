@@ -423,7 +423,7 @@ export default function ProductsPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Product Info */}
                     <div className="flex-1">
                       <div className="font-semibold text-slate-900 text-sm">
@@ -439,7 +439,9 @@ export default function ProductsPage() {
                         </span>
                         <span
                           className={
-                            product.is_active ? "text-green-600" : "text-red-600"
+                            product.is_active
+                              ? "text-green-600"
+                              : "text-red-600"
                           }
                         >
                           {product.is_active ? "✓ Active" : "✗ Inactive"}
@@ -497,7 +499,7 @@ export default function ProductsPage() {
                       />
                     </div>
                   )}
-                  
+
                   <div>
                     <div className="text-xs text-slate-600 font-semibold">
                       Product Name

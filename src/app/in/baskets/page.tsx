@@ -88,6 +88,7 @@ type Order = {
 
 // Service sequence for basket services
 const SERVICE_SEQUENCE = ["wash", "spin", "dry", "iron", "fold"];
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function BasketsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -99,6 +100,7 @@ export default function BasketsPage() {
   const [mobileOrderModal, setMobileOrderModal] = useState<Order | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [selectedStatuses, setSelectedStatuses] = useState<StatusFilter[]>([
     "pending",
     "processing",
@@ -152,6 +154,16 @@ export default function BasketsPage() {
     }
 
     getAuthUser();
+  }, []);
+
+  // Auto-refresh orders every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load();
+      setLastRefresh(new Date());
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -586,6 +598,13 @@ export default function BasketsPage() {
           >
             ↻ Refresh
           </button>
+          
+          {/* Auto-refresh indicator */}
+          <div className="text-gray-500 text-xs font-mono">
+            {lastRefresh && (
+              <span>Auto-refreshing (Last: {lastRefresh.toLocaleTimeString()})</span>
+            )}
+          </div>
         </div>
 
         {/* Error Message */}
