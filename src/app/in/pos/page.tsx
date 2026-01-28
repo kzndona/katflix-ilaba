@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { usePOSState } from "./logic/usePOSState";
+import ReceiptModal from "./components/receiptModal";
 
 /**
  * POS Page - 6-Step Clean Order Workflow
@@ -290,7 +291,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                   <div className="p-3 border rounded-lg flex items-center justify-center gap-4 bg-slate-100 border-slate-300 flex-1">
                     <div className="text-center min-w-16">
                       <div className="text-2xl font-bold text-slate-900">
-                        {activeBasket.services?.additional_dry_time_minutes || 0}
+                        {activeBasket.services?.additional_dry_time_minutes ||
+                          0}
                       </div>
                       <div className="text-xs text-slate-600">min</div>
                     </div>
@@ -298,7 +300,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                       <div className="text-sm font-semibold text-slate-700">
                         ₱
                         {(
-                          ((activeBasket.services?.additional_dry_time_minutes || 0) /
+                          ((activeBasket.services
+                            ?.additional_dry_time_minutes || 0) /
                             minutes) *
                           price
                         ).toFixed(2)}
@@ -309,7 +312,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                         onClick={() => {
                           if (activeBasket.services?.dry !== "off") {
                             const curr =
-                              activeBasket.services?.additional_dry_time_minutes || 0;
+                              activeBasket.services
+                                ?.additional_dry_time_minutes || 0;
                             if (curr > 0)
                               pos.updateActiveBasketService?.(
                                 "additional_dry_time_minutes",
@@ -326,7 +330,8 @@ function Step2Baskets({ pos }: { pos: any }) {
                         onClick={() => {
                           if (activeBasket.services?.dry !== "off") {
                             const curr =
-                              activeBasket.services?.additional_dry_time_minutes || 0;
+                              activeBasket.services
+                                ?.additional_dry_time_minutes || 0;
                             const maxMinutes =
                               minutes * dryTimeInfo.max_increments;
                             if (curr < maxMinutes)
@@ -1066,9 +1071,13 @@ function OrderSummary({
             {breakdown.baskets.map((b: any, i: number) => {
               // Helper to get service price from services or database
               const getServicePrice = (serviceType: string, tier?: string) => {
-                const matching = pos.services.filter((s: any) => s.service_type === serviceType);
+                const matching = pos.services.filter(
+                  (s: any) => s.service_type === serviceType,
+                );
                 if (!matching.length) return 0;
-                const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+                const service =
+                  matching.find((s: any) => !tier || s.tier === tier) ||
+                  matching[0];
                 return service.base_price || 0;
               };
 
@@ -1081,19 +1090,17 @@ function OrderSummary({
                   </div>
                   {b.services && (
                     <>
-                      {b.services.wash &&
-                        b.services.wash !== "off" && (
-                          <div className="flex justify-between text-xs ml-3 text-slate-600">
-                            <span>🧺 Wash ({b.services.wash})</span>
-                            <span className="font-semibold">
-                              ₱
-                              {getServicePrice(
-                                "wash",
-                                b.services.wash,
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
+                      {b.services.wash && b.services.wash !== "off" && (
+                        <div className="flex justify-between text-xs ml-3 text-slate-600">
+                          <span>🧺 Wash ({b.services.wash})</span>
+                          <span className="font-semibold">
+                            ₱
+                            {getServicePrice("wash", b.services.wash).toFixed(
+                              2,
+                            )}
+                          </span>
+                        </div>
+                      )}
                       {b.services.spin && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>🌀 Spin</span>
@@ -1106,18 +1113,15 @@ function OrderSummary({
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>💨 Dry ({b.services.dry})</span>
                           <span className="font-semibold">
-                            ₱
-                            {getServicePrice(
-                              "dry",
-                              b.services.dry,
-                            ).toFixed(2)}
+                            ₱{getServicePrice("dry", b.services.dry).toFixed(2)}
                           </span>
                         </div>
                       )}
                       {(b.services.additional_dry_time_minutes || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
                           <span>
-                            ⏱️ Extra Dry ({b.services.additional_dry_time_minutes}
+                            ⏱️ Extra Dry (
+                            {b.services.additional_dry_time_minutes}
                             m)
                           </span>
                           <span className="font-semibold">
@@ -1133,9 +1137,7 @@ function OrderSummary({
                       )}
                       {(b.services.iron_weight_kg || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>
-                            👔 Iron ({b.services.iron_weight_kg}kg)
-                          </span>
+                          <span>👔 Iron ({b.services.iron_weight_kg}kg)</span>
                           <span className="font-semibold">
                             ₱
                             {(
@@ -1147,9 +1149,7 @@ function OrderSummary({
                       )}
                       {(b.services.plastic_bags || 0) > 0 && (
                         <div className="flex justify-between text-xs ml-3 text-slate-600">
-                          <span>
-                            🛍️ Bags ({b.services.plastic_bags}pc)
-                          </span>
+                          <span>🛍️ Bags ({b.services.plastic_bags}pc)</span>
                           <span className="font-semibold">
                             ₱
                             {(
@@ -1237,7 +1237,7 @@ function OrderSummary({
                   name="loyaltyTier"
                   checked={pos.loyaltyDiscountTier === "tier1"}
                   onChange={() => pos.setLoyaltyDiscountTier("tier1")}
-                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
+                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 shrink-0"
                 />
                 <div className="flex-1 text-xs">
                   <div className="font-semibold text-slate-900">
@@ -1258,7 +1258,7 @@ function OrderSummary({
                   name="loyaltyTier"
                   checked={pos.loyaltyDiscountTier === "tier2"}
                   onChange={() => pos.setLoyaltyDiscountTier("tier2")}
-                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 flex-shrink-0"
+                  className="w-4 h-4 accent-[#c41d7f] rounded mt-0.5 shrink-0"
                 />
                 <div className="flex-1 text-xs">
                   <div className="font-semibold text-slate-900">
@@ -1702,7 +1702,7 @@ export default function POSPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+            <div className="bg-linear-to-r from-blue-50 to-blue-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
                   Daily Sales Report
@@ -1859,6 +1859,14 @@ export default function POSPage() {
           </div>
         </div>
       )}
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={pos.showReceiptModal}
+        receiptContent={pos.receiptContent}
+        orderId={pos.lastOrderId || ""}
+        onClose={() => pos.setShowReceiptModal(false)}
+      />
     </div>
   );
 }

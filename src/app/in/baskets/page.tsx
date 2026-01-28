@@ -18,6 +18,8 @@ if (typeof window !== "undefined") {
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
+import ReceiptModal from "@/src/app/in/pos/components/receiptModal";
+import { formatReceiptAsPlaintext, CompactReceipt } from "@/src/app/in/pos/logic/receiptGenerator";
 
 // Status filter type
 type StatusFilter = "pending" | "processing" | "completed" | "cancelled";
@@ -98,6 +100,8 @@ export default function BasketsPage() {
     "pending",
     "processing",
   ]);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptContent, setReceiptContent] = useState("");
 
   // Get authenticated staff user
   useEffect(() => {
@@ -475,6 +479,33 @@ export default function BasketsPage() {
     }
   }
 
+  function printMobileOrderReceipt(order: Order) {
+    // Build receipt object from mobile order data
+    const receiptData: CompactReceipt = {
+      orderId: order.id,
+      customerName: 
+        order.customers 
+          ? `${order.customers.first_name} ${order.customers.last_name}` 
+          : "Customer",
+      items: (order.breakdown?.items || []).map(item => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.unit_price * item.quantity,
+      })),
+      baskets: order.breakdown?.baskets || [],
+      total: order.total_amount,
+      timestamp: new Date(order.created_at).toISOString(),
+      paymentMethod: order.handling?.payment_method?.toUpperCase() || "MOBILE",
+      summary: order.breakdown?.summary,
+    };
+
+    // Format receipt for display
+    const formattedReceipt = formatReceiptAsPlaintext(receiptData);
+    setReceiptContent(formattedReceipt);
+    setShowReceiptModal(true);
+  }
+
   if (authLoading)
     return <div className="p-6 text-center">Loading authentication...</div>;
 
@@ -632,7 +663,7 @@ export default function BasketsPage() {
                               Basket #{basket.basket_number}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {basket.weight}kg • ₱{basket.total.toFixed(2)}
+                              ₱{(basket.total || 0).toFixed(2)}
                             </div>
                           </div>
                           {allServicesComplete && (
@@ -708,6 +739,30 @@ export default function BasketsPage() {
                                 service.status === "skipped";
                               const isActive = service.status === "in_progress";
 
+                              // Build service label with tier info
+                              let serviceLabel = service.service_type
+                                .split("_")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                )
+                                .join(" ");
+
+                              // Add tier info from services_data if available
+                              const servicesData = basket.services_data || {};
+                              if (service.service_type === "wash" && servicesData.wash) {
+                                const washTier = servicesData.wash;
+                                if (washTier !== "off" && washTier !== true) {
+                                  serviceLabel += ` (${washTier.charAt(0).toUpperCase() + washTier.slice(1)})`;
+                                }
+                              }
+                              if (service.service_type === "dry" && servicesData.dry) {
+                                const dryTier = servicesData.dry;
+                                if (dryTier !== "off" && dryTier !== true) {
+                                  serviceLabel += ` (${dryTier.charAt(0).toUpperCase() + dryTier.slice(1)})`;
+                                }
+                              }
+
                               return (
                                 <div
                                   key={sIdx}
@@ -731,10 +786,7 @@ export default function BasketsPage() {
                                     {isDone ? "✓" : isActive ? "●" : "○"}
                                   </span>
                                   <span className="flex-1">
-                                    {service.service_type
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      service.service_type.slice(1)}
+                                    {serviceLabel}
                                   </span>
                                 </div>
                               );
@@ -1001,6 +1053,13 @@ export default function BasketsPage() {
               {/* Modal Footer - Actions */}
               <div className="border-t border-gray-200 px-6 py-4 flex gap-3 shrink-0 bg-white">
                 <button
+                  onClick={() => printMobileOrderReceipt(mobileOrderModal)}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition bg-green-600 text-white hover:bg-green-700"
+                  title="Print receipt"
+                >
+                  🖨️ Print Receipt
+                </button>
+                <button
                   onClick={async () => {
                     await updateServiceStatus(
                       mobileOrderModal.id,
@@ -1038,6 +1097,14 @@ export default function BasketsPage() {
             </div>
           </div>
         )}
+
+        {/* Receipt Modal */}
+        <ReceiptModal
+          isOpen={showReceiptModal}
+          receiptContent={receiptContent}
+          orderId={mobileOrderModal?.id || ""}
+          onClose={() => setShowReceiptModal(false)}
+        />
       </div>
     </div>
   );

@@ -73,6 +73,18 @@ export async function POST(request: NextRequest) {
       console.log("[POS CREATE] Basket[0].services.additional_dry_time_minutes:", body.breakdown.baskets[0].services?.additional_dry_time_minutes);
     }
 
+    // *** ENTRY POINT TRACE ***
+    console.log("[TRACE-ENTRY] Frontend sent breakdown:", {
+      baskets_count: body.breakdown?.baskets?.length,
+      basket_0_subtotal: body.breakdown?.baskets?.[0]?.subtotal,
+      summary_subtotal_services: body.breakdown?.summary?.subtotal_services,
+      summary_total: body.breakdown?.summary?.total,
+      raw_json: JSON.stringify({
+        baskets: body.breakdown?.baskets?.map((b: any) => ({ subtotal: b.subtotal, services: b.services })),
+        summary: body.breakdown?.summary,
+      })
+    });
+
     // === HELPER: Enrich services with pricing snapshots ===
     async function enrichServicesWithPricing(breakdown: any) {
       console.log("[ENRICH] Function called, baskets count:", breakdown.baskets?.length || 0);
@@ -392,6 +404,9 @@ export async function POST(request: NextRequest) {
 
     // STEP 3: Create order
     console.log("[POS CREATE] About to insert order. Final breakdown baskets[0].services.additional_dry_time_minutes:", body.breakdown.baskets?.[0]?.services?.additional_dry_time_minutes);
+    console.log("[POS CREATE] Final breakdown baskets[0].subtotal:", body.breakdown.baskets?.[0]?.subtotal);
+    console.log("[POS CREATE] Final breakdown summary.subtotal_services:", body.breakdown.summary?.subtotal_services);
+    console.log("[POS CREATE] Final breakdown summary.total:", body.breakdown.summary?.total);
     const { data: newOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -417,16 +432,25 @@ export async function POST(request: NextRequest) {
 
     const orderId = newOrder.id;
 
-    // Verify what was actually inserted
+    // *** EXIT POINT TRACE - VERIFY WHAT WAS SAVED ***
     const { data: verifyOrder, error: verifyError } = await supabase
       .from("orders")
-      .select("id, breakdown")
+      .select("id, breakdown, total_amount")
       .eq("id", orderId)
       .single();
 
-    if (verifyOrder?.breakdown?.baskets?.[0]) {
-      console.log("[POS CREATE] VERIFY after insert - Basket[0].services.additional_dry_time_minutes:", verifyOrder.breakdown.baskets[0].services?.additional_dry_time_minutes);
-    }
+    console.log("[TRACE-EXIT] Backend saved breakdown:", {
+      order_id: orderId,
+      total_amount_field: verifyOrder?.total_amount,
+      basket_0_subtotal: verifyOrder?.breakdown?.baskets?.[0]?.subtotal,
+      summary_subtotal_services: verifyOrder?.breakdown?.summary?.subtotal_services,
+      summary_total: verifyOrder?.breakdown?.summary?.total,
+      discrepancy: (verifyOrder?.breakdown?.summary?.total || 0) - (verifyOrder?.total_amount || 0),
+      raw_json: JSON.stringify({
+        baskets: verifyOrder?.breakdown?.baskets?.map((b: any) => ({ subtotal: b.subtotal })),
+        summary: verifyOrder?.breakdown?.summary,
+      })
+    });
 
     // STEP 4: Deduct inventory (product_transactions)
     // Collect all items to deduct: regular items + plastic bags from baskets

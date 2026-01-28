@@ -6,7 +6,13 @@ export async function POST(request: NextRequest) {
     // Use service role key for storage operations
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
     );
     const { productId, imageUrl } = await request.json();
 

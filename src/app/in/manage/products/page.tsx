@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getInventoryHistory,
+  getTransactionSummary,
+} from "@/src/app/in/pos/logic/inventoryUtils";
 
 type Product = {
   id: string;
@@ -36,12 +40,22 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedProductForView, setSelectedProductForView] = useState<Product | null>(null);
+  const [adjustmentTransactions, setAdjustmentTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const ROWS_PER_PAGE = 10;
 
   useEffect(() => {
     load();
   }, []);
+
+  // Load transactions for selected product
+  useEffect(() => {
+    if (selectedProductForView) {
+      viewProductDetails(selectedProductForView);
+    }
+  }, [selectedProductForView]);
 
   // Apply search and sort
   useEffect(() => {
@@ -134,6 +148,19 @@ export default function ProductsPage() {
       setErrorMsg("Failed to load products");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function viewProductDetails(product: Product) {
+    setLoadingTransactions(true);
+    try {
+      const result = await getInventoryHistory(product.id);
+      setAdjustmentTransactions(result.transactions || []);
+    } catch (err) {
+      console.error(err);
+      setAdjustmentTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
     }
   }
 
@@ -262,19 +289,27 @@ export default function ProductsPage() {
     return <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>;
   };
 
+  // Calculate dashboard metrics
+  const totalProducts = rows.length;
+  const totalStock = rows.reduce((sum, p) => sum + parseInt(p.quantity), 0);
+  const lowStockItems = rows.filter((p) => parseInt(p.quantity) <= parseInt(p.reorder_level)).length;
+  const visibleCount = filteredRows.length;
+
+  // Calculate transaction summary
+  const transactionSummary =
+    selectedProductForView && adjustmentTransactions.length > 0
+      ? getTransactionSummary(adjustmentTransactions)
+      : null;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
-      <div className="mx-auto w-full">
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Products Management
+            <h1 className="text-3xl font-bold text-slate-900">
+              📦 Products Management
             </h1>
-            <p className="text-gray-500 text-xs mt-0.5">
-              {filteredRows.length} product
-              {filteredRows.length !== 1 ? "s" : ""} found
-            </p>
           </div>
           <button
             onClick={openNew}
@@ -284,246 +319,292 @@ export default function ProductsPage() {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by name, SKU, price, quantity, date, updater..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          />
+        {/* Mini Dashboard Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-slate-300 p-4">
+            <div className="text-sm text-slate-600 font-semibold">Total Products</div>
+            <div className="text-3xl font-bold text-slate-900 mt-1">{totalProducts}</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-300 p-4">
+            <div className="text-sm text-slate-600 font-semibold">Total Stock</div>
+            <div className="text-3xl font-bold text-blue-600 mt-1">{totalStock}</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-300 p-4">
+            <div className="text-sm text-slate-600 font-semibold">Low Stock Items</div>
+            <div className={`text-3xl font-bold mt-1 ${lowStockItems > 0 ? "text-red-600" : "text-green-600"}`}>
+              {lowStockItems}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-300 p-4">
+            <div className="text-sm text-slate-600 font-semibold">Visible Count</div>
+            <div className="text-3xl font-bold text-slate-900 mt-1">{visibleCount}</div>
+          </div>
         </div>
 
         {/* Error Message */}
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
           </div>
         )}
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500">
-              Loading products...
-            </div>
-          ) : paginatedRows.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              {rows.length === 0
-                ? "No products yet. Create one to get started!"
-                : "No results match your search."}
-            </div>
-          ) : (
-            <>
-              {/* Table Wrapper with Horizontal Scroll */}
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200">
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("item_name")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Name <SortIcon field="item_name" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("sku")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          SKU <SortIcon field="sku" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("unit_cost")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Unit Cost <SortIcon field="unit_cost" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("unit_price")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Unit Price <SortIcon field="unit_price" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("quantity")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Quantity <SortIcon field="quantity" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("reorder_level")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Reorder Level <SortIcon field="reorder_level" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("created_at")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Created <SortIcon field="created_at" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("updated_at")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Updated <SortIcon field="updated_at" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("updated_by")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Updated By <SortIcon field="updated_by" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        <button
-                          onClick={() => handleSort("is_active")}
-                          className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
-                        >
-                          Status <SortIcon field="is_active" />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedRows.map((product) => (
-                      <tr
-                        key={product.id}
-                        className="border-b border-gray-200 hover:bg-blue-50 transition"
-                      >
-                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          {product.item_name}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {product.sku || "—"}
-                        </td>
-                        <td className="px-4 py-2 text-sm font-semibold text-blue-700">
-                          {product.unit_cost
-                            ? `₱${parseFloat(product.unit_cost).toFixed(2)}`
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-2 text-sm font-semibold text-green-700">
-                          {product.unit_price
-                            ? `₱${parseFloat(product.unit_price).toFixed(2)}`
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {product.quantity}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {product.reorder_level}
-                        </td>
-                        <td className="px-4 py-2 text-xs text-gray-600">
-                          {product.created_at
-                            ? new Date(product.created_at).toLocaleDateString()
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-2 text-xs text-gray-600">
-                          {product.updated_at
-                            ? new Date(product.updated_at).toLocaleDateString()
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-2 text-xs text-gray-600">
-                          {product.updated_by || "—"}
-                        </td>
-                        <td className="px-4 py-2 text-sm">
-                          {product.is_active ? (
-                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                              ✓ Active
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                              ✗ Inactive
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-sm">
-                          <button
-                            onClick={() => openEdit(product)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* LEFT: Products List */}
+          <div className="space-y-4 bg-white rounded-lg border border-slate-300 p-6">
+            <h2 className="text-xl font-bold text-slate-900">Products List</h2>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                  <div className="text-xs text-gray-600">
-                    Showing {startIdx + 1} to{" "}
-                    {Math.min(endIdx, filteredRows.length)} of{" "}
-                    {filteredRows.length} products
+            {/* Search Bar */}
+            <div>
+              <input
+                type="text"
+                placeholder="Search by name, SKU, price..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            {/* Products List */}
+            <div className="space-y-2 max-h-96 overflow-y-auto border border-slate-200 rounded p-2">
+              {loading ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  Loading products...
+                </div>
+              ) : paginatedRows.length === 0 ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  {rows.length === 0
+                    ? "No products yet. Create one to get started!"
+                    : "No results match your search."}
+                </div>
+              ) : (
+                paginatedRows.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => setSelectedProductForView(product)}
+                    className={`p-3 border border-slate-200 rounded cursor-pointer hover:bg-blue-50 transition ${
+                      selectedProductForView?.id === product.id
+                        ? "bg-blue-100 border-blue-400"
+                        : ""
+                    }`}
+                  >
+                    <div className="font-semibold text-slate-900 text-sm">
+                      {product.item_name}
+                    </div>
+                    <div className="text-xs text-slate-600 mt-1">
+                      SKU: {product.sku || "—"}
+                    </div>
+                    <div className="flex justify-between mt-2 text-xs">
+                      <span>Stock: <span className="font-bold">{product.quantity}</span></span>
+                      <span className={product.is_active ? "text-green-600" : "text-red-600"}>
+                        {product.is_active ? "✓ Active" : "✗ Inactive"}
+                      </span>
+                    </div>
                   </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex gap-2 justify-between items-center border-t border-slate-200 pt-4">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Prev
+                </button>
+                <span className="text-xs text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: Product Details & Transaction History */}
+          <div className="space-y-4 bg-white rounded-lg border border-slate-300 p-6">
+            <h2 className="text-xl font-bold text-slate-900">
+              Product Details & History
+            </h2>
+
+            {selectedProductForView ? (
+              <>
+                {/* Product Details Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded p-4 space-y-3">
+                  <div>
+                    <div className="text-xs text-slate-600 font-semibold">Product Name</div>
+                    <div className="text-sm font-bold text-slate-900">
+                      {selectedProductForView.item_name}
+                    </div>
+                  </div>
+
+                  {selectedProductForView.sku && (
+                    <div>
+                      <div className="text-xs text-slate-600 font-semibold">SKU</div>
+                      <div className="text-sm text-slate-900">
+                        {selectedProductForView.sku}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-slate-600 font-semibold">Unit Cost</div>
+                      <div className="text-sm font-bold text-blue-700">
+                        {selectedProductForView.unit_cost
+                          ? `₱${parseFloat(selectedProductForView.unit_cost).toFixed(2)}`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-600 font-semibold">Unit Price</div>
+                      <div className="text-sm font-bold text-green-700">
+                        {selectedProductForView.unit_price
+                          ? `₱${parseFloat(selectedProductForView.unit_price).toFixed(2)}`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-blue-50 border border-blue-300 rounded p-3">
+                      <div className="text-xs text-blue-600 font-semibold">
+                        Current Stock
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {selectedProductForView.quantity}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-300 rounded p-3">
+                      <div className="text-xs text-purple-600 font-semibold">
+                        Reorder Level
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        {selectedProductForView.reorder_level}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => openEdit(selectedProductForView)}
+                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
                     >
-                      ← Previous
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => {
-                        const diff = Math.abs(p - currentPage);
-                        return diff < 3 || p === 1 || p === totalPages;
-                      })
-                      .map((p, i, arr) => (
-                        <div key={p}>
-                          {i > 0 && arr[i - 1] !== p - 1 && (
-                            <span className="px-1 text-gray-400">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition ${
-                              currentPage === p
-                                ? "bg-blue-600 text-white"
-                                : "border border-gray-300 hover:bg-gray-200"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </div>
-                      ))}
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next →
+                      Edit Product
                     </button>
                   </div>
                 </div>
-              )}
-            </>
-          )}
+
+                {/* Transaction Summary */}
+                {transactionSummary && (
+                  <div className="bg-slate-100 rounded p-4 space-y-2">
+                    <div className="text-sm font-bold text-slate-600">
+                      Transaction Summary
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-slate-600">Deducted</div>
+                        <div className="font-bold text-slate-900">
+                          -{transactionSummary.total_deducted}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-600">Returned</div>
+                        <div className="font-bold text-slate-900">
+                          +{transactionSummary.total_returned}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-600">Net Change</div>
+                        <div
+                          className={`font-bold ${transactionSummary.net_change >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {transactionSummary.net_change > 0 ? "+" : ""}
+                          {transactionSummary.net_change}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-600">Transactions</div>
+                        <div className="font-bold text-slate-900">
+                          {transactionSummary.transaction_count}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction History */}
+                <div className="space-y-2">
+                  <div className="text-sm font-bold text-slate-900">
+                    Transaction History
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded p-2">
+                    {loadingTransactions ? (
+                      <div className="p-4 text-center text-slate-500 text-sm">
+                        Loading transactions...
+                      </div>
+                    ) : adjustmentTransactions.length > 0 ? (
+                      adjustmentTransactions.map((tx, idx) => (
+                        <div
+                          key={idx}
+                          className="border border-slate-300 rounded p-2 hover:bg-slate-50"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-bold text-slate-900 text-xs">
+                                {tx.transaction_type?.toUpperCase() || "TRANSACTION"}
+                              </div>
+                              <div
+                                className={`text-xs font-bold ${
+                                  tx.quantity_change > 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {tx.quantity_change > 0 ? "+" : ""}
+                                {tx.quantity_change}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs text-slate-600">
+                                {new Date(tx.created_at).toLocaleDateString()}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {new Date(tx.created_at).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </div>
+                          {tx.notes && (
+                            <div className="text-xs text-slate-600 mt-1">
+                              📝 {tx.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-slate-600 text-xs">
+                        No transactions yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-80 text-slate-600 text-sm">
+                Select a product to view details and history
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

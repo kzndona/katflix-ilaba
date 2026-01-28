@@ -52,6 +52,25 @@ export async function GET(request: NextRequest) {
           id,
           first_name,
           last_name
+        ),
+        service_logs:basket_service_status(
+          id,
+          basket_number,
+          service_type,
+          status,
+          started_at,
+          completed_at,
+          notes,
+          started_by_staff:started_by(
+            id,
+            first_name,
+            last_name
+          ),
+          completed_by_staff:completed_by(
+            id,
+            first_name,
+            last_name
+          )
         )
       `)
       .order('created_at', { ascending: false });
@@ -140,7 +159,7 @@ export async function GET(request: NextRequest) {
         },
         customers: order.customers,
         staff: order.staff,
-        service_logs: [],
+        service_logs: order.service_logs || [],
       };
     });
 

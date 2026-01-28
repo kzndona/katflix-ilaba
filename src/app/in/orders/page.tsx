@@ -48,6 +48,7 @@ type Order = {
     baskets: Array<{
       basket_number: number;
       weight: number;
+      subtotal?: number;
       basket_notes: string | null;
       services: Array<{
         id: string;
@@ -124,8 +125,10 @@ export default function OrdersPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [cashierFilter, setCashierFilter] = useState<string>("");
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const ROWS_PER_PAGE = 10;
+  const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
   useEffect(() => {
     // Check URL params for pre-set filters
@@ -157,6 +160,16 @@ export default function OrdersPage() {
   useEffect(() => {
     filterAndSort();
   }, [rows, searchQuery, sortConfig, dateFrom, dateTo, cashierFilter]);
+
+  // Auto-refresh orders every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load();
+      setLastRefresh(new Date());
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -213,7 +226,8 @@ export default function OrdersPage() {
         const customerName = order.customers
           ? `${order.customers.first_name} ${order.customers.last_name}`.toLowerCase()
           : "";
-        return customerName.includes(query);
+        const orderId = order.id.toLowerCase();
+        return customerName.includes(query) || orderId.includes(query);
       });
     }
 
@@ -332,6 +346,11 @@ export default function OrdersPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {groupedOrders.length} order
               {groupedOrders.length !== 1 ? "s" : ""} found
+              {lastRefresh && (
+                <span className="ml-2 text-gray-400">
+                  • Auto-refreshing (Last: {lastRefresh.toLocaleTimeString()})
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -362,7 +381,7 @@ export default function OrdersPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600 mb-1 block">
-              Search Customer
+              Search Order ID or Customer
             </label>
             <input
               type="text"
@@ -409,6 +428,9 @@ export default function OrdersPage() {
                         >
                           Customer <SortIcon field="total_amount" />
                         </button>
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
+                        Order ID
                       </th>
                       <th className="px-4 py-2 text-left font-semibold text-sm text-gray-900">
                         Phone
@@ -467,6 +489,9 @@ export default function OrdersPage() {
                         >
                           <td className="px-4 py-2 text-sm font-medium text-gray-900">
                             {customerName}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600 font-mono">
+                            {order.id.slice(0, 8)}...
                           </td>
                           <td className="px-4 py-2 text-sm text-gray-700">
                             {order.customers?.phone_number || "—"}
@@ -568,6 +593,43 @@ export default function OrdersPage() {
 }
 
 function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+
+  const handleCancelOrder = async () => {
+    setCancelling(true);
+    setCancelError(null);
+    setCancelSuccess(false);
+
+    try {
+      const res = await fetch(`/api/orders/${order.id}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to cancel order (${res.status})`);
+      }
+
+      setCancelSuccess(true);
+      setShowCancelConfirm(false);
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setCancelError(message);
+      console.error("Cancel order error:", err);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   // Log order details for debugging
   console.log("[ViewModal] Displaying order:", {
     id: order.id,
@@ -972,13 +1034,54 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2 shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition"
-          >
-            Close
-          </button>
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-between gap-2 shrink-0">
+          <div className="flex-1">
+            {cancelError && (
+              <div className="text-red-600 text-xs font-medium">{cancelError}</div>
+            )}
+            {cancelSuccess && (
+              <div className="text-green-600 text-xs font-medium">✓ Order cancelled successfully</div>
+            )}
+          </div>
+          <div className="flex gap-2 ml-auto">
+            {showCancelConfirm ? (
+              <>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={cancelling}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={cancelling}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelling ? "Cancelling..." : "Confirm Cancel"}
+                </button>
+              </>
+            ) : (
+              <>
+                {order.status !== "cancelled" && (
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    disabled={cancelling || cancelSuccess}
+                    className="px-4 py-2 border border-red-300 rounded-lg text-red-700 text-sm font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel Order
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  disabled={cancelling}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1002,20 +1105,48 @@ function BasketCard({
   breakdownSummary?: Order["breakdown"]["summary"];
 }) {
   const basketNumber = basket?.basket_number || 0;
-  const total = basket?.total || 0;
+  const total = basket?.subtotal || basket?.total || 0;
+
+  console.log("[BasketCard] Raw basket object:", {
+    basket_number: basket?.basket_number,
+    subtotal: basket?.subtotal,
+    total: basket?.total,
+    resolvedTotal: total,
+  });
 
   // Extract services from the services object with pricing snapshots
   // Services are stored as: { wash: "basic", dry: "basic", wash_pricing: {...}, dry_pricing: {...}, ... }
   const servicesObj = basket?.services || {};
 
+  console.log("[BasketCard] Services object keys:", Object.keys(servicesObj));
+
   // Find all *_pricing entries which contain the service snapshots
-  const servicePricings = Object.entries(servicesObj)
+  const allPricingKeys = Object.entries(servicesObj)
     .filter(([key]) => key.endsWith("_pricing"))
     .map(([key, pricingData]: [string, any]) => ({
       key,
       serviceType: key.replace("_pricing", ""), // e.g., "wash_pricing" -> "wash"
       ...pricingData,
-    }))
+    }));
+
+  console.log(
+    "[BasketCard] All pricing snapshots found:",
+    allPricingKeys.map((p) => ({
+      serviceType: p.serviceType,
+      base_price: p.base_price,
+      total_price: p.total_price,
+    })),
+  );
+
+  const servicePricings = allPricingKeys
+    .filter((pricing) => {
+      // NEVER show staff_service_pricing in basket card
+      // Staff Service is an order-level fee, not a basket-level service
+      if (pricing.serviceType === "staff_service") {
+        return false;
+      }
+      return true;
+    })
     .sort((a, b) => {
       // Define service order: Wash, Spin, Dry, Additional Dry, Iron
       const serviceOrder: Record<string, number> = {
@@ -1031,6 +1162,15 @@ function BasketCard({
       const orderB = serviceOrder[b.serviceType] || 99;
       return orderA - orderB;
     });
+
+  console.log(
+    "[BasketCard] Filtered servicePricings:",
+    servicePricings.map((p) => ({
+      serviceType: p.serviceType,
+      base_price: p.base_price,
+      total_price: p.total_price,
+    })),
+  );
 
   // For services without pricing info, extract from the base service keys
   const baseServices = Object.entries(servicesObj)
@@ -1060,20 +1200,36 @@ function BasketCard({
     );
 
   // Calculate subtotal from pricing snapshots
-  const servicesSubtotal = servicePricings.reduce(
-    (sum, service) => {
-      // For additional_dry_time, use total_price; for others use base_price
-      const price = service.serviceType === "additional_dry_time" 
-        ? (service.total_price || 0)
-        : (service.base_price || 0);
-      return sum + price;
-    },
-    0,
-  );
+  const servicesSubtotal = servicePricings.reduce((sum, service) => {
+    // For additional_dry_time, use total_price; for others use base_price
+    const price =
+      service.serviceType === "additional_dry_time"
+        ? service.total_price || 0
+        : service.base_price || 0;
+    console.log(`[BasketCard] Service ${service.serviceType}: price=${price}`);
+    return sum + price;
+  }, 0);
 
-  // If we have no total and no services data, use the summary services if available
+  console.log("[BasketCard] Calculated servicesSubtotal:", servicesSubtotal);
+
+  // CRITICAL: Prioritize calculated subtotal from pricing snapshots over stored total
+  // The stored "total" field may be incorrect; trust the pricing snapshots instead
   const displayTotal =
-    total > 0 ? total : servicesSubtotal > 0 ? servicesSubtotal : 0;
+    servicePricings.length > 0 && servicesSubtotal > 0
+      ? servicesSubtotal
+      : total > 0
+        ? total
+        : 0;
+
+  console.log("[BasketCard] Final displayTotal:", {
+    storedTotal: total,
+    calculatedServicesSubtotal: servicesSubtotal,
+    displayTotal,
+    source:
+      servicePricings.length > 0 && servicesSubtotal > 0
+        ? "pricing_snapshots"
+        : "stored_total",
+  });
 
   return (
     <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">

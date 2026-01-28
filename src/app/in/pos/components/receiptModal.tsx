@@ -11,10 +11,9 @@ interface ReceiptModalProps {
 }
 
 /**
- * Receipt Display Modal
- * Shows plaintext receipt with Print button
- * Print button downloads as .txt file for now
- * TODO: Replace download logic with thermal printer integration when printer is available
+ * Receipt Preview Modal
+ * Displays formatted receipt with print functionality
+ * Print button: Currently downloads as .txt (placeholder for thermal printer)
  */
 export default function ReceiptModal({
   isOpen,
@@ -25,14 +24,94 @@ export default function ReceiptModal({
 }: ReceiptModalProps) {
   if (!isOpen) return null;
 
-  const handleDownloadReceipt = () => {
-    // TODO: THERMAL PRINTER INTEGRATION
-    // When thermal printer is connected, replace this with:
-    // - Send receipt to printer API
-    // - Show "Printing..." status
-    // - Handle print success/failure
+  const handlePrint = () => {
+    // Optimized print for 58mm thermal printer (RONGTA, Epson, etc.)
+    const printWindow = window.open("", "", "width=400,height=600");
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Receipt - ${orderId}</title>
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+              }
+              
+              @page {
+                /* 58mm thermal printer = 2.28 inches width */
+                size: 58mm auto;
+                margin: 0;
+                padding: 0;
+              }
+              
+              @media print {
+                * {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 58mm;
+                  height: auto;
+                }
+                
+                pre {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 58mm;
+                  height: auto;
+                  page-break-after: avoid;
+                  orphans: 0;
+                  widows: 0;
+                }
+              }
+              
+              body {
+                font-family: 'Courier New', monospace;
+                background: white;
+                width: 58mm;
+              }
+              
+              pre {
+                font-size: 9px;
+                line-height: 1.2;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                width: 58mm;
+                overflow: hidden;
+              }
+            </style>
+          </head>
+          <body>
+            <pre>${receiptContent}</pre>
+            <script>
+              // Wait for page to render, then print
+              setTimeout(() => {
+                window.print();
+                // Close after a short delay to ensure print job is sent
+                setTimeout(() => window.close(), 500);
+              }, 100);
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
 
-    // For now: Download as .txt file
+  const handleDownloadReceipt = () => {
+    // Download as .txt file for backup
     const element = document.createElement("a");
     const file = new Blob([receiptContent], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
@@ -48,10 +127,14 @@ export default function ReceiptModal({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Receipt Preview</h2>
+          <div>
+            <h2 className="text-xl font-bold text-white">Receipt Preview</h2>
+            <p className="text-xs text-blue-100">Order ID: {orderId}</p>
+          </div>
           <button
             onClick={onClose}
             className="text-white hover:bg-blue-800 rounded-lg p-2 transition"
+            title="Close"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -63,9 +146,9 @@ export default function ReceiptModal({
           </button>
         </div>
 
-        {/* Receipt Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <pre className="font-mono text-sm text-gray-900 whitespace-pre-wrap wrap-break-word bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        {/* Receipt Content - 80mm thermal printer width optimized */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50 flex items-start justify-center">
+          <pre className="font-mono text-xs text-gray-900 bg-white p-6 rounded-lg border border-gray-200 shadow-sm whitespace-pre-wrap wrap-break-word max-w-sm">
             {receiptContent}
           </pre>
         </div>
@@ -73,8 +156,30 @@ export default function ReceiptModal({
         {/* Actions */}
         <div className="bg-gray-100 px-6 py-4 flex gap-3 border-t border-gray-200">
           <button
-            onClick={handleDownloadReceipt}
+            onClick={handlePrint}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            title="Print receipt (opens print dialog)"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4H9a2 2 0 00-2 2v2a2 2 0 002 2h10a2 2 0 002-2v-2a2 2 0 00-2-2"
+              />
+            </svg>
+            Print
+          </button>
+
+          <button
+            onClick={handleDownloadReceipt}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            title="Download receipt as text file"
           >
             <svg
               className="w-5 h-5"
@@ -89,7 +194,7 @@ export default function ReceiptModal({
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-            Print / Download
+            Download
           </button>
 
           <button

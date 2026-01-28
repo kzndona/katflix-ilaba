@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { createClient } from "@/src/app/utils/supabase/client";
 import { Basket, BasketServices, ServiceType, CustomerData, PaymentMethod, OrderItem, POSProduct, POSCustomer, OrderBreakdown, OrderHandling } from "./posTypes";
 import { buildOrderBreakdown, calculateChange, isAmountSufficient } from "./posHelpers";
+import { formatReceiptAsPlaintext, CompactReceipt } from "./receiptGenerator";
 
 const createNewBasket = (basketNumber: number): Basket => ({
   basket_number: basketNumber,
@@ -12,64 +13,6 @@ const createNewBasket = (basketNumber: number): Basket => ({
   notes: "",
   subtotal: 0,
 });
-
-// Format receipt content for display
-function formatOrderReceipt(orderId: string, breakdown: any, loyaltyTier: null | 'tier1' | 'tier2'): string {
-  const now = new Date().toISOString();
-  let receipt = `\n========================================\n`;
-  receipt += `           KATFLIX LAUNDRY RECEIPT\n`;
-  receipt += `========================================\n\n`;
-  receipt += `Order ID: ${orderId}\n`;
-  receipt += `Date: ${now}\n\n`;
-  
-  // Baskets & Services
-  if (breakdown.baskets && breakdown.baskets.length > 0) {
-    receipt += `--------LAUNDRY SERVICES--------\n`;
-    breakdown.baskets.forEach((basket: any, idx: number) => {
-      receipt += `Basket ${idx + 1} (${basket.weight_kg}kg): ₱${basket.subtotal.toFixed(2)}\n`;
-    });
-    receipt += `\n`;
-  }
-  
-  // Products
-  if (breakdown.items && breakdown.items.length > 0) {
-    receipt += `--------PRODUCTS--------\n`;
-    breakdown.items.forEach((item: any) => {
-      receipt += `${item.product_name} x${item.quantity}\n`;
-      receipt += `  ₱${item.unit_price.toFixed(2)} × ${item.quantity} = ₱${(item.unit_price * item.quantity).toFixed(2)}\n`;
-    });
-    receipt += `\n`;
-  }
-  
-  // Summary
-  receipt += `--------SUMMARY--------\n`;
-  if (breakdown.summary.subtotal_products > 0) {
-    receipt += `Products:        ₱${breakdown.summary.subtotal_products.toFixed(2)}\n`;
-  }
-  if (breakdown.summary.subtotal_services > 0) {
-    receipt += `Services:        ₱${breakdown.summary.subtotal_services.toFixed(2)}\n`;
-  }
-  if (breakdown.summary.staff_service_fee > 0) {
-    receipt += `Staff Fee:       ₱${breakdown.summary.staff_service_fee.toFixed(2)}\n`;
-  }
-  if (breakdown.summary.delivery_fee > 0) {
-    receipt += `Delivery Fee:    ₱${breakdown.summary.delivery_fee.toFixed(2)}\n`;
-  }
-  
-  receipt += `VAT (12%):       ₱${breakdown.summary.vat_amount.toFixed(2)}\n`;
-  
-  // Loyalty Discount
-  if (breakdown.summary.loyalty_discount && breakdown.summary.loyalty_discount > 0) {
-    const discountPercent = loyaltyTier === 'tier1' ? '5%' : '15%';
-    receipt += `\nLoyalty Discount (${discountPercent}): -₱${breakdown.summary.loyalty_discount.toFixed(2)}\n`;
-  }
-  
-  receipt += `\n========================================\n`;
-  receipt += `TOTAL: ₱${breakdown.summary.total.toFixed(2)}\n`;
-  receipt += `========================================\n`;
-  
-  return receipt;
-}
 
 export function usePOSState() {
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(0);
@@ -304,8 +247,29 @@ export function usePOSState() {
 
       setLastOrderId(responseData.order_id);
       
-      // Format receipt content with all order details including loyalty discount
-      const formattedReceipt = formatOrderReceipt(responseData.order_id, breakdown, loyaltyDiscountTier);
+      // Build receipt object from response data for formatting
+      const receiptData: CompactReceipt = {
+        orderId: responseData.order_id,
+        customerName: 
+          customer 
+            ? `${customer.first_name} ${customer.last_name}` 
+            : `${newCustomerForm.first_name} ${newCustomerForm.last_name}`.trim(),
+        items: (breakdown.items || []).map(item => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.unit_price * item.quantity,
+        })),
+        baskets: breakdown.baskets || [],
+        total: breakdown.summary.total,
+        timestamp: new Date().toISOString(),
+        paymentMethod: paymentMethod.toUpperCase(),
+        summary: breakdown.summary,
+        change: paymentMethod === "cash" ? amountPaid - breakdown.summary.total : undefined,
+      };
+
+      // Format receipt for display
+      const formattedReceipt = formatReceiptAsPlaintext(receiptData);
       setReceiptContent(formattedReceipt);
       setShowReceiptModal(true);
       resetOrder();

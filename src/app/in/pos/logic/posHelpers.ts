@@ -24,9 +24,7 @@ const PRICING = {
   BASKET_WEIGHT_MAX: 8,
   IRON_WEIGHT_MIN: 2,
   IRON_WEIGHT_MAX: 8,
-  IRON_PRICE_PER_KG: 80,
   ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL: 15,
-  SPIN_PRICE: 20,
   FOLD_PRICE: 0,                     // Assume included or free for now
 };
 
@@ -93,6 +91,7 @@ export function calculateBasketSubtotal(
   products: POSProduct[]
 ): number {
   let total = 0;
+  console.log(`[calculateBasketSubtotal] Starting calculation for basket ${basket.basket_number}`);
 
   // Wash
   if (basket.services.wash !== "off") {
@@ -101,6 +100,7 @@ export function calculateBasketSubtotal(
       "wash",
       basket.services.wash as "basic" | "premium"
     );
+    console.log(`[calculateBasketSubtotal] Wash (${basket.services.wash}): ₱${price}`);
     total += price;
   }
 
@@ -111,12 +111,15 @@ export function calculateBasketSubtotal(
       "dry",
       basket.services.dry as "basic" | "premium"
     );
+    console.log(`[calculateBasketSubtotal] Dry (${basket.services.dry}): ₱${price}`);
     total += price;
   }
 
   // Spin
   if (basket.services.spin) {
-    total += PRICING.SPIN_PRICE;
+    const price = getServicePrice(services, "spin");
+    console.log(`[calculateBasketSubtotal] Spin: ₱${price}`);
+    total += price;
   }
 
   // Iron (minimum 2kg, only if weight >= 2kg)
@@ -124,18 +127,21 @@ export function calculateBasketSubtotal(
     basket.services.iron_weight_kg >=
     PRICING.IRON_WEIGHT_MIN
   ) {
-    total += basket.services.iron_weight_kg * PRICING.IRON_PRICE_PER_KG;
+    const ironPrice = getServicePrice(services, "iron");
+    console.log(`[calculateBasketSubtotal] Iron (${basket.services.iron_weight_kg}kg @ ₱${ironPrice}/kg): ₱${basket.services.iron_weight_kg * ironPrice}`);
+    total += basket.services.iron_weight_kg * ironPrice;
   }
 
   // Fold
   if (basket.services.fold) {
+    console.log(`[calculateBasketSubtotal] Fold: ₱${PRICING.FOLD_PRICE}`);
     total += PRICING.FOLD_PRICE;
   }
 
   // Additional dry time
   const dryTimeLevels = basket.services.additional_dry_time_minutes / 8; // 0, 1, 2, or 3
   const additionalDryTimeCost = dryTimeLevels * PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL;
-  console.log(`[posHelpers] Basket ${basket.basket_number}: additional_dry_time_minutes=${basket.services.additional_dry_time_minutes}, dryTimeLevels=${dryTimeLevels}, cost=₱${additionalDryTimeCost}`);
+  console.log(`[calculateBasketSubtotal] Additional Dry Time: ${basket.services.additional_dry_time_minutes}min ÷ 8 = ${dryTimeLevels} levels × ₱${PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL} = ₱${additionalDryTimeCost}`);
   total += additionalDryTimeCost;
 
   // Plastic bags - included in services subtotal
@@ -144,9 +150,11 @@ export function calculateBasketSubtotal(
       (p: any) => p.item_name?.toLowerCase().includes("plastic") || p.item_name?.toLowerCase().includes("bag")
     );
     const plasticBagPrice = plasticBagProduct?.unit_price || 0.50;
+    console.log(`[calculateBasketSubtotal] Plastic bags (${basket.services.plastic_bags}): ₱${(basket.services.plastic_bags || 0) * plasticBagPrice}`);
     total += (basket.services.plastic_bags || 0) * plasticBagPrice;
   }
 
+  console.log(`[calculateBasketSubtotal] FINAL BASKET ${basket.basket_number} TOTAL: ₱${total}`);
   return total;
 }
 

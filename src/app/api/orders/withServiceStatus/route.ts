@@ -173,9 +173,9 @@ export async function GET(request: NextRequest) {
 
             return {
               basket_number: basket.basket_number,
-              weight: basket.weight_kg || 0,
+              weight: basket.weight_kg || basket.weight || 0,
               basket_notes: basket.basket_notes || null,
-              total: basket.total || 0,
+              total: basket.subtotal || basket.total || 0,
               services: basketServiceStatuses,
               services_data: basket.services, // Keep pricing snapshots for reference
             };
