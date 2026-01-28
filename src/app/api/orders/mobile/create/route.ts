@@ -126,20 +126,23 @@ export async function POST(request: NextRequest) {
 
     // === BUILD HANDLING STRUCTURE ===
     // For mobile orders, both pickup and delivery addresses must be provided
+    // IMPORTANT: Both pickup and delivery require LAT/LNG coordinates
     const handling = {
       pickup: {
         address: body.handling?.pickup_address || "",
+        lng: body.handling?.pickup_lng || null,
+        lat: body.handling?.pickup_lat || null,
         status: "pending" as const,
         started_at: null,
         completed_at: null,
       },
       delivery: {
         address: body.handling?.delivery_address || "",
+        lng: body.handling?.delivery_lng || null,
+        lat: body.handling?.delivery_lat || null,
         status: "pending" as const,
         started_at: null,
         completed_at: null,
-        lng: body.handling?.delivery_lng || null,
-        lat: body.handling?.delivery_lat || null,
       },
       // Include payment info if provided
       payment_method: body.handling?.payment_method || null,
