@@ -22,15 +22,28 @@ export type HandlingType = "pickup" | "delivery";
 // BASKET & SERVICES
 // ============================================================================
 
+export interface PricingInfo {
+  name?: string;
+  tier?: "basic" | "premium" | null;
+  base_price: number;
+  service_type?: string;
+}
+
 export interface BasketServices {
   wash: "off" | "basic" | "premium";      // Off/Basic/Premium
   wash_cycles: 1 | 2 | 3;                 // Only relevant if wash != "off"
+  wash_pricing?: PricingInfo;             // Pricing info for wash service
   dry: "off" | "basic" | "premium";       // Off/Basic/Premium
+  dry_pricing?: PricingInfo;              // Pricing info for dry service
   spin: boolean;                          // On/Off
+  spin_pricing?: PricingInfo;             // Pricing info for spin service
   iron_weight_kg: 0 | 2 | 3 | 4 | 5 | 6 | 7 | 8; // 0 = off, min 2kg
+  iron_pricing?: PricingInfo;             // Pricing info for iron service
   fold: boolean;                          // On/Off
   additional_dry_time_minutes: 0 | 8 | 16 | 24;  // 0, 8, 16, or 24
+  additional_dry_time_pricing?: PricingInfo; // Pricing info for additional dry time
   plastic_bags: number;                   // Quantity of plastic bags
+  staff_service_pricing?: PricingInfo;    // Pricing info for staff service
 }
 
 export interface Basket {

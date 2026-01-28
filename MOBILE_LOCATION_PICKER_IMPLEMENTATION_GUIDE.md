@@ -2,7 +2,7 @@
 
 **Date**: January 29, 2026  
 **Target**: Flutter Mobile App  
-**Status**: Ready for Implementation  
+**Status**: Ready for Implementation
 
 ---
 
@@ -23,6 +23,7 @@
 Your mobile app needs to communicate with these backend API endpoints:
 
 ### 1. **GET `/api/pos/services`** - Fetch Laundry Services
+
 - **Purpose**: Get all available laundry services (wash, dry, iron, etc.)
 - **Authentication**: None required (public)
 - **Response**: Services with pricing, tiers, and modifiers
@@ -39,6 +40,7 @@ final response = await http.get(
 ---
 
 ### 2. **GET `/api/pos/products`** - Fetch Products
+
 - **Purpose**: Get all available products (plastic bags, detergent, etc.)
 - **Authentication**: None required (public)
 - **Response**: Products with pricing and inventory
@@ -54,9 +56,10 @@ final response = await http.get(
 ---
 
 ### 3. **GET `/api/pos/customers/search?query=<search>&limit=10`** - Search Customers
+
 - **Purpose**: Search existing customers by name or phone
 - **Authentication**: None required (public)
-- **Query Parameters**: 
+- **Query Parameters**:
   - `query` (required, min 2 chars)
   - `limit` (optional, default 10)
 - **Response**: List of matching customers
@@ -72,6 +75,7 @@ final response = await http.get(
 ---
 
 ### 4. **POST `/api/maps/distance`** - Calculate Distance & Duration ⭐ MAPS
+
 - **Purpose**: Calculate delivery distance and duration from store to customer location
 - **Authentication**: None required (public)
 - **Request**: Delivery coordinates + optional store location
@@ -98,13 +102,14 @@ final response = await http.post(
 ```
 
 **Response Example**:
+
 ```json
 {
   "success": true,
-  "distance": 5250,          // meters
-  "duration": 900,           // seconds
-  "distanceKm": "5.25",      // formatted km
-  "durationMinutes": 15,     // formatted minutes
+  "distance": 5250, // meters
+  "duration": 900, // seconds
+  "distanceKm": "5.25", // formatted km
+  "durationMinutes": 15, // formatted minutes
   "polyline": "..." // encoded polyline for route visualization
 }
 ```
@@ -112,6 +117,7 @@ final response = await http.post(
 ---
 
 ### 5. **POST `/api/orders/mobile/create`** - Create Order ⭐ ORDER CREATION
+
 - **Purpose**: Create order with breakdown, handling (location), and payment info
 - **Authentication**: None required (optional)
 - **Request**: Customer data, breakdown (items/baskets/fees), handling (addresses/coordinates), payment
@@ -129,6 +135,7 @@ final response = await http.post(
 ---
 
 ### 6. **GET `/api/orders`** - Fetch Order History (Optional)
+
 - **Purpose**: Fetch all orders for a customer (if authentication available)
 - **Authentication**: Optional (requires Supabase session)
 - **Response**: Order list with details
@@ -199,6 +206,7 @@ dependencies:
 ```
 
 Run:
+
 ```bash
 flutter pub get
 ```
@@ -264,7 +272,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
 
   Future<void> _calculateDistance() async {
     setState(() => loading = true);
-    
+
     try {
       final response = await http.post(
         Uri.parse('$API_BASE_URL/api/maps/distance'),
@@ -523,7 +531,7 @@ class _BookingDeliveryStepState extends State<BookingDeliveryStep> {
 
         if (deliveryType == 'delivery') ...[
           SizedBox(height: 16),
-          
+
           // Address text field
           TextField(
             controller: addressController,
@@ -576,43 +584,45 @@ The `handling` field in your order payload should look like this:
 ```typescript
 interface OrderHandling {
   // ===== DELIVERY TYPE & ADDRESSES =====
-  handling_type: "pickup" | "delivery",
-  pickup_address: "Store" | null,           // Always "Store" for pickup
-  delivery_address: "123 Main St, City",    // User-entered or from map
-  
+  handling_type: "pickup" | "delivery";
+  pickup_address: "Store" | null; // Always "Store" for pickup
+  delivery_address: "123 Main St, City"; // User-entered or from map
+
   // ===== COORDINATES (NEW) =====
-  delivery_lng: 120.9950 | null,            // Delivery location longitude
-  delivery_lat: 14.5850 | null,             // Delivery location latitude
-  
+  delivery_lng: 120.995 | null; // Delivery location longitude
+  delivery_lat: 14.585 | null; // Delivery location latitude
+
   // ===== FEES & NOTES =====
-  delivery_fee_override: 55.00 | null,      // Optional override
-  special_instructions: "Leave at door",    // Customer notes
-  
+  delivery_fee_override: 55.0 | null; // Optional override
+  special_instructions: "Leave at door"; // Customer notes
+
   // ===== PAYMENT =====
-  payment_method: "cash" | "gcash",
-  amount_paid: 500.00,
-  gcash_reference: "ref123" | null,         // If GCash
+  payment_method: "cash" | "gcash";
+  amount_paid: 500.0;
+  gcash_reference: "ref123" | null; // If GCash
 }
 ```
 
 ### Real Example
 
 **For Delivery**:
+
 ```json
 {
   "handling_type": "delivery",
   "pickup_address": null,
   "delivery_address": "123 Main St, Caloocan City",
-  "delivery_lng": 120.9950,
-  "delivery_lat": 14.5850,
-  "delivery_fee_override": 55.00,
+  "delivery_lng": 120.995,
+  "delivery_lat": 14.585,
+  "delivery_fee_override": 55.0,
   "special_instructions": "Leave at gate",
   "payment_method": "cash",
-  "amount_paid": 500.00
+  "amount_paid": 500.0
 }
 ```
 
 **For Pickup**:
+
 ```json
 {
   "handling_type": "pickup",
@@ -623,7 +633,7 @@ interface OrderHandling {
   "delivery_fee_override": null,
   "special_instructions": null,
   "payment_method": "gcash",
-  "amount_paid": 250.00,
+  "amount_paid": 250.0,
   "gcash_reference": "gcash_ref_123"
 }
 ```
@@ -742,6 +752,7 @@ class OrderService {
 ### Endpoint: `POST /api/orders/mobile/create`
 
 #### Request Headers
+
 ```
 Content-Type: application/json
 ```
@@ -762,8 +773,8 @@ Content-Type: application/json
         "product_id": "uuid",
         "product_name": "Plastic Bags",
         "quantity": 3,
-        "unit_price": 0.50,
-        "total_price": 1.50
+        "unit_price": 0.5,
+        "total_price": 1.5
       }
     ],
     "baskets": [
@@ -780,47 +791,47 @@ Content-Type: application/json
           "additional_dry_time_minutes": 0,
           "plastic_bags": 2
         },
-        "subtotal": 150.00
+        "subtotal": 150.0
       }
     ],
     "fees": [
       {
         "type": "staff_service_fee",
-        "amount": 40.00,
+        "amount": 40.0,
         "description": "Staff service fee"
       },
       {
         "type": "delivery_fee",
-        "amount": 50.00,
+        "amount": 50.0,
         "description": "Delivery to customer"
       },
       {
         "type": "vat",
-        "amount": 24.00,
+        "amount": 24.0,
         "description": "VAT (12%)"
       }
     ],
     "summary": {
-      "subtotal_products": 1.50,
-      "subtotal_services": 150.00,
-      "staff_service_fee": 40.00,
-      "delivery_fee": 50.00,
-      "subtotal_before_vat": 241.50,
-      "vat_amount": 24.00,
-      "loyalty_discount": 0.00,
-      "total": 265.50
+      "subtotal_products": 1.5,
+      "subtotal_services": 150.0,
+      "staff_service_fee": 40.0,
+      "delivery_fee": 50.0,
+      "subtotal_before_vat": 241.5,
+      "vat_amount": 24.0,
+      "loyalty_discount": 0.0,
+      "total": 265.5
     }
   },
   "handling": {
     "handling_type": "delivery",
     "pickup_address": null,
     "delivery_address": "123 Main St, Caloocan City",
-    "delivery_lng": 120.9950,     // ⭐ COORDINATES
-    "delivery_lat": 14.5850,       // ⭐ COORDINATES
+    "delivery_lng": 120.995, // ⭐ COORDINATES
+    "delivery_lat": 14.585, // ⭐ COORDINATES
     "delivery_fee_override": null,
     "special_instructions": "Leave at gate",
     "payment_method": "gcash",
-    "amount_paid": 300.00,
+    "amount_paid": 300.0,
     "gcash_reference": "gcash_ref_20260129_001"
   },
   "loyalty": {
@@ -843,7 +854,7 @@ Content-Type: application/json
     "customer_id": "660e8400-e29b-41d4-a716-446655440001",
     "source": "mobile",
     "status": "pending",
-    "total_amount": 265.50,
+    "total_amount": 265.5,
     "created_at": "2026-01-29T10:30:00Z"
   }
 }
@@ -863,11 +874,13 @@ Content-Type: application/json
 ## ✅ Implementation Checklist
 
 ### Phase 1: Setup & Dependencies
+
 - [ ] Add Google Maps Flutter package to `pubspec.yaml`
 - [ ] Configure Google Maps API key in `android/app/build.gradle` and `ios/Runner/Info.plist`
 - [ ] Test Google Maps loads in test widget
 
 ### Phase 2: Location Picker Widget
+
 - [ ] Create `LocationPickerWidget` component
 - [ ] Test map displays and allows tapping
 - [ ] Test marker appears at center and updates when map moves
@@ -875,6 +888,7 @@ Content-Type: application/json
 - [ ] Display distance and duration from API response
 
 ### Phase 3: Booking Flow Integration
+
 - [ ] Add handling type selection (Pickup vs Delivery)
 - [ ] Show location picker when "Delivery" selected
 - [ ] Save selected location to state/provider
@@ -882,6 +896,7 @@ Content-Type: application/json
 - [ ] Calculate delivery fee based on distance
 
 ### Phase 4: API Integration
+
 - [ ] Load services from `GET /api/pos/services`
 - [ ] Load products from `GET /api/pos/products`
 - [ ] Search customers with `GET /api/pos/customers/search`
@@ -890,6 +905,7 @@ Content-Type: application/json
 - [ ] Handle error responses gracefully
 
 ### Phase 5: Testing
+
 - [ ] Test delivery location picker
 - [ ] Test distance calculation accuracy
 - [ ] Test order creation with coordinates
@@ -898,6 +914,7 @@ Content-Type: application/json
 - [ ] Test GCash payment flow
 
 ### Phase 6: QA & Deployment
+
 - [ ] Code review with team
 - [ ] Integration testing with backend
 - [ ] User acceptance testing
@@ -925,17 +942,18 @@ CREATE TABLE orders (
 ```
 
 **Sample handling JSONB**:
+
 ```json
 {
   "handling_type": "delivery",
   "pickup_address": null,
   "delivery_address": "123 Main St, Caloocan City",
-  "delivery_lng": 120.9950,
-  "delivery_lat": 14.5850,
+  "delivery_lng": 120.995,
+  "delivery_lat": 14.585,
   "delivery_fee_override": null,
   "special_instructions": "Leave at gate",
   "payment_method": "gcash",
-  "amount_paid": 300.00,
+  "amount_paid": 300.0,
   "gcash_reference": "gcash_ref_20260129_001",
   "status": "pending",
   "started_at": null,
@@ -947,19 +965,20 @@ CREATE TABLE orders (
 
 ## 🆘 Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Google Maps API key error | Ensure API key is set in `android/app/build.gradle` and `ios/Runner/Info.plist` |
-| Map doesn't load | Check that Google Maps API is enabled in Google Cloud Console |
-| Distance calculation fails | Verify coordinates are valid and `/api/maps/distance` endpoint is reachable |
-| Order creation fails | Check all required fields in handling JSONB are present |
-| Coordinates not saved | Verify `delivery_lng` and `delivery_lat` are being sent in payload |
+| Issue                      | Solution                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| Google Maps API key error  | Ensure API key is set in `android/app/build.gradle` and `ios/Runner/Info.plist` |
+| Map doesn't load           | Check that Google Maps API is enabled in Google Cloud Console                   |
+| Distance calculation fails | Verify coordinates are valid and `/api/maps/distance` endpoint is reachable     |
+| Order creation fails       | Check all required fields in handling JSONB are present                         |
+| Coordinates not saved      | Verify `delivery_lng` and `delivery_lat` are being sent in payload              |
 
 ---
 
 ## 📞 Support
 
 For questions or issues:
+
 1. Check this guide's implementation checklist
 2. Review `MOBILE_MAPS_INTEGRATION_HANDOFF.md` for additional context
 3. Check API response errors in network logs
