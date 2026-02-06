@@ -180,7 +180,15 @@ export default function OrdersPage() {
 
   useEffect(() => {
     filterAndSort();
-  }, [rows, searchQuery, sortConfig, dateFrom, dateTo, cashierFilter, statusFilters]);
+  }, [
+    rows,
+    searchQuery,
+    sortConfig,
+    dateFrom,
+    dateTo,
+    cashierFilter,
+    statusFilters,
+  ]);
 
   // Auto-refresh orders every 30 seconds
   useEffect(() => {
@@ -373,7 +381,10 @@ export default function OrdersPage() {
               {groupedOrders.length} order
               {groupedOrders.length !== 1 ? "s" : ""} found
               {groupedOrders.length > ROWS_PER_PAGE && (
-                <> • Page {currentPage} of {totalPages}</>
+                <>
+                  {" "}
+                  • Page {currentPage} of {totalPages}
+                </>
               )}
               {lastRefresh && (
                 <span className="ml-2 text-gray-400">

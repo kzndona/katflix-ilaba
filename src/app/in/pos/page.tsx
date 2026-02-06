@@ -548,14 +548,17 @@ function Step4Customer({ pos }: { pos: any }) {
     if (!phone) return "Phone number is required";
     if (phone.length < 11) return "Phone number must be at least 11 digits";
     if (phone.length > 13) return "Phone number cannot exceed 13 characters";
-    
+
     // PH phone format: starts with +63 or 09
     const isValidPhFormat = /^(\+63|09)\d{9,11}$/.test(phone);
     if (!isValidPhFormat) {
       return "Phone must be in PH format: +63XXXXXXXXXX or 09XXXXXXXXXX";
     }
-    
-    if (pos.newCustomerForm.email_address && !pos.newCustomerForm.email_address.includes("@")) {
+
+    if (
+      pos.newCustomerForm.email_address &&
+      !pos.newCustomerForm.email_address.includes("@")
+    ) {
       return "Invalid email address";
     }
     return null;
@@ -564,7 +567,7 @@ function Step4Customer({ pos }: { pos: any }) {
   const validateAndCreate = async () => {
     setError("");
     setSuccess("");
-    
+
     const validationError = validateNewCustomerForm();
     if (validationError) {
       setError(validationError);
@@ -621,10 +624,12 @@ function Step4Customer({ pos }: { pos: any }) {
         });
 
         setError("");
-        setSuccess(`✓ Customer ${data.customer.first_name} created successfully!`);
+        setSuccess(
+          `✓ Customer ${data.customer.first_name} created successfully!`,
+        );
         setEditedPhone("");
         setEditedEmail("");
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(""), 3000);
       }
@@ -643,7 +648,7 @@ function Step4Customer({ pos }: { pos: any }) {
     setError("");
     setSuccess("");
     setIsSavingChanges(true);
-    
+
     try {
       const response = await fetch("/api/pos/customers", {
         method: "POST",
@@ -739,21 +744,25 @@ function Step4Customer({ pos }: { pos: any }) {
       <div className="border-t-2 border-slate-300"></div>
 
       {/* Customer form fields - always visible */}
-      <div className={`space-y-3 rounded-lg p-4 border-2 transition ${
-        pos.customer
-          ? "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-green-500 shadow-sm"
-          : "bg-slate-50 border-slate-300"
-      }`}>
+      <div
+        className={`space-y-3 rounded-lg p-4 border-2 transition ${
+          pos.customer
+            ? "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-green-500 shadow-sm"
+            : "bg-slate-50 border-slate-300"
+        }`}
+      >
         {pos.customer && (
           <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-l-4 border-green-700 rounded text-sm text-green-900 font-semibold">
             ✓ {pos.customer.first_name} {pos.customer.last_name} selected
           </div>
         )}
-        
+
         {/* First Name | Last Name */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">First Name</label>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              First Name
+            </label>
             <input
               type="text"
               placeholder="First Name"
@@ -779,7 +788,9 @@ function Step4Customer({ pos }: { pos: any }) {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Last Name</label>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Last Name
+            </label>
             <input
               type="text"
               placeholder="Last Name"
@@ -809,7 +820,9 @@ function Step4Customer({ pos }: { pos: any }) {
         {/* Phone | Email */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Phone (PH Format)</label>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Phone (PH Format)
+            </label>
             <input
               type="tel"
               placeholder="+63 or 09"
@@ -837,7 +850,9 @@ function Step4Customer({ pos }: { pos: any }) {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Email (Optional)</label>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Email (Optional)
+            </label>
             <input
               type="email"
               placeholder="name@example.com"
@@ -1997,7 +2012,7 @@ export default function POSPage() {
           onSelect={async (coords: LocationCoords) => {
             pos.setDeliveryLng(coords.lng);
             pos.setDeliveryLat(coords.lat);
-            
+
             // Reverse geocode coordinates to get address
             if (window.google?.maps?.Geocoder) {
               const geocoder = new (window.google.maps.Geocoder as any)();
@@ -2006,12 +2021,15 @@ export default function POSPage() {
                 (results: any, status: any) => {
                   if (status === "OK" && results?.[0]) {
                     pos.setDeliveryAddress(results[0].formatted_address);
-                    console.log("Address from geocoding:", results[0].formatted_address);
+                    console.log(
+                      "Address from geocoding:",
+                      results[0].formatted_address,
+                    );
                   }
-                }
+                },
               );
             }
-            
+
             setShowLocationPicker(false);
           }}
           onClose={() => setShowLocationPicker(false)}

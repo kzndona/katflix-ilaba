@@ -76,7 +76,7 @@ export default function Navbar() {
         if (res.ok) {
           const products = await res.json();
           const lowStockProducts = products.filter(
-            (p: any) => parseInt(p.quantity) <= parseInt(p.reorder_level)
+            (p: any) => parseInt(p.quantity) <= parseInt(p.reorder_level),
           );
           setLowStockCount(lowStockProducts.length);
         }

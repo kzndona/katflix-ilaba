@@ -48,7 +48,9 @@ export default function ProductsPage() {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
   const [quantityError, setQuantityError] = useState<string | null>(null);
-  const [transactionModal, setTransactionModal] = useState<Product | null>(null);
+  const [transactionModal, setTransactionModal] = useState<Product | null>(
+    null,
+  );
 
   const ROWS_PER_PAGE = 10;
 
@@ -170,7 +172,10 @@ export default function ProductsPage() {
     }
   }
 
-  async function updateProductQuantity(productId: string, quantityChange: number) {
+  async function updateProductQuantity(
+    productId: string,
+    quantityChange: number,
+  ) {
     if (quantityChange === 0) return;
 
     setUpdatingQuantity(true);
@@ -196,7 +201,9 @@ export default function ProductsPage() {
       }
     } catch (err) {
       console.error(err);
-      setQuantityError(err instanceof Error ? err.message : "Failed to update quantity");
+      setQuantityError(
+        err instanceof Error ? err.message : "Failed to update quantity",
+      );
     } finally {
       setUpdatingQuantity(false);
     }
@@ -621,7 +628,9 @@ export default function ProductsPage() {
 
                   <div className="flex gap-2 flex-col">
                     <button
-                      onClick={() => setTransactionModal(selectedProductForView)}
+                      onClick={() =>
+                        setTransactionModal(selectedProductForView)
+                      }
                       className="w-full px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition"
                     >
                       Update Quantity Manually
@@ -859,7 +868,11 @@ function EditModal({
                 <input
                   type="number"
                   step="0.01"
-                  value={product.unit_cost ? parseFloat(product.unit_cost).toFixed(2) : ""}
+                  value={
+                    product.unit_cost
+                      ? parseFloat(product.unit_cost).toFixed(2)
+                      : ""
+                  }
                   onChange={(e) =>
                     updateField(
                       "unit_cost",
@@ -877,7 +890,11 @@ function EditModal({
                 <input
                   type="number"
                   step="0.01"
-                  value={product.unit_price ? parseFloat(product.unit_price).toFixed(2) : ""}
+                  value={
+                    product.unit_price
+                      ? parseFloat(product.unit_price).toFixed(2)
+                      : ""
+                  }
                   onChange={(e) =>
                     updateField(
                       "unit_price",
@@ -1239,7 +1256,7 @@ function TransactionModal({
 
     if (isInvalidDecrease) {
       setErrorMsg(
-        `Cannot decrease by ${absQuantity}. Current stock is only ${currentQty}.`
+        `Cannot decrease by ${absQuantity}. Current stock is only ${currentQty}.`,
       );
       return;
     }
@@ -1270,7 +1287,7 @@ function TransactionModal({
     } catch (err) {
       console.error(err);
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to update quantity"
+        err instanceof Error ? err.message : "Failed to update quantity",
       );
     } finally {
       setSubmitting(false);
@@ -1389,9 +1406,7 @@ function TransactionModal({
               className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                 isInvalidDecrease ? "border-red-500" : "border-gray-300"
               }`}
-              placeholder={
-                formData.direction === "decrease" ? "-0" : "0"
-              }
+              placeholder={formData.direction === "decrease" ? "-0" : "0"}
               min="0"
             />
             <div className="text-xs text-gray-500 mt-1">
@@ -1400,35 +1415,37 @@ function TransactionModal({
           </div>
 
           {/* Resulting Stock Preview */}
-          {formData.quantity_change && !isNaN(absQuantity) && absQuantity > 0 && (
-            <div
-              className={`p-3 rounded border ${
-                isInvalidDecrease
-                  ? "bg-red-50 border-red-300"
-                  : "bg-blue-50 border-blue-300"
-              }`}
-            >
-              <div className="text-xs text-gray-600 mb-1">
-                Stock after adjustment:
-              </div>
+          {formData.quantity_change &&
+            !isNaN(absQuantity) &&
+            absQuantity > 0 && (
               <div
-                className={`text-xl font-bold ${
+                className={`p-3 rounded border ${
                   isInvalidDecrease
-                    ? "text-red-600"
-                    : resultingQuantity >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
+                    ? "bg-red-50 border-red-300"
+                    : "bg-blue-50 border-blue-300"
                 }`}
               >
-                {resultingQuantity}
-              </div>
-              {isInvalidDecrease && (
-                <div className="text-xs text-red-600 mt-1">
-                  ⚠️ This would result in negative stock!
+                <div className="text-xs text-gray-600 mb-1">
+                  Stock after adjustment:
                 </div>
-              )}
-            </div>
-          )}
+                <div
+                  className={`text-xl font-bold ${
+                    isInvalidDecrease
+                      ? "text-red-600"
+                      : resultingQuantity >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                  }`}
+                >
+                  {resultingQuantity}
+                </div>
+                {isInvalidDecrease && (
+                  <div className="text-xs text-red-600 mt-1">
+                    ⚠️ This would result in negative stock!
+                  </div>
+                )}
+              </div>
+            )}
 
           <div>
             <label className="block text-xs font-semibold text-gray-900 mb-2">
@@ -1456,7 +1473,9 @@ function TransactionModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || isInvalidDecrease || !formData.quantity_change}
+            disabled={
+              submitting || isInvalidDecrease || !formData.quantity_change
+            }
             className="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Updating..." : "Update Quantity"}

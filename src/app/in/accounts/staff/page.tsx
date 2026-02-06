@@ -258,7 +258,11 @@ export default function StaffPage() {
               {filteredRows.length} staff member
               {filteredRows.length !== 1 ? "s" : ""} found
               {filteredRows.length > ITEMS_PER_PAGE && (
-                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}</>
+                <>
+                  {" "}
+                  • Page {currentPage} of{" "}
+                  {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                </>
               )}
             </p>
           </div>
@@ -339,10 +343,13 @@ export default function StaffPage() {
                     {filteredRows
                       .slice(
                         (currentPage - 1) * ITEMS_PER_PAGE,
-                        currentPage * ITEMS_PER_PAGE
+                        currentPage * ITEMS_PER_PAGE,
                       )
                       .map((staff) => (
-                        <tr key={staff.id} className="hover:bg-gray-50 transition">
+                        <tr
+                          key={staff.id}
+                          className="hover:bg-gray-50 transition"
+                        >
                           <td className="px-6 py-4 text-gray-900 font-medium">
                             {staff.first_name} {staff.last_name}
                           </td>
@@ -399,18 +406,22 @@ export default function StaffPage() {
                     ← Previous
                   </button>
                   <span className="text-xs text-gray-600">
-                    Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                    Page {currentPage} of{" "}
+                    {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
                   </span>
                   <button
                     onClick={() =>
                       setCurrentPage((p) =>
                         Math.min(
                           Math.ceil(filteredRows.length / ITEMS_PER_PAGE),
-                          p + 1
-                        )
+                          p + 1,
+                        ),
                       )
                     }
-                    disabled={currentPage === Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                    disabled={
+                      currentPage ===
+                      Math.ceil(filteredRows.length / ITEMS_PER_PAGE)
+                    }
                     className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     Next →

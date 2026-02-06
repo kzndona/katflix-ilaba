@@ -228,7 +228,11 @@ export default function IssuesPage() {
               {filteredRows.length} issue
               {filteredRows.length !== 1 ? "s" : ""} found
               {filteredRows.length > ROWS_PER_PAGE && (
-                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ROWS_PER_PAGE)}</>
+                <>
+                  {" "}
+                  • Page {currentPage} of{" "}
+                  {Math.ceil(filteredRows.length / ROWS_PER_PAGE)}
+                </>
               )}
             </p>
           </div>
