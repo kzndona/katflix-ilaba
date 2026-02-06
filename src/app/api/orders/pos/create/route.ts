@@ -222,6 +222,10 @@ export async function POST(request: NextRequest) {
       // Include payment info if provided
       payment_method: body.handling?.payment_method || null,
       amount_paid: body.handling?.amount_paid || null,
+      // Include scheduling info if provided
+      scheduled: body.handling?.scheduled || false,
+      scheduled_date: body.handling?.scheduled_date || undefined,
+      scheduled_time: body.handling?.scheduled_time || undefined,
     };
 
     // Replace body.handling with the properly structured version

@@ -35,6 +35,9 @@ type Order = {
       notes: string | null;
     };
     payment_method?: "cash" | "gcash";
+    scheduled?: boolean;
+    scheduled_date?: string;
+    scheduled_time?: string;
   };
   breakdown: {
     items: Array<{
@@ -723,395 +726,435 @@ function ViewModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       {/* Modal Centered */}
       <div
-        className="bg-white shadow-2xl rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white shadow-2xl rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 flex justify-between items-center shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">Order Details</h2>
+        {/* Modal Header - Compact & Modern */}
+        <div className="px-8 py-6 border-b border-gray-200 flex justify-between items-start shrink-0">
+          <div className="flex-1">
+            <h1 className="text-3xl font-black text-gray-900 mb-1">
+              {order.customers
+                ? `${order.customers.first_name} ${order.customers.last_name}`
+                : "Unknown Customer"}
+            </h1>
+            <p className="text-sm text-gray-500 font-mono">
+              Order #{order.id.slice(0, 8)} • {order.source.toUpperCase()}
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
+            className="text-gray-400 hover:text-gray-600 text-2xl font-light transition"
           >
             ✕
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Customer & Order Info */}
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {order.customers
-                ? `${order.customers.first_name} ${order.customers.last_name}`
-                : "No customer"}
-            </h3>
-            <p className="text-sm text-gray-500">
-              Order #{order.id.slice(0, 8)}
-            </p>
-          </div>
-
-          {/* Key Details */}
-          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
-            <DetailField label="Status" value={order.status} />
-            <DetailField label="Source" value={order.source} />
-            <DetailField
-              label="Total Amount"
-              value={`₱${order.total_amount.toFixed(2)}`}
-            />
-            <DetailField
-              label="Created"
-              value={formatToPST(order.created_at)}
-            />
-          </div>
-
-          {/* Cashier Info */}
-          {(order.staff || order.cashier_id) && (
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
-              <DetailField
-                label="Cashier"
-                value={
-                  order.staff
-                    ? `${order.staff.first_name} ${order.staff.last_name}`
-                    : `ID: ${order.cashier_id?.slice(0, 8)}`
-                }
-              />
-            </div>
-          )}
-
-          {/* Customer Contact */}
-          {order.customers && (
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
-              <DetailField
-                label="Phone"
-                value={order.customers.phone_number || "—"}
-              />
-              <DetailField
-                label="Email"
-                value={order.customers.email_address || "—"}
-              />
-            </div>
-          )}
-
-          {/* Handling */}
-          {order.handling && (
-            <div className="pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                Pickup & Delivery
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500">Pickup Address</p>
-                  <p className="text-sm text-gray-900">
-                    {order.handling.pickup.address || "In-store"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Delivery Address</p>
-                  <p className="text-sm text-gray-900">
-                    {order.handling.delivery.address || "In-store"}
-                  </p>
-                </div>
+        {/* Modal Content - Multi-column layout */}
+        <div className="flex-1 overflow-y-auto">
+          {/* TOP SECTION: Status & Total Amount (Large & Bold) */}
+          <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-gray-200">
+            <div className="grid grid-cols-3 gap-6">
+              {/* Status */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Status</p>
+                <p className="text-2xl font-black text-gray-900 capitalize">
+                  {order.status.replace(/_/g, ' ')}
+                </p>
+              </div>
+              {/* Total Amount - MOST PROMINENT */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Total Amount</p>
+                <p className="text-3xl font-black text-green-700">
+                  ₱{order.total_amount.toFixed(2)}
+                </p>
+              </div>
+              {/* Created Date */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Created</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {new Date(order.created_at || '').toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date(order.created_at || '').toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Pricing Summary */}
-          {order.breakdown?.summary && (
-            <div className="pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                Summary
-              </h4>
-              <div className="space-y-1 text-sm bg-gray-50 p-3 rounded">
-                {order.breakdown.summary.subtotal_products !== null &&
-                  order.breakdown.summary.subtotal_products !== undefined && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Products:</span>
-                      <span className="font-medium">
-                        ₱
-                        {(
-                          order.breakdown.summary.subtotal_products as number
-                        ).toFixed(2)}
-                      </span>
+          {/* MIDDLE SECTION: Contact & Fulfillment Info */}
+          <div className="px-8 py-6 space-y-6 border-b border-gray-200">
+            <div className="grid grid-cols-3 gap-6">
+              {/* Contact */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Contact</p>
+                <div className="space-y-2">
+                  {order.customers?.phone_number && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">📱 {order.customers.phone_number}</p>
                     </div>
                   )}
-                {order.breakdown.summary.subtotal_services !== null &&
-                  order.breakdown.summary.subtotal_services !== undefined && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Services:</span>
-                      <span className="font-medium">
-                        ₱
-                        {(
-                          order.breakdown.summary.subtotal_services as number
-                        ).toFixed(2)}
-                      </span>
+                  {order.customers?.email_address && (
+                    <div>
+                      <p className="text-sm text-gray-600 break-all">{order.customers.email_address}</p>
                     </div>
                   )}
-                {order.breakdown.summary.staff_service_fee !== null &&
-                  order.breakdown.summary.staff_service_fee !== undefined &&
-                  (order.breakdown.summary.staff_service_fee as number) > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Staff Service Fee:</span>
-                      <span className="font-medium">
-                        ₱
-                        {(
-                          order.breakdown.summary.staff_service_fee as number
-                        ).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                {order.breakdown.summary.delivery_fee !== null &&
-                  order.breakdown.summary.delivery_fee !== undefined &&
-                  (order.breakdown.summary.delivery_fee as number) > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Delivery Fee:</span>
-                      <span className="font-medium">
-                        ₱
-                        {(
-                          order.breakdown.summary.delivery_fee as number
-                        ).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                {order.breakdown.summary.vat_amount !== null &&
-                  order.breakdown.summary.vat_amount !== undefined && (
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>VAT (12% inclusive):</span>
-                      <span>
-                        ₱
-                        {(order.breakdown.summary.vat_amount as number).toFixed(
-                          2,
-                        )}
-                      </span>
-                    </div>
-                  )}
-                {order.breakdown.summary.loyalty_discount !== null &&
-                  order.breakdown.summary.loyalty_discount !== undefined &&
-                  (order.breakdown.summary.loyalty_discount as number) > 0 && (
-                    <div className="flex justify-between text-amber-700 font-semibold">
-                      <span>Loyalty Discount:</span>
-                      <span>
-                        -₱
-                        {(
-                          order.breakdown.summary.loyalty_discount as number
-                        ).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                <div className="flex justify-between pt-1 border-t border-gray-300">
-                  <span className="text-gray-700 font-semibold">Total:</span>
-                  <span className="font-bold">
-                    ₱{order.total_amount.toFixed(2)}
-                  </span>
                 </div>
               </div>
+
+              {/* Fulfillment - Pickup */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Pickup</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {order.handling?.pickup?.address?.toLowerCase() === 'store' 
+                    ? '🏪 In-Store' 
+                    : order.handling?.pickup?.address || 'In-Store'}
+                </p>
+              </div>
+
+              {/* Fulfillment - Delivery */}
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Delivery</p>
+                <p className="text-sm font-medium text-gray-900 break-words">
+                  {order.handling?.delivery?.address?.toLowerCase() === 'store' || !order.handling?.delivery?.address
+                    ? '🏪 In-Store' 
+                    : `🚚 ${order.handling.delivery.address.substring(0, 40)}${order.handling.delivery.address.length > 40 ? '...' : ''}`}
+                </p>
+              </div>
             </div>
-          )}
 
-          {/* Products */}
-          {order.breakdown?.items && order.breakdown.items.length > 0 && (
-            <div className="pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                Products ({order.breakdown.items.length})
-              </h4>
-              <div className="space-y-2">
-                {order.breakdown.items.map((item, idx) => {
-                  const quantity = item.quantity || 0;
-                  const unitPrice = item.unit_price || 0;
-                  const subtotal = item.subtotal ?? quantity * unitPrice;
+            {/* Scheduling - If Present (Blue Highlight) */}
+            {order.handling?.scheduled && order.handling?.scheduled_date && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">📅 Scheduled Date</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {new Date(order.handling.scheduled_date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">⏰ Scheduled Time</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {order.handling.scheduled_time || 'TBD'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                  return (
-                    <div
-                      key={item.id || `item-${idx}`}
-                      className="flex justify-between text-sm p-2 rounded bg-gray-50"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {item.product_name || "Unknown Product"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {quantity} × ₱{(unitPrice as number).toFixed(2)}
-                        </p>
+            {/* Payment Information */}
+            {order.handling && (
+              <div className="grid grid-cols-2 gap-4">
+                {order.handling.payment_method && (
+                  <div>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Payment Method</p>
+                    <p className="text-sm font-medium text-gray-900 capitalize">
+                      {order.handling.payment_method}
+                    </p>
+                  </div>
+                )}
+                {order.breakdown?.payment?.amount_paid !== null && order.breakdown?.payment?.amount_paid !== undefined && (
+                  <div>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Amount Paid</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₱{(order.breakdown.payment.amount_paid as number).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* BOTTOM SECTION: Pricing & Items (Condensed) */}
+          <div className="px-8 py-6 space-y-6">
+            {/* Pricing Summary - Full Breakdown */}
+            {order.breakdown?.summary && (
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Pricing Breakdown
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                  {order.breakdown.summary.subtotal_products !== null &&
+                    order.breakdown.summary.subtotal_products !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Products:</span>
+                        <span className="font-medium">
+                          ₱{(order.breakdown.summary.subtotal_products as number).toFixed(2)}
+                        </span>
                       </div>
-                      <p className="font-medium text-gray-900">
-                        ₱{(subtotal as number).toFixed(2)}
-                      </p>
-                    </div>
-                  );
-                })}
+                    )}
+                  {order.breakdown.summary.subtotal_services !== null &&
+                    order.breakdown.summary.subtotal_services !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Services:</span>
+                        <span className="font-medium">
+                          ₱{(order.breakdown.summary.subtotal_services as number).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  {order.breakdown.summary.staff_service_fee !== null &&
+                    order.breakdown.summary.staff_service_fee !== undefined &&
+                    (order.breakdown.summary.staff_service_fee as number) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Staff Service Fee:</span>
+                        <span className="font-medium">
+                          ₱{(order.breakdown.summary.staff_service_fee as number).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  {order.breakdown.summary.delivery_fee !== null &&
+                    order.breakdown.summary.delivery_fee !== undefined &&
+                    (order.breakdown.summary.delivery_fee as number) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Delivery Fee:</span>
+                        <span className="font-medium">
+                          ₱{(order.breakdown.summary.delivery_fee as number).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  {order.breakdown.summary.vat_amount !== null &&
+                    order.breakdown.summary.vat_amount !== undefined && (
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>VAT (12% inclusive):</span>
+                        <span>
+                          ₱{(order.breakdown.summary.vat_amount as number).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  {order.breakdown.summary.loyalty_discount !== null &&
+                    order.breakdown.summary.loyalty_discount !== undefined &&
+                    (order.breakdown.summary.loyalty_discount as number) > 0 && (
+                      <div className="flex justify-between text-amber-700 font-semibold">
+                        <span>Loyalty Discount:</span>
+                        <span>
+                          -₱{(order.breakdown.summary.loyalty_discount as number).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  <div className="flex justify-between pt-2 border-t border-gray-300 font-semibold">
+                    <span className="text-gray-700">Total:</span>
+                    <span className="text-gray-900">₱{order.total_amount.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Baskets */}
-          {order.breakdown?.baskets && order.breakdown.baskets.length > 0 && (
-            <div className="pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                Baskets ({order.breakdown.baskets.length})
-              </h4>
-              <div className="space-y-3">
-                {order.breakdown.baskets.map((basket, idx) => (
-                  <BasketCard
-                    key={idx}
-                    basket={basket}
-                    breakdownSummary={order.breakdown.summary}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+            {/* Products */}
+            {order.breakdown?.items && order.breakdown.items.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Products ({order.breakdown.items.length})
+                </p>
+                <div className="space-y-2">
+                  {order.breakdown.items.map((item, idx) => {
+                    const quantity = item.quantity || 0;
+                    const unitPrice = item.unit_price || 0;
+                    const subtotal = item.subtotal ?? quantity * unitPrice;
 
-          {/* Service Timeline */}
-          {order.service_logs && order.service_logs.length > 0 && (
-            <div className="pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                Service Timeline
-              </h4>
-              <div className="space-y-2">
-                {/* Group logs by basket */}
-                {Array.from(
-                  new Set(order.service_logs.map((log) => log.basket_number)),
-                )
-                  .sort((a, b) => a - b)
-                  .map((basketNum) => {
-                    const basketLogs = order.service_logs!.filter(
-                      (log) => log.basket_number === basketNum,
-                    );
                     return (
                       <div
-                        key={basketNum}
-                        className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                        key={item.id || `item-${idx}`}
+                        className="flex justify-between text-sm p-2 rounded bg-gray-50"
                       >
-                        <p className="text-xs font-semibold text-gray-700 mb-2">
-                          Basket #{basketNum}
-                        </p>
-                        <div className="space-y-2 pl-3 border-l-2 border-blue-300">
-                          {basketLogs.map((log, idx) => (
-                            <div key={log.id} className="text-xs">
-                              <div className="flex items-start gap-2">
-                                <div className="mt-1">
-                                  <span
-                                    className={`inline-block w-2 h-2 rounded-full -ml-3.5 ${
-                                      log.status === "completed"
-                                        ? "bg-green-500"
-                                        : log.status === "in_progress"
-                                          ? "bg-blue-500"
-                                          : log.status === "skipped"
-                                            ? "bg-gray-400"
-                                            : "bg-yellow-500"
-                                    }`}
-                                  />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium text-gray-900 capitalize">
-                                      {log.service_type}
-                                    </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        log.status === "completed"
-                                          ? "bg-green-100 text-green-800"
-                                          : log.status === "in_progress"
-                                            ? "bg-blue-100 text-blue-800"
-                                            : log.status === "skipped"
-                                              ? "bg-gray-100 text-gray-800"
-                                              : "bg-yellow-100 text-yellow-800"
-                                      }`}
-                                    >
-                                      {log.status.replace("_", " ")}
-                                    </span>
-                                  </div>
-
-                                  {/* Started Info */}
-                                  {log.started_at && (
-                                    <div className="mt-1 text-gray-600">
-                                      <span>Started: </span>
-                                      <span className="text-gray-900 font-medium">
-                                        {new Date(
-                                          log.started_at,
-                                        ).toLocaleString()}
-                                      </span>
-                                      {log.started_by_staff && (
-                                        <span className="text-gray-500">
-                                          {" "}
-                                          by{" "}
-                                          <span className="text-gray-900">
-                                            {log.started_by_staff.first_name}{" "}
-                                            {log.started_by_staff.last_name}
-                                          </span>
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Completed Info */}
-                                  {log.completed_at && (
-                                    <div className="mt-1 text-gray-600">
-                                      <span>Completed: </span>
-                                      <span className="text-gray-900 font-medium">
-                                        {new Date(
-                                          log.completed_at,
-                                        ).toLocaleString()}
-                                      </span>
-                                      {log.completed_by_staff && (
-                                        <span className="text-gray-500">
-                                          {" "}
-                                          by{" "}
-                                          <span className="text-gray-900">
-                                            {log.completed_by_staff.first_name}{" "}
-                                            {log.completed_by_staff.last_name}
-                                          </span>
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Duration */}
-                                  {log.started_at && log.completed_at && (
-                                    <div className="mt-1 text-gray-600 text-xs">
-                                      <span>Duration: </span>
-                                      <span className="text-gray-900 font-medium">
-                                        {(() => {
-                                          const start = new Date(
-                                            log.started_at,
-                                          );
-                                          const end = new Date(
-                                            log.completed_at,
-                                          );
-                                          const diffMs =
-                                            end.getTime() - start.getTime();
-                                          const diffMins = Math.round(
-                                            diffMs / 60000,
-                                          );
-                                          const hours = Math.floor(
-                                            diffMins / 60,
-                                          );
-                                          const mins = diffMins % 60;
-                                          return hours > 0
-                                            ? `${hours}h ${mins}m`
-                                            : `${mins}m`;
-                                        })()}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {/* Notes */}
-                                  {log.notes && (
-                                    <div className="mt-1 text-gray-600 text-xs italic">
-                                      {log.notes}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {item.product_name || "Unknown Product"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {quantity} × ₱{(unitPrice as number).toFixed(2)}
+                          </p>
                         </div>
+                        <p className="font-medium text-gray-900">
+                          ₱{(subtotal as number).toFixed(2)}
+                        </p>
                       </div>
                     );
                   })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Baskets */}
+            {order.breakdown?.baskets && order.breakdown.baskets.length > 0 && (
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Baskets ({order.breakdown.baskets.length})
+                </p>
+                <div className="space-y-3">
+                  {order.breakdown.baskets.map((basket, idx) => (
+                    <BasketCard
+                      key={idx}
+                      basket={basket}
+                      breakdownSummary={order.breakdown.summary}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Service Timeline */}
+            {order.service_logs && order.service_logs.length > 0 && (
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Service Timeline
+                </p>
+                <div className="space-y-2">
+                  {/* Group logs by basket */}
+                  {Array.from(
+                    new Set(order.service_logs.map((log) => log.basket_number)),
+                  )
+                    .sort((a, b) => a - b)
+                    .map((basketNum) => {
+                      const basketLogs = order.service_logs!.filter(
+                        (log) => log.basket_number === basketNum,
+                      );
+                      return (
+                        <div
+                          key={basketNum}
+                          className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                        >
+                          <p className="text-xs font-semibold text-gray-700 mb-2">
+                            Basket #{basketNum}
+                          </p>
+                          <div className="space-y-2 pl-3 border-l-2 border-blue-300">
+                            {basketLogs.map((log, idx) => (
+                              <div key={log.id} className="text-xs">
+                                <div className="flex items-start gap-2">
+                                  <div className="mt-1">
+                                    <span
+                                      className={`inline-block w-2 h-2 rounded-full -ml-3.5 ${
+                                        log.status === "completed"
+                                          ? "bg-green-500"
+                                          : log.status === "in_progress"
+                                            ? "bg-blue-500"
+                                            : log.status === "skipped"
+                                              ? "bg-gray-400"
+                                              : "bg-yellow-500"
+                                      }`}
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-medium text-gray-900 capitalize">
+                                        {log.service_type}
+                                      </span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                          log.status === "completed"
+                                            ? "bg-green-100 text-green-800"
+                                            : log.status === "in_progress"
+                                              ? "bg-blue-100 text-blue-800"
+                                              : log.status === "skipped"
+                                                ? "bg-gray-100 text-gray-800"
+                                                : "bg-yellow-100 text-yellow-800"
+                                        }`}
+                                      >
+                                        {log.status.replace("_", " ")}
+                                      </span>
+                                    </div>
+
+                                    {/* Started Info */}
+                                    {log.started_at && (
+                                      <div className="mt-1 text-gray-600">
+                                        <span>Started: </span>
+                                        <span className="text-gray-900 font-medium">
+                                          {new Date(
+                                            log.started_at,
+                                          ).toLocaleString()}
+                                        </span>
+                                        {log.started_by_staff && (
+                                          <span className="text-gray-500">
+                                            {" "}
+                                            by{" "}
+                                            <span className="text-gray-900">
+                                              {log.started_by_staff.first_name}{" "}
+                                              {log.started_by_staff.last_name}
+                                            </span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Completed Info */}
+                                    {log.completed_at && (
+                                      <div className="mt-1 text-gray-600">
+                                        <span>Completed: </span>
+                                        <span className="text-gray-900 font-medium">
+                                          {new Date(
+                                            log.completed_at,
+                                          ).toLocaleString()}
+                                        </span>
+                                        {log.completed_by_staff && (
+                                          <span className="text-gray-500">
+                                            {" "}
+                                            by{" "}
+                                            <span className="text-gray-900">
+                                              {log.completed_by_staff.first_name}{" "}
+                                              {log.completed_by_staff.last_name}
+                                            </span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Duration */}
+                                    {log.started_at && log.completed_at && (
+                                      <div className="mt-1 text-gray-600 text-xs">
+                                        <span>Duration: </span>
+                                        <span className="text-gray-900 font-medium">
+                                          {(() => {
+                                            const start = new Date(
+                                              log.started_at,
+                                            );
+                                            const end = new Date(
+                                              log.completed_at,
+                                            );
+                                            const diffMs =
+                                              end.getTime() - start.getTime();
+                                            const diffMins = Math.round(
+                                              diffMs / 60000,
+                                            );
+                                            const hours = Math.floor(
+                                              diffMins / 60,
+                                            );
+                                            const mins = diffMins % 60;
+                                            return hours > 0
+                                              ? `${hours}h ${mins}m`
+                                              : `${mins}m`;
+                                          })()}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Notes */}
+                                    {log.notes && (
+                                      <div className="mt-1 text-gray-600 text-xs italic">
+                                        {log.notes}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}
@@ -1500,11 +1543,21 @@ function BasketCard({
         : "stored_total",
   });
 
+  // Check if basket has heavy fabrics
+  const hasHeavyFabrics = (servicesObj as any)?.heavy_fabrics === true;
+
   return (
     <div className="border rounded-lg p-3 bg-gray-50 border-gray-200">
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h5 className="font-semibold text-sm">Basket #{basketNumber}</h5>
+          <div className="flex items-center gap-2">
+            <h5 className="font-semibold text-sm">Basket #{basketNumber}</h5>
+            {hasHeavyFabrics && (
+              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                👖 Heavy Fabrics
+              </span>
+            )}
+          </div>
         </div>
         <div className="text-right">
           <div className="text-sm font-semibold text-gray-900">

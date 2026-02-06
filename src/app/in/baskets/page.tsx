@@ -43,6 +43,9 @@ type Order = {
     payment_method?: string;
     pickup_address?: string;
     delivery_address?: string;
+    scheduled?: boolean;
+    scheduled_date?: string;
+    scheduled_time?: string;
     pickup: {
       address: string;
       status: "pending" | "in_progress" | "completed" | "skipped";
@@ -217,12 +220,23 @@ export default function BasketsPage() {
           (o.status === "pending" || o.status === "processing"),
       );
 
+      // Parse breakdown and handling JSON strings into objects
+      const parsedOrders = processingOrders.map((o: any) => {
+        const parsed = {
+          ...o,
+          breakdown: typeof o.breakdown === 'string' ? JSON.parse(o.breakdown) : o.breakdown,
+          handling: typeof o.handling === 'string' ? JSON.parse(o.handling) : o.handling,
+        };
+        console.log("[PARSE ORDERS] Order", o.id, "parsed handling:", parsed.handling);
+        return parsed;
+      });
+
       console.log(
         "[LOAD ORDERS] Filtered processing orders:",
-        processingOrders.length,
+        parsedOrders.length,
       );
 
-      setOrders(processingOrders);
+      setOrders(parsedOrders);
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -671,6 +685,22 @@ export default function BasketsPage() {
                     {countBaskets(order) !== 1 ? "s" : ""} • ₱
                     {order.total_amount.toFixed(2)}
                   </div>
+                  {(() => {
+                    console.log("[ORDER CARD] Order", order.id, "handling.scheduled:", order.handling?.scheduled, "handling.scheduled_date:", order.handling?.scheduled_date);
+                    return order.handling?.scheduled && order.handling?.scheduled_date && (
+                      <div className="text-xs text-blue-700 font-semibold mt-2 flex items-center gap-1">
+                        <span>📅</span>
+                        <span>
+                          Scheduled for{" "}
+                          {new Date(order.handling.scheduled_date).toLocaleDateString(
+                            "en-US",
+                            { month: "short", day: "numeric" },
+                          )}{" "}
+                          at {order.handling.scheduled_time || "TBD"}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Baskets Container */}

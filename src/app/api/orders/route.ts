@@ -112,6 +112,9 @@ export async function GET(request: NextRequest) {
             notes: handling.delivery?.notes || handling.delivery_notes || null,
           },
           payment_method: handling.payment_method || 'cash',
+          scheduled: handling.scheduled || false,
+          scheduled_date: handling.scheduled_date,
+          scheduled_time: handling.scheduled_time,
         },
         breakdown: {
           items: breakdown.items || [],

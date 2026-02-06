@@ -407,6 +407,27 @@ function Step2Baskets({ pos }: { pos: any }) {
               );
             })()}
           </div>
+
+          {/* Heavy Fabrics */}
+          <div>
+            {(() => {
+              return (
+                <label className="flex items-center gap-2 p-3 border border-slate-300 bg-slate-50 cursor-pointer hover:bg-slate-100 rounded-lg h-20">
+                  <input
+                    type="checkbox"
+                    checked={activeBasket.services?.heavy_fabrics || false}
+                    onChange={(e) =>
+                      pos.updateActiveBasketService?.("heavy_fabrics", e.target.checked)
+                    }
+                    className="w-4 h-4 accent-[#c41d7f]"
+                  />
+                  <div className="text-sm font-semibold text-slate-700">
+                    👖 Heavy fabrics (jeans, comforter, etc.)
+                  </div>
+                </label>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
@@ -1080,6 +1101,64 @@ function Step5Handling({
         onChange={(e) => pos.setSpecialInstructions(e.target.value)}
         className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 text-sm h-24 resize-none"
       />
+
+      {/* Scheduling */}
+      <div className="space-y-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-4 w-full">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={pos.scheduled}
+            onChange={(e) => pos.setScheduled(e.target.checked)}
+            className="w-4 h-4 accent-blue-600"
+          />
+          <div className="text-sm font-semibold text-slate-700">
+            📅 Schedule for later?
+          </div>
+        </label>
+
+        {pos.scheduled && (
+          <div className="space-y-3 ml-6 pt-2 border-t border-blue-200">
+            {/* Date Picker */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Date
+              </label>
+              <input
+                type="date"
+                value={pos.scheduledDate}
+                onChange={(e) => pos.setScheduledDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                  .toISOString()
+                  .split("T")[0]}
+                className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
+              />
+            </div>
+
+            {/* Time Picker */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Time (1:00 PM - 5:00 PM)
+              </label>
+              <select
+                value={pos.scheduledTime}
+                onChange={(e) => pos.setScheduledTime(e.target.value)}
+                className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
+              >
+                <option value="13:00">1:00 PM</option>
+                <option value="13:30">1:30 PM</option>
+                <option value="14:00">2:00 PM</option>
+                <option value="14:30">2:30 PM</option>
+                <option value="15:00">3:00 PM</option>
+                <option value="15:30">3:30 PM</option>
+                <option value="16:00">4:00 PM</option>
+                <option value="16:30">4:30 PM</option>
+                <option value="17:00">5:00 PM</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1320,6 +1399,22 @@ function OrderSummary({
                 );
               },
             )}
+          </div>
+        )}
+
+        {pos.scheduled && pos.scheduledDate && (
+          <div className="bg-blue-50 border border-blue-300 rounded p-2 space-y-1">
+            <div className="text-xs text-slate-600 font-semibold uppercase">
+              📅 Scheduled Order
+            </div>
+            <div className="text-xs text-slate-900">
+              {new Date(pos.scheduledDate).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}{" "}
+              at {pos.scheduledTime}
+            </div>
           </div>
         )}
       </div>

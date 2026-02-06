@@ -9,7 +9,7 @@ import { formatReceiptAsPlaintext, CompactReceipt } from "./receiptGenerator";
 const createNewBasket = (basketNumber: number): Basket => ({
   basket_number: basketNumber,
   weight_kg: 0,
-  services: { wash: "off", wash_cycles: 1, dry: "off", spin: false, iron_weight_kg: 0, fold: false, additional_dry_time_minutes: 0, plastic_bags: 0 },
+  services: { wash: "off", wash_cycles: 1, dry: "off", spin: false, iron_weight_kg: 0, fold: false, additional_dry_time_minutes: 0, plastic_bags: 0, heavy_fabrics: false },
   notes: "",
   subtotal: 0,
 });
@@ -33,6 +33,9 @@ export function usePOSState() {
   const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
   const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<number | null>(null);
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [scheduled, setScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("13:00");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [amountPaid, setAmountPaid] = useState(0);
   const [gcashReference, setGcashReference] = useState("");
@@ -205,6 +208,9 @@ export function usePOSState() {
         payment_method: paymentMethod,
         amount_paid: amountPaid,
         gcash_reference: paymentMethod === "gcash" ? gcashReference : undefined,
+        scheduled: scheduled,
+        scheduled_date: scheduled ? scheduledDate : undefined,
+        scheduled_time: scheduled ? scheduledTime : undefined,
       };
 
       console.log("[POS CREATE] Sending order with baskets:", breakdown.baskets.map(b => ({
@@ -283,7 +289,7 @@ export function usePOSState() {
     } finally {
       setIsProcessing(false);
     }
-  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer, loyaltyDiscountTier]);
+  }, [calculateOrderTotal, serviceType, deliveryType, deliveryAddress, specialInstructions, paymentMethod, amountPaid, gcashReference, customer, loyaltyDiscountTier, scheduled, scheduledDate, scheduledTime])
 
   const resetOrder = useCallback(() => {
     setStep(0);
@@ -311,6 +317,7 @@ export function usePOSState() {
     products, loadingProducts, selectedProducts, addProductToOrder, removeProductFromOrder, setProductQuantity,
     customer, setCustomer, customerSearch, setCustomerSearch, customerSuggestions, selectCustomer, clearCustomer, showCustomerForm, setShowCustomerForm, newCustomerForm, setNewCustomerForm, createNewCustomer,
     deliveryType, setDeliveryType, deliveryAddress, setDeliveryAddress, deliveryLng, setDeliveryLng, deliveryLat, setDeliveryLat, deliveryFeeOverride, setDeliveryFeeOverride, specialInstructions, setSpecialInstructions,
+    scheduled, setScheduled, scheduledDate, setScheduledDate, scheduledTime, setScheduledTime,
     paymentMethod, setPaymentMethod, amountPaid, setAmountPaid, gcashReference, setGcashReference,
     loyaltyDiscountTier, setLoyaltyDiscountTier,
     calculateOrderTotal, isPaymentValid, createOrder, resetOrder, isProcessing,

@@ -43,6 +43,7 @@ export interface BasketServices {
   additional_dry_time_minutes: 0 | 8 | 16 | 24;  // 0, 8, 16, or 24
   additional_dry_time_pricing?: PricingInfo; // Pricing info for additional dry time
   plastic_bags: number;                   // Quantity of plastic bags
+  heavy_fabrics: boolean;                 // Heavy fabrics (jeans, comforter, etc) - informational flag
   staff_service_pricing?: PricingInfo;    // Pricing info for staff service
 }
 
@@ -108,6 +109,9 @@ export interface OrderHandling {
   delivery_lat?: number | null;           // Delivery location latitude
   delivery_fee_override: number | null;   // Cashier override (min 50 if delivery)
   special_instructions: string;           // Order-level notes
+  scheduled: boolean;                     // Whether order is scheduled for later
+  scheduled_date?: string;                // ISO date format (YYYY-MM-DD) for scheduled pickup/delivery
+  scheduled_time?: string;                // HH:MM format (13:00-17:00 range) for scheduled pickup/delivery
   payment_method: PaymentMethod;
   amount_paid: number;
   amount_change?: number;                 // If cash

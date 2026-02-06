@@ -100,10 +100,14 @@ export async function GET(request: NextRequest) {
       // Ensure handling has proper default structure
       const handling = order.handling || {};
       const safeHandling = {
+        ...handling,
         service_type: handling.service_type,
         handling_type: handling.handling_type,
         pickup_address: handling.pickup_address,
         delivery_address: handling.delivery_address,
+        scheduled: handling.scheduled || false,
+        scheduled_date: handling.scheduled_date,
+        scheduled_time: handling.scheduled_time,
         pickup: handling.pickup || {
           address: handling.pickup_address || "",
           status: "pending" as const,
