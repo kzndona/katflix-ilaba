@@ -417,7 +417,10 @@ function Step2Baskets({ pos }: { pos: any }) {
                     type="checkbox"
                     checked={activeBasket.services?.heavy_fabrics || false}
                     onChange={(e) =>
-                      pos.updateActiveBasketService?.("heavy_fabrics", e.target.checked)
+                      pos.updateActiveBasketService?.(
+                        "heavy_fabrics",
+                        e.target.checked,
+                      )
                     }
                     className="w-4 h-4 accent-[#c41d7f]"
                   />
@@ -1128,9 +1131,11 @@ function Step5Handling({
                 value={pos.scheduledDate}
                 onChange={(e) => pos.setScheduledDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0]}
+                max={
+                  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split("T")[0]
+                }
                 className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
               />
             </div>

@@ -25,7 +25,7 @@ interface CreateMobileOrderRequest {
     email?: string;
   };
   breakdown: any; // OrderBreakdown JSONB
-  handling: any; // OrderHandling JSONB
+  handling: any; // OrderHandling JSONB (includes scheduling: scheduled, scheduled_date, scheduled_time)
   gcash_receipt_url?: string; // Optional GCash receipt image URL
   loyalty?: {
     discount_tier: null | 'tier1' | 'tier2';
@@ -147,6 +147,10 @@ export async function POST(request: NextRequest) {
       // Include payment info if provided
       payment_method: body.handling?.payment_method || null,
       amount_paid: body.handling?.amount_paid || null,
+      // Include scheduling info if provided (mapped from POS)
+      scheduled: body.handling?.scheduled || false,
+      scheduled_date: body.handling?.scheduled_date || undefined,
+      scheduled_time: body.handling?.scheduled_time || undefined,
     };
 
     // Replace body.handling with the properly structured version

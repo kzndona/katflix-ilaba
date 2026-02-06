@@ -24,8 +24,8 @@ interface CreateOrderRequest {
     phone_number: string;
     email?: string;
   };
-  breakdown: any; // OrderBreakdown JSONB
-  handling: any; // OrderHandling JSONB
+  breakdown: any; // OrderBreakdown JSONB with items, baskets, summary
+  handling: any; // OrderHandling JSONB with: pickup, delivery, payment_method, amount_paid, scheduled, scheduled_date, scheduled_time
   loyalty?: {
     discount_tier: null | 'tier1' | 'tier2';
   };

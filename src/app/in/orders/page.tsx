@@ -756,33 +756,45 @@ function ViewModal({
             <div className="grid grid-cols-3 gap-6">
               {/* Status */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Status</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">
+                  Status
+                </p>
                 <p className="text-2xl font-black text-gray-900 capitalize">
-                  {order.status.replace(/_/g, ' ')}
+                  {order.status.replace(/_/g, " ")}
                 </p>
               </div>
               {/* Total Amount - MOST PROMINENT */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Total Amount</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">
+                  Total Amount
+                </p>
                 <p className="text-3xl font-black text-green-700">
                   ₱{order.total_amount.toFixed(2)}
                 </p>
               </div>
               {/* Created Date */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Created</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">
+                  Created
+                </p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {new Date(order.created_at || '').toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {new Date(order.created_at || "").toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    },
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {new Date(order.created_at || '').toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+                  {new Date(order.created_at || "").toLocaleTimeString(
+                    "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
                 </p>
               </div>
             </div>
@@ -793,16 +805,22 @@ function ViewModal({
             <div className="grid grid-cols-3 gap-6">
               {/* Contact */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Contact</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Contact
+                </p>
                 <div className="space-y-2">
                   {order.customers?.phone_number && (
                     <div>
-                      <p className="text-sm font-medium text-gray-900">📱 {order.customers.phone_number}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        📱 {order.customers.phone_number}
+                      </p>
                     </div>
                   )}
                   {order.customers?.email_address && (
                     <div>
-                      <p className="text-sm text-gray-600 break-all">{order.customers.email_address}</p>
+                      <p className="text-sm text-gray-600 break-all">
+                        {order.customers.email_address}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -810,21 +828,26 @@ function ViewModal({
 
               {/* Fulfillment - Pickup */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Pickup</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Pickup
+                </p>
                 <p className="text-sm font-medium text-gray-900">
-                  {order.handling?.pickup?.address?.toLowerCase() === 'store' 
-                    ? '🏪 In-Store' 
-                    : order.handling?.pickup?.address || 'In-Store'}
+                  {order.handling?.pickup?.address?.toLowerCase() === "store"
+                    ? "🏪 In-Store"
+                    : order.handling?.pickup?.address || "In-Store"}
                 </p>
               </div>
 
               {/* Fulfillment - Delivery */}
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">Delivery</p>
+                <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3">
+                  Delivery
+                </p>
                 <p className="text-sm font-medium text-gray-900 break-words">
-                  {order.handling?.delivery?.address?.toLowerCase() === 'store' || !order.handling?.delivery?.address
-                    ? '🏪 In-Store' 
-                    : `🚚 ${order.handling.delivery.address.substring(0, 40)}${order.handling.delivery.address.length > 40 ? '...' : ''}`}
+                  {order.handling?.delivery?.address?.toLowerCase() ===
+                    "store" || !order.handling?.delivery?.address
+                    ? "🏪 In-Store"
+                    : `🚚 ${order.handling.delivery.address.substring(0, 40)}${order.handling.delivery.address.length > 40 ? "..." : ""}`}
                 </p>
               </div>
             </div>
@@ -834,19 +857,25 @@ function ViewModal({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">📅 Scheduled Date</p>
+                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">
+                      📅 Scheduled Date
+                    </p>
                     <p className="text-lg font-bold text-blue-900">
-                      {new Date(order.handling.scheduled_date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
+                      {new Date(
+                        order.handling.scheduled_date,
+                      ).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
                       })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">⏰ Scheduled Time</p>
+                    <p className="text-xs text-blue-700 uppercase tracking-wide font-semibold mb-1">
+                      ⏰ Scheduled Time
+                    </p>
                     <p className="text-lg font-bold text-blue-900">
-                      {order.handling.scheduled_time || 'TBD'}
+                      {order.handling.scheduled_time || "TBD"}
                     </p>
                   </div>
                 </div>
@@ -858,20 +887,28 @@ function ViewModal({
               <div className="grid grid-cols-2 gap-4">
                 {order.handling.payment_method && (
                   <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Payment Method</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">
+                      Payment Method
+                    </p>
                     <p className="text-sm font-medium text-gray-900 capitalize">
                       {order.handling.payment_method}
                     </p>
                   </div>
                 )}
-                {order.breakdown?.payment?.amount_paid !== null && order.breakdown?.payment?.amount_paid !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Amount Paid</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      ₱{(order.breakdown.payment.amount_paid as number).toFixed(2)}
-                    </p>
-                  </div>
-                )}
+                {order.breakdown?.payment?.amount_paid !== null &&
+                  order.breakdown?.payment?.amount_paid !== undefined && (
+                    <div>
+                      <p className="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">
+                        Amount Paid
+                      </p>
+                      <p className="text-sm font-medium text-gray-900">
+                        ₱
+                        {(
+                          order.breakdown.payment.amount_paid as number
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -890,7 +927,10 @@ function ViewModal({
                       <div className="flex justify-between">
                         <span className="text-gray-600">Products:</span>
                         <span className="font-medium">
-                          ₱{(order.breakdown.summary.subtotal_products as number).toFixed(2)}
+                          ₱
+                          {(
+                            order.breakdown.summary.subtotal_products as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -899,17 +939,26 @@ function ViewModal({
                       <div className="flex justify-between">
                         <span className="text-gray-600">Services:</span>
                         <span className="font-medium">
-                          ₱{(order.breakdown.summary.subtotal_services as number).toFixed(2)}
+                          ₱
+                          {(
+                            order.breakdown.summary.subtotal_services as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
                   {order.breakdown.summary.staff_service_fee !== null &&
                     order.breakdown.summary.staff_service_fee !== undefined &&
-                    (order.breakdown.summary.staff_service_fee as number) > 0 && (
+                    (order.breakdown.summary.staff_service_fee as number) >
+                      0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Staff Service Fee:</span>
+                        <span className="text-gray-600">
+                          Staff Service Fee:
+                        </span>
                         <span className="font-medium">
-                          ₱{(order.breakdown.summary.staff_service_fee as number).toFixed(2)}
+                          ₱
+                          {(
+                            order.breakdown.summary.staff_service_fee as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -919,7 +968,10 @@ function ViewModal({
                       <div className="flex justify-between">
                         <span className="text-gray-600">Delivery Fee:</span>
                         <span className="font-medium">
-                          ₱{(order.breakdown.summary.delivery_fee as number).toFixed(2)}
+                          ₱
+                          {(
+                            order.breakdown.summary.delivery_fee as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -928,23 +980,32 @@ function ViewModal({
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>VAT (12% inclusive):</span>
                         <span>
-                          ₱{(order.breakdown.summary.vat_amount as number).toFixed(2)}
+                          ₱
+                          {(
+                            order.breakdown.summary.vat_amount as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
                   {order.breakdown.summary.loyalty_discount !== null &&
                     order.breakdown.summary.loyalty_discount !== undefined &&
-                    (order.breakdown.summary.loyalty_discount as number) > 0 && (
+                    (order.breakdown.summary.loyalty_discount as number) >
+                      0 && (
                       <div className="flex justify-between text-amber-700 font-semibold">
                         <span>Loyalty Discount:</span>
                         <span>
-                          -₱{(order.breakdown.summary.loyalty_discount as number).toFixed(2)}
+                          -₱
+                          {(
+                            order.breakdown.summary.loyalty_discount as number
+                          ).toFixed(2)}
                         </span>
                       </div>
                     )}
                   <div className="flex justify-between pt-2 border-t border-gray-300 font-semibold">
                     <span className="text-gray-700">Total:</span>
-                    <span className="text-gray-900">₱{order.total_amount.toFixed(2)}</span>
+                    <span className="text-gray-900">
+                      ₱{order.total_amount.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1100,7 +1161,10 @@ function ViewModal({
                                             {" "}
                                             by{" "}
                                             <span className="text-gray-900">
-                                              {log.completed_by_staff.first_name}{" "}
+                                              {
+                                                log.completed_by_staff
+                                                  .first_name
+                                              }{" "}
                                               {log.completed_by_staff.last_name}
                                             </span>
                                           </span>
