@@ -13,6 +13,7 @@ export default function Navbar() {
   const [manageOpen, setManageOpen] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [lowStockCount, setLowStockCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Helper function to check if a path is active
@@ -68,7 +69,24 @@ export default function Navbar() {
       }
     };
 
+    // Fetch low-stock products
+    const fetchLowStockCount = async () => {
+      try {
+        const res = await fetch("/api/manage/products/getAllProducts");
+        if (res.ok) {
+          const products = await res.json();
+          const lowStockProducts = products.filter(
+            (p: any) => parseInt(p.quantity) <= parseInt(p.reorder_level)
+          );
+          setLowStockCount(lowStockProducts.length);
+        }
+      } catch (err) {
+        console.error("Error fetching low-stock count:", err);
+      }
+    };
+
     fetchUserRoles();
+    fetchLowStockCount();
   }, [supabase]);
 
   // Placeholder navigation functions
@@ -188,13 +206,18 @@ export default function Navbar() {
             onMouseLeave={() => setManageOpen(false)}
           >
             <button
-              className={`font-medium transition-all px-3 py-2 rounded-lg relative group ${
+              className={`font-medium transition-all px-3 py-2 rounded-lg relative group flex items-center gap-2 ${
                 isActive("/in/manage")
                   ? "text-blue-400"
                   : "text-slate-200 hover:text-blue-400"
               }`}
             >
-              Manage
+              <span>Manage</span>
+              {lowStockCount > 0 && (
+                <span className="bg-red-600 text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                  {lowStockCount}
+                </span>
+              )}
               <span
                 className={`absolute bottom-0 left-0 h-0.5 rounded-full transition-all duration-300 ${
                   isActive("/in/manage")
@@ -210,9 +233,14 @@ export default function Navbar() {
             >
               <button
                 onClick={goToProducts}
-                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition"
+                className="px-4 py-2 text-left text-slate-200 hover:bg-slate-700 hover:text-blue-400 transition flex items-center justify-between"
               >
-                Products
+                <span>Products</span>
+                {lowStockCount > 0 && (
+                  <span className="bg-red-600 text-white rounded-full px-2 py-0.5 text-xs font-bold ml-2">
+                    {lowStockCount}
+                  </span>
+                )}
               </button>
               {/* <button
                 onClick={goToMachines}

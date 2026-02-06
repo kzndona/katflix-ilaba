@@ -46,6 +46,9 @@ export default function ProductsPage() {
     [],
   );
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [updatingQuantity, setUpdatingQuantity] = useState(false);
+  const [quantityError, setQuantityError] = useState<string | null>(null);
+  const [transactionModal, setTransactionModal] = useState<Product | null>(null);
 
   const ROWS_PER_PAGE = 10;
 
@@ -167,6 +170,38 @@ export default function ProductsPage() {
     }
   }
 
+  async function updateProductQuantity(productId: string, quantityChange: number) {
+    if (quantityChange === 0) return;
+
+    setUpdatingQuantity(true);
+    setQuantityError(null);
+    try {
+      const res = await fetch("/api/manage/products/updateQuantity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          quantityChange,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(body.error || `Server responded ${res.status}`);
+
+      // Reload data
+      await load();
+      if (selectedProductForView) {
+        await viewProductDetails(selectedProductForView);
+      }
+    } catch (err) {
+      console.error(err);
+      setQuantityError(err instanceof Error ? err.message : "Failed to update quantity");
+    } finally {
+      setUpdatingQuantity(false);
+    }
+  }
+
   function openNew() {
     setEditing({
       id: "",
@@ -269,11 +304,24 @@ export default function ProductsPage() {
     }
   }
 
+  // Helper to check if product is low stock
+  const isLowStock = (product: Product) => {
+    return parseInt(product.quantity) <= parseInt(product.reorder_level);
+  };
+
   // Pagination
   const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
   const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
   const endIdx = startIdx + ROWS_PER_PAGE;
-  const paginatedRows = filteredRows.slice(startIdx, endIdx);
+  // Sort to show low-stock items first
+  const sortedFilteredRows = [...filteredRows].sort((a, b) => {
+    const aLowStock = isLowStock(a);
+    const bLowStock = isLowStock(b);
+    if (aLowStock && !bLowStock) return -1;
+    if (!aLowStock && bLowStock) return 1;
+    return 0;
+  });
+  const paginatedRows = sortedFilteredRows.slice(startIdx, endIdx);
 
   const handleSort = (key: keyof Product) => {
     if (sortConfig.key === key) {
@@ -403,7 +451,11 @@ export default function ProductsPage() {
                   <div
                     key={product.id}
                     onClick={() => setSelectedProductForView(product)}
-                    className={`p-3 border border-slate-200 rounded cursor-pointer hover:bg-blue-50 transition flex gap-3 ${
+                    className={`p-3 border rounded cursor-pointer hover:bg-blue-50 transition flex gap-3 ${
+                      isLowStock(product)
+                        ? "bg-red-50 border-red-400"
+                        : "border-slate-200"
+                    } ${
                       selectedProductForView?.id === product.id
                         ? "bg-blue-100 border-blue-400"
                         : ""
@@ -426,8 +478,13 @@ export default function ProductsPage() {
 
                     {/* Product Info */}
                     <div className="flex-1">
-                      <div className="font-semibold text-slate-900 text-sm">
+                      <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                         {product.item_name}
+                        {isLowStock(product) && (
+                          <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">
+                            LOW
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-600 mt-1">
                         SKU: {product.sku || "—"}
@@ -562,10 +619,16 @@ export default function ProductsPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-col">
+                    <button
+                      onClick={() => setTransactionModal(selectedProductForView)}
+                      className="w-full px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition"
+                    >
+                      Update Quantity Manually
+                    </button>
                     <button
                       onClick={() => openEdit(selectedProductForView)}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
                     >
                       Edit Product
                     </button>
@@ -692,6 +755,18 @@ export default function ProductsPage() {
           isNewProduct={!editing.id}
         />
       )}
+
+      {/* Transaction Modal */}
+      {transactionModal && (
+        <TransactionModal
+          product={transactionModal}
+          onClose={() => setTransactionModal(null)}
+          onSuccess={() => {
+            setTransactionModal(null);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -784,7 +859,7 @@ function EditModal({
                 <input
                   type="number"
                   step="0.01"
-                  value={product.unit_cost ?? ""}
+                  value={product.unit_cost ? parseFloat(product.unit_cost).toFixed(2) : ""}
                   onChange={(e) =>
                     updateField(
                       "unit_cost",
@@ -802,7 +877,7 @@ function EditModal({
                 <input
                   type="number"
                   step="0.01"
-                  value={product.unit_price ?? ""}
+                  value={product.unit_price ? parseFloat(product.unit_price).toFixed(2) : ""}
                   onChange={(e) =>
                     updateField(
                       "unit_price",
@@ -1091,6 +1166,303 @@ function ImageUploadField({
           Uploading...
         </div>
       )}
+    </div>
+  );
+}
+
+// Transaction Modal Component
+function TransactionModal({
+  product,
+  onClose,
+  onSuccess,
+}: {
+  product: Product;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    transaction_type: "adjustment",
+    direction: "increase" as "increase" | "decrease",
+    quantity_change: "",
+    notes: "",
+  });
+
+  const currentQty = parseInt(product.quantity) || 0;
+  const absQuantity = formData.quantity_change
+    ? parseInt(formData.quantity_change)
+    : 0;
+  const resultingQuantity =
+    formData.direction === "increase"
+      ? currentQty + absQuantity
+      : currentQty - absQuantity;
+
+  // Determine if decrease is impossible
+  const isInvalidDecrease =
+    formData.direction === "decrease" && resultingQuantity < 0;
+
+  // Determine allowed directions based on transaction type
+  const allowIncrease =
+    formData.transaction_type === "adjustment" ||
+    formData.transaction_type === "restock" ||
+    formData.transaction_type === "return";
+  const allowDecrease =
+    formData.transaction_type === "adjustment" ||
+    formData.transaction_type === "damage";
+
+  // Handle transaction type change
+  const handleTransactionTypeChange = (newType: string) => {
+    setFormData({ ...formData, transaction_type: newType });
+    // Auto-set direction based on type
+    if (newType === "damage") {
+      setFormData((prev) => ({ ...prev, direction: "decrease" }));
+    } else if (newType === "restock") {
+      setFormData((prev) => ({ ...prev, direction: "increase" }));
+    } else if (newType === "return") {
+      setFormData((prev) => ({ ...prev, direction: "decrease" }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    setErrorMsg(null);
+
+    if (!formData.quantity_change || isNaN(absQuantity)) {
+      setErrorMsg("Please enter a valid quantity change");
+      return;
+    }
+
+    if (absQuantity === 0) {
+      setErrorMsg("Quantity change must be non-zero");
+      return;
+    }
+
+    if (isInvalidDecrease) {
+      setErrorMsg(
+        `Cannot decrease by ${absQuantity}. Current stock is only ${currentQty}.`
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const quantityChange =
+        formData.direction === "increase" ? absQuantity : -absQuantity;
+
+      const res = await fetch("/api/manage/products/adjustQuantity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: product.id,
+          adjustment_amount: Math.abs(quantityChange),
+          adjustment_type: quantityChange > 0 ? "add" : "subtract",
+          notes: formData.notes || null,
+          transaction_type: formData.transaction_type,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Server responded ${res.status}`);
+      }
+
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to update quantity"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      {/* Modal */}
+      <div
+        className="bg-white shadow-2xl rounded-lg w-full max-w-md flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-gray-900">
+            Update Quantity Manually
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-600 hover:text-gray-900 text-xl font-light transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {errorMsg && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="text-red-800 text-xs font-medium">{errorMsg}</div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-2">
+              Product
+            </label>
+            <div className="px-3 py-2 bg-gray-100 rounded text-sm text-gray-900 font-medium">
+              {product.item_name}
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              Current Stock: <span className="font-bold">{currentQty}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-2">
+              Transaction Type
+            </label>
+            <select
+              value={formData.transaction_type}
+              onChange={(e) => handleTransactionTypeChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="adjustment">Adjustment</option>
+              <option value="return">Return</option>
+              <option value="restock">Restock</option>
+              <option value="damage">Damage</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-2">
+              Direction
+            </label>
+            <div className="flex gap-2">
+              {allowIncrease && (
+                <button
+                  onClick={() =>
+                    setFormData({ ...formData, direction: "increase" })
+                  }
+                  className={`flex-1 px-3 py-2 rounded text-xs font-medium border transition ${
+                    formData.direction === "increase"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  Increase (+)
+                </button>
+              )}
+              {allowDecrease && (
+                <button
+                  onClick={() =>
+                    setFormData({ ...formData, direction: "decrease" })
+                  }
+                  className={`flex-1 px-3 py-2 rounded text-xs font-medium border transition ${
+                    formData.direction === "decrease"
+                      ? "bg-red-600 text-white border-red-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  Decrease (−)
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-2">
+              Quantity Change
+            </label>
+            <input
+              type="number"
+              value={
+                formData.quantity_change
+                  ? formData.direction === "decrease"
+                    ? `-${formData.quantity_change}`
+                    : formData.quantity_change
+                  : ""
+              }
+              onChange={(e) => {
+                const val = e.target.value.replace(/^-/, "");
+                setFormData({ ...formData, quantity_change: val });
+              }}
+              className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                isInvalidDecrease ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder={
+                formData.direction === "decrease" ? "-0" : "0"
+              }
+              min="0"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Enter the absolute quantity (sign added automatically)
+            </div>
+          </div>
+
+          {/* Resulting Stock Preview */}
+          {formData.quantity_change && !isNaN(absQuantity) && absQuantity > 0 && (
+            <div
+              className={`p-3 rounded border ${
+                isInvalidDecrease
+                  ? "bg-red-50 border-red-300"
+                  : "bg-blue-50 border-blue-300"
+              }`}
+            >
+              <div className="text-xs text-gray-600 mb-1">
+                Stock after adjustment:
+              </div>
+              <div
+                className={`text-xl font-bold ${
+                  isInvalidDecrease
+                    ? "text-red-600"
+                    : resultingQuantity >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                }`}
+              >
+                {resultingQuantity}
+              </div>
+              {isInvalidDecrease && (
+                <div className="text-xs text-red-600 mt-1">
+                  ⚠️ This would result in negative stock!
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-2">
+              Notes (Optional)
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-20"
+              placeholder="e.g., Missing items in shipment..."
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900 text-xs font-medium hover:bg-gray-100 transition disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || isInvalidDecrease || !formData.quantity_change}
+            className="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Updating..." : "Update Quantity"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

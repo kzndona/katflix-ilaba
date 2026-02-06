@@ -227,6 +227,9 @@ export default function IssuesPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {filteredRows.length} issue
               {filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length > ROWS_PER_PAGE && (
+                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ROWS_PER_PAGE)}</>
+              )}
             </p>
           </div>
           <button
@@ -463,28 +466,26 @@ export default function IssuesPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
-                <div className="text-sm text-gray-600">
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  ← Previous
+                </button>
+                <span className="text-xs text-gray-600">
                   Page {currentPage} of {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    ← Previous
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentPage(Math.min(totalPages, currentPage + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    Next →
-                  </button>
-                </div>
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Next →
+                </button>
               </div>
             )}
           </div>

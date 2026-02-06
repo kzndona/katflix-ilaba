@@ -280,6 +280,9 @@ export default function ServicesPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {filteredRows.length} service
               {filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length > ROWS_PER_PAGE && (
+                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ROWS_PER_PAGE)}</>
+              )}
             </p>
           </div>
           <button
@@ -482,52 +485,26 @@ export default function ServicesPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                  <div className="text-xs text-gray-600">
-                    Showing {startIdx + 1} to{" "}
-                    {Math.min(endIdx, filteredRows.length)} of{" "}
-                    {filteredRows.length} services
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      ← Previous
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => {
-                        const diff = Math.abs(p - currentPage);
-                        return diff < 3 || p === 1 || p === totalPages;
-                      })
-                      .map((p, i, arr) => (
-                        <div key={p}>
-                          {i > 0 && arr[i - 1] !== p - 1 && (
-                            <span className="px-1 text-gray-400">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition ${
-                              currentPage === p
-                                ? "bg-blue-600 text-white"
-                                : "border border-gray-300 hover:bg-gray-200"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </div>
-                      ))}
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next →
-                    </button>
-                  </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
                 </div>
               )}
             </>

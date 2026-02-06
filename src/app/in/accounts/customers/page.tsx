@@ -32,6 +32,8 @@ export default function CustomersPage() {
     null,
   );
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Load customers on component mount
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function CustomersPage() {
   // Debounced search filter - updates filtered list based on search query
   useEffect(() => {
     const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page on search
       if (searchQuery.trim() === "") {
         setFilteredRows(rows);
       } else {
@@ -246,6 +249,9 @@ export default function CustomersPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {filteredRows.length} customer
               {filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length > ITEMS_PER_PAGE && (
+                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}</>
+              )}
             </p>
           </div>
           <button
@@ -296,59 +302,94 @@ export default function CustomersPage() {
                 : "No results match your search."}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Loyalty Points
-                    </th>
-                    <th className="px-6 py-3 text-center font-semibold text-gray-900">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredRows.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="hover:bg-gray-50 transition"
-                    >
-                      <td className="px-6 py-4 text-gray-900 font-medium">
-                        {customer.first_name} {customer.last_name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {customer.email_address || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {customer.phone_number || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {customer.loyalty_points && customer.loyalty_points > 0
-                          ? `⭐ ${customer.loyalty_points}`
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => openView(customer)}
-                          className="text-blue-600 hover:text-blue-700 font-medium text-xs mr-3"
-                        >
-                          View
-                        </button>
-                      </td>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Loyalty Points
+                      </th>
+                      <th className="px-6 py-3 text-center font-semibold text-gray-900">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredRows
+                      .slice(
+                        (currentPage - 1) * ITEMS_PER_PAGE,
+                        currentPage * ITEMS_PER_PAGE
+                      )
+                      .map((customer) => (
+                        <tr
+                          key={customer.id}
+                          className="hover:bg-gray-50 transition"
+                        >
+                          <td className="px-6 py-4 text-gray-900 font-medium">
+                            {customer.first_name} {customer.last_name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {customer.email_address || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {customer.phone_number || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {customer.loyalty_points && customer.loyalty_points > 0
+                              ? `⭐ ${customer.loyalty_points}`
+                              : "—"}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => openView(customer)}
+                              className="text-blue-600 hover:text-blue-700 font-medium text-xs mr-3"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredRows.length > ITEMS_PER_PAGE && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-600">
+                    Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) =>
+                        Math.min(
+                          Math.ceil(filteredRows.length / ITEMS_PER_PAGE),
+                          p + 1
+                        )
+                      )
+                    }
+                    disabled={currentPage === Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

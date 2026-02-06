@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
       .from('products')
       .update({
         quantity: newQty,
-        last_updated: new Date().toISOString(),
       })
       .eq('id', product_id);
 
@@ -88,17 +87,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Create transaction record for audit trail
-    const transactionReason = notes 
-      ? `Manual adjustment (${adjustment_type}): ${notes}`
-      : `Manual adjustment (${adjustment_type}) by staff`;
-
     const { error: txError } = await supabase
       .from('product_transactions')
       .insert({
         product_id,
-        change_type: 'adjust',
-        quantity: amount,
-        reason: transactionReason,
+        quantity_change: adjustment_type === 'add' ? amount : -amount,
+        transaction_type: 'adjustment',
+        notes: notes || null,
       });
 
     if (txError) {

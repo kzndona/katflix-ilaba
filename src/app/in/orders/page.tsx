@@ -127,9 +127,29 @@ export default function OrdersPage() {
   const [dateTo, setDateTo] = useState("");
   const [cashierFilter, setCashierFilter] = useState<string>("");
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [statusFilters, setStatusFilters] = useState<string[]>([
+    "pending",
+    "processing",
+    "completed",
+  ]);
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
+    null,
+  );
 
   const ROWS_PER_PAGE = 10;
   const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+
+  // Reset auto-refresh timer when user takes an action
+  const resetAutoRefresh = () => {
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+    }
+    const newInterval = setInterval(() => {
+      load();
+      setLastRefresh(new Date());
+    }, AUTO_REFRESH_INTERVAL);
+    setRefreshInterval(newInterval);
+  };
 
   useEffect(() => {
     // Check URL params for pre-set filters
@@ -160,16 +180,16 @@ export default function OrdersPage() {
 
   useEffect(() => {
     filterAndSort();
-  }, [rows, searchQuery, sortConfig, dateFrom, dateTo, cashierFilter]);
+  }, [rows, searchQuery, sortConfig, dateFrom, dateTo, cashierFilter, statusFilters]);
 
   // Auto-refresh orders every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      load();
-      setLastRefresh(new Date());
-    }, AUTO_REFRESH_INTERVAL);
-
-    return () => clearInterval(interval);
+    resetAutoRefresh();
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
   }, []);
 
   async function load() {
@@ -213,6 +233,11 @@ export default function OrdersPage() {
         const orderDate = order.created_at ? new Date(order.created_at) : null;
         return orderDate && orderDate <= to;
       });
+    }
+
+    // Apply status filter
+    if (statusFilters.length > 0) {
+      result = result.filter((order) => statusFilters.includes(order.status));
     }
 
     // Apply cashier filter
@@ -347,6 +372,9 @@ export default function OrdersPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {groupedOrders.length} order
               {groupedOrders.length !== 1 ? "s" : ""} found
+              {groupedOrders.length > ROWS_PER_PAGE && (
+                <> • Page {currentPage} of {totalPages}</>
+              )}
               {lastRefresh && (
                 <span className="ml-2 text-gray-400">
                   • Auto-refreshing (Last: {lastRefresh.toLocaleTimeString()})
@@ -357,7 +385,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-4 grid grid-cols-3 gap-4">
+        <div className="mb-4 grid grid-cols-4 gap-4">
           <div>
             <label className="text-xs font-medium text-gray-600 mb-1 block">
               From
@@ -391,6 +419,34 @@ export default function OrdersPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
+          </div>
+
+          {/* Status Filters */}
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              Status
+            </label>
+            <div className="flex gap-1 items-stretch">
+              {["pending", "processing", "completed"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    setStatusFilters((prev) =>
+                      prev.includes(status)
+                        ? prev.filter((s) => s !== status)
+                        : [...prev, status],
+                    );
+                  }}
+                  className={`px-3 py-2 rounded text-xs font-medium transition flex-1 border ${
+                    statusFilters.includes(status)
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300 border-gray-300"
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -523,12 +579,14 @@ export default function OrdersPage() {
                               >
                                 View
                               </button>
-                              <button
-                                onClick={() => setEditing(order)}
-                                className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
-                              >
-                                Edit
-                              </button>
+                              {order.status !== "completed" && (
+                                <button
+                                  onClick={() => setEditing(order)}
+                                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
+                                >
+                                  Edit
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -540,52 +598,26 @@ export default function OrdersPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                  <div className="text-xs text-gray-600">
-                    Showing {startIdx + 1} to{" "}
-                    {Math.min(endIdx, groupedOrders.length)} of{" "}
-                    {groupedOrders.length} orders
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      ← Previous
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => {
-                        const diff = Math.abs(p - currentPage);
-                        return diff < 3 || p === 1 || p === totalPages;
-                      })
-                      .map((p, i, arr) => (
-                        <div key={p}>
-                          {i > 0 && arr[i - 1] !== p - 1 && (
-                            <span className="px-1 text-gray-400">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition ${
-                              currentPage === p
-                                ? "bg-blue-600 text-white"
-                                : "border border-gray-300 hover:bg-gray-200"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </div>
-                      ))}
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next →
-                    </button>
-                  </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
                 </div>
               )}
             </>
@@ -594,18 +626,40 @@ export default function OrdersPage() {
       </div>
       {/* View Modal - Centered */}
       {viewing && (
-        <ViewModal order={viewing} onClose={() => setViewing(null)} />
+        <ViewModal
+          order={viewing}
+          onClose={() => {
+            setViewing(null);
+            resetAutoRefresh();
+          }}
+          onActionTaken={resetAutoRefresh}
+        />
       )}
 
       {/* Edit Modal - Centered */}
       {editing && (
-        <EditModal order={editing} onClose={() => setEditing(null)} />
+        <EditModal
+          order={editing}
+          onClose={() => {
+            setEditing(null);
+            resetAutoRefresh();
+          }}
+          onActionTaken={resetAutoRefresh}
+        />
       )}
     </div>
   );
 }
 
-function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
+function ViewModal({
+  order,
+  onClose,
+  onActionTaken,
+}: {
+  order: Order;
+  onClose: () => void;
+  onActionTaken: () => void;
+}) {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -631,6 +685,7 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
 
       setCancelSuccess(true);
       setShowCancelConfirm(false);
+      onActionTaken();
 
       // Close modal after 2 seconds
       setTimeout(() => {
@@ -1107,7 +1162,15 @@ function ViewModal({ order, onClose }: { order: Order; onClose: () => void }) {
   );
 }
 
-function EditModal({ order, onClose }: { order: Order; onClose: () => void }) {
+function EditModal({
+  order,
+  onClose,
+  onActionTaken,
+}: {
+  order: Order;
+  onClose: () => void;
+  onActionTaken: () => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -1138,6 +1201,7 @@ function EditModal({ order, onClose }: { order: Order; onClose: () => void }) {
       }
 
       setSuccessMsg("✓ Order updated successfully");
+      onActionTaken();
 
       // Close modal after 1.5 seconds
       setTimeout(() => {

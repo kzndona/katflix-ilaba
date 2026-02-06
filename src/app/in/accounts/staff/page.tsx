@@ -46,6 +46,8 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false); // Loading state during save/delete
   const [originalStaff, setOriginalStaff] = useState<Staff | null>(null); // Original data for change detection
   const [loading, setLoading] = useState(false); // Loading state for table
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Load staff from database on component mount
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function StaffPage() {
   // Debounced search filter - updates filtered list when search query changes (300ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page on search
       if (searchQuery.trim() === "") {
         setFilteredRows(rows);
       } else {
@@ -254,6 +257,9 @@ export default function StaffPage() {
             <p className="text-gray-500 text-xs mt-0.5">
               {filteredRows.length} staff member
               {filteredRows.length !== 1 ? "s" : ""} found
+              {filteredRows.length > ITEMS_PER_PAGE && (
+                <> • Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}</>
+              )}
             </p>
           </div>
           <button
@@ -304,78 +310,113 @@ export default function StaffPage() {
                 : "No results match your search."}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-center font-semibold text-gray-900">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredRows.map((staff) => (
-                    <tr key={staff.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-gray-900 font-medium">
-                        {staff.first_name} {staff.last_name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {staff.email_address || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {staff.phone_number || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {staff.role
-                            .replace(/_/g, " ")
-                            .split(" ")
-                            .map(
-                              (word) =>
-                                word.charAt(0).toUpperCase() +
-                                word.slice(1).toLowerCase(),
-                            )
-                            .join(" ")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            staff.is_active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {staff.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => openView(staff)}
-                          className="text-blue-600 hover:text-blue-700 font-medium text-xs"
-                        >
-                          View
-                        </button>
-                      </td>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Role
+                      </th>
+                      <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-center font-semibold text-gray-900">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredRows
+                      .slice(
+                        (currentPage - 1) * ITEMS_PER_PAGE,
+                        currentPage * ITEMS_PER_PAGE
+                      )
+                      .map((staff) => (
+                        <tr key={staff.id} className="hover:bg-gray-50 transition">
+                          <td className="px-6 py-4 text-gray-900 font-medium">
+                            {staff.first_name} {staff.last_name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {staff.email_address || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {staff.phone_number || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {staff.role
+                                .replace(/_/g, " ")
+                                .split(" ")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() +
+                                    word.slice(1).toLowerCase(),
+                                )
+                                .join(" ")}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                staff.is_active
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {staff.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => openView(staff)}
+                              className="text-blue-600 hover:text-blue-700 font-medium text-xs"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredRows.length > ITEMS_PER_PAGE && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-600">
+                    Page {currentPage} of {Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) =>
+                        Math.min(
+                          Math.ceil(filteredRows.length / ITEMS_PER_PAGE),
+                          p + 1
+                        )
+                      )
+                    }
+                    disabled={currentPage === Math.ceil(filteredRows.length / ITEMS_PER_PAGE)}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
