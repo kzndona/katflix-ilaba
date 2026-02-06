@@ -695,6 +695,7 @@ function StaffModal({
                 label="First Name"
                 value={staff.first_name}
                 onChange={(v) => updateField("first_name", v)}
+                required={true}
               />
               <Field
                 label="Middle Name"
@@ -708,6 +709,7 @@ function StaffModal({
                 label="Last Name"
                 value={staff.last_name}
                 onChange={(v) => updateField("last_name", v)}
+                required={true}
               />
               <Field
                 label="Birthdate"
@@ -715,6 +717,7 @@ function StaffModal({
                 value={staff.birthdate ?? ""}
                 onChange={(v) => updateField("birthdate", v)}
                 max={new Date().toISOString().split("T")[0]}
+                required={true}
               />
             </div>
 
@@ -728,6 +731,7 @@ function StaffModal({
                   { value: "male", label: "Male" },
                   { value: "female", label: "Female" },
                 ]}
+                required={true}
               />
               <Select
                 label="Role"
@@ -740,6 +744,7 @@ function StaffModal({
                   { value: "rider", label: "Rider" },
                   { value: "cashier_attendant", label: "Cashier & Attendant" },
                 ]}
+                required={true}
               />
             </div>
 
@@ -747,18 +752,21 @@ function StaffModal({
               label="Phone"
               value={staff.phone_number ?? ""}
               onChange={(v) => updateField("phone_number", v)}
+              required={true}
             />
 
             <Field
               label="Email Address"
               value={staff.email_address ?? ""}
               onChange={(v) => updateField("email_address", v)}
+              required={true}
             />
 
             <Field
               label="Address"
               value={staff.address ?? ""}
               onChange={(v) => updateField("address", v)}
+              required={true}
             />
 
             {isNewStaff && (
@@ -821,19 +829,19 @@ function PhoneField({
   value,
   onChange,
   disabled = false,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  required?: boolean;
 }) {
   const isValid = value === "" || /^09\d{9}$/.test(value);
 
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <input
         type="tel"
         value={value}
@@ -869,6 +877,7 @@ function Field({
   type = "text",
   disabled = false,
   max,
+  required = false,
 }: {
   label: string;
   value: string;
@@ -876,12 +885,11 @@ function Field({
   type?: string;
   disabled?: boolean;
   max?: string;
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <input
         type={type}
         value={value}
@@ -900,17 +908,17 @@ function Select({
   value,
   onChange,
   options,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -200,6 +200,7 @@ export default function MachinesPage() {
                 label="Machine Name"
                 value={editing.machine_name}
                 onChange={(v) => updateField("machine_name", v)}
+                required={true}
               />
 
               <SelectField
@@ -207,6 +208,7 @@ export default function MachinesPage() {
                 value={editing.type}
                 onChange={(v) => updateField("type", v)}
                 options={["wash", "dry", "iron"]}
+                required={true}
               />
 
               <SelectField
@@ -214,6 +216,7 @@ export default function MachinesPage() {
                 value={editing.status}
                 onChange={(v) => updateField("status", v)}
                 options={["available", "running", "maintenance"]}
+                required={true}
               />
 
               <Field
@@ -265,15 +268,17 @@ function Field({
   value,
   onChange,
   type = "text",
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm">{label}</label>
+      <label className="text-sm">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <input
         type={type}
         value={value}
@@ -289,15 +294,17 @@ function SelectField({
   value,
   onChange,
   options,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: string[];
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm">{label}</label>
+      <label className="text-sm">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

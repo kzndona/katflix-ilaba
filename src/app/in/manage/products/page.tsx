@@ -834,7 +834,7 @@ function EditModal({
             {/* Item Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Item Name
+                Item Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -848,7 +848,7 @@ function EditModal({
             {/* SKU */}
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                SKU (Stock Keeping Unit)
+                SKU (Stock Keeping Unit) <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -863,7 +863,7 @@ function EditModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-900 mb-1">
-                  Unit Cost (₱)
+                  Unit Cost (₱) <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"
@@ -885,7 +885,7 @@ function EditModal({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-900 mb-1">
-                  Unit Price (₱)
+                  Unit Price (₱) <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"
@@ -911,7 +911,7 @@ function EditModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-900 mb-1">
-                  Quantity
+                  Quantity <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"
@@ -929,7 +929,7 @@ function EditModal({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-900 mb-1">
-                  Reorder Level
+                  Reorder Level <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"

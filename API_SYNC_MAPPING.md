@@ -1,6 +1,7 @@
 # API Sync Mapping: POS → Mobile
 
 ## Overview
+
 This document maps the new POS order creation features to the Mobile API for feature parity.
 
 **Last Updated:** February 7, 2026  
@@ -11,6 +12,7 @@ This document maps the new POS order creation features to the Mobile API for fea
 ## 1. Scheduling Parameters (NEW)
 
 ### POS Order Creation (`/api/orders/pos/create`)
+
 - **Location:** `src/app/api/orders/pos/create/route.ts` (lines 213-228)
 - **Parameters:**
   ```typescript
@@ -26,6 +28,7 @@ This document maps the new POS order creation features to the Mobile API for fea
   - Time picker for scheduled_time (lines 1149-1150, constrained 1 PM - 5 PM)
 
 ### Mobile API (`/api/orders/mobile/create`)
+
 - **Location:** `src/app/api/orders/mobile/create/route.ts` (lines 130-161)
 - **Changes Made:**
   ```typescript
@@ -49,35 +52,39 @@ This document maps the new POS order creation features to the Mobile API for fea
 ## 2. Heavy Fabrics (Service Feature - Already Present)
 
 ### Status
+
 - **Wash Steps:** Both APIs handle `heavy_fabrics` via basket services object
 - **Field Location:** `breakdown.baskets[].services.heavy_fabrics`
 - **Type:** Boolean flag
 - **POS Integration:** Checkbox in Services step (pos/page.tsx)
 - **Mobile Integration:** Already mapped in service selection (no changes needed)
 
-| Field | POS | Mobile | Status |
-|-------|-----|--------|--------|
-| `heavy_fabrics` | ✅ | ✅ | Already Synced |
+| Field           | POS | Mobile | Status         |
+| --------------- | --- | ------ | -------------- |
+| `heavy_fabrics` | ✅  | ✅     | Already Synced |
 
 ---
 
 ## 3. Payment Information (Already Present)
 
 ### Status
+
 - **Both APIs:** Already accept payment_method and amount_paid
 - **Field Location:** `handling.payment_method`, `handling.amount_paid`
 
-| Field | POS | Mobile | Status |
-|-------|-----|--------|--------|
-| `payment_method` | ✅ | ✅ | Already Synced |
-| `amount_paid` | ✅ | ✅ | Already Synced |
+| Field            | POS | Mobile | Status         |
+| ---------------- | --- | ------ | -------------- |
+| `payment_method` | ✅  | ✅     | Already Synced |
+| `amount_paid`    | ✅  | ✅     | Already Synced |
 
 ---
 
 ## 4. Interface Documentation Updates
 
 ### POS API Interface
+
 **File:** `src/app/api/orders/pos/create/route.ts` (lines 19-31)
+
 ```typescript
 interface CreateOrderRequest {
   // ...
@@ -87,8 +94,10 @@ interface CreateOrderRequest {
 }
 ```
 
-### Mobile API Interface  
+### Mobile API Interface
+
 **File:** `src/app/api/orders/mobile/create/route.ts` (lines 19-31)
+
 ```typescript
 interface CreateMobileOrderRequest {
   // ...
@@ -115,7 +124,7 @@ handling: {
     lng?: number | null;              // Mobile only
     lat?: number | null;              // Mobile only
   };
-  
+
   // Delivery Information
   delivery: {
     address: string;                  // "store" or location
@@ -125,11 +134,11 @@ handling: {
     lng?: number | null;              // Mobile only
     lat?: number | null;              // Mobile only
   };
-  
+
   // Payment
   payment_method: "cash" | "gcash" | null;
   amount_paid: number | null;
-  
+
   // Scheduling (NEW - Both APIs)
   scheduled: boolean;                 // Default: false
   scheduled_date?: string;            // ISO format YYYY-MM-DD
@@ -142,11 +151,13 @@ handling: {
 ## 6. Validation & Constraints
 
 ### Scheduling Constraints (Backend)
+
 - **Date:** Must be future date (validated in API)
 - **Time:** Must be between 1 PM - 5 PM (13:00-17:00)
 - **Optional:** Both fields optional if `scheduled=false`
 
 ### Data Flow
+
 1. **Mobile App** → Collects scheduled, scheduled_date, scheduled_time
 2. **Frontend Call** → Sends via `/api/orders/mobile/create`
 3. **Backend** → Stores in JSONB `handling` object
@@ -158,7 +169,7 @@ handling: {
 ## 7. Testing Checklist
 
 - [x] POS API accepts scheduling parameters
-- [x] Mobile API accepts scheduling parameters  
+- [x] Mobile API accepts scheduling parameters
 - [x] Both APIs preserve scheduling in JSONB
 - [x] Orders API (`/api/orders`) returns scheduling data
 - [x] Baskets API (`/api/orders/withServiceStatus`) returns scheduling data
@@ -172,6 +183,7 @@ handling: {
 ## 8. Implementation Notes
 
 ### Mobile App Checklist (Rider/Flutter)
+
 When implementing scheduling in the mobile app, ensure:
 
 1. **Date Picker UI**
@@ -185,10 +197,15 @@ When implementing scheduling in the mobile app, ensure:
    - Example: "13:00", "14:30", "17:00"
 
 3. **Request Payload**
+
    ```json
    {
-     "customer_data": { /* ... */ },
-     "breakdown": { /* ... */ },
+     "customer_data": {
+       /* ... */
+     },
+     "breakdown": {
+       /* ... */
+     },
      "handling": {
        "pickup_address": "...",
        "pickup_lat": 14.756816999770653,
@@ -214,12 +231,12 @@ When implementing scheduling in the mobile app, ensure:
 
 ## 9. API Endpoint Summary
 
-| Endpoint | Scheduling | Heavy Fabrics | Payment | Status |
-|----------|-----------|---------------|---------|--------|
-| POST `/api/orders/pos/create` | ✅ NEW | ✅ | ✅ | Ready |
-| POST `/api/orders/mobile/create` | ✅ NEW | ✅ | ✅ | Ready |
-| GET `/api/orders` | ✅ Returns | ✅ Returns | ✅ Returns | Ready |
-| GET `/api/orders/withServiceStatus` | ✅ Returns | ✅ Returns | ✅ Returns | Ready |
+| Endpoint                            | Scheduling | Heavy Fabrics | Payment    | Status |
+| ----------------------------------- | ---------- | ------------- | ---------- | ------ |
+| POST `/api/orders/pos/create`       | ✅ NEW     | ✅            | ✅         | Ready  |
+| POST `/api/orders/mobile/create`    | ✅ NEW     | ✅            | ✅         | Ready  |
+| GET `/api/orders`                   | ✅ Returns | ✅ Returns    | ✅ Returns | Ready  |
+| GET `/api/orders/withServiceStatus` | ✅ Returns | ✅ Returns    | ✅ Returns | Ready  |
 
 ---
 

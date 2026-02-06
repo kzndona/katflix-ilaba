@@ -562,7 +562,7 @@ function Step4Customer({ pos }: { pos: any }) {
   const [isSavingChanges, setIsSavingChanges] = React.useState(false);
 
   // Validate new customer form
-  const validateNewCustomerForm = () => {
+  const validateNewCustomerForm = async () => {
     const firstName = pos.newCustomerForm.first_name?.trim();
     const lastName = pos.newCustomerForm.last_name?.trim();
     const phone = pos.newCustomerForm.phone_number?.trim();
@@ -585,6 +585,23 @@ function Step4Customer({ pos }: { pos: any }) {
     ) {
       return "Invalid email address";
     }
+
+    // Check for duplicate phone number
+    try {
+      const response = await fetch("/api/pos/customers/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_number: phone }),
+      });
+      const data = await response.json();
+      if (data.customers && data.customers.length > 0) {
+        return `Phone number already exists (${data.customers[0].first_name} ${data.customers[0].last_name})`;
+      }
+    } catch (err) {
+      console.warn("Failed to check for duplicate phone number:", err);
+      // Don't block on search errors, let the API handle it
+    }
+
     return null;
   };
 
@@ -592,7 +609,7 @@ function Step4Customer({ pos }: { pos: any }) {
     setError("");
     setSuccess("");
 
-    const validationError = validateNewCustomerForm();
+    const validationError = await validateNewCustomerForm();
     if (validationError) {
       setError(validationError);
       return;
@@ -785,7 +802,7 @@ function Step4Customer({ pos }: { pos: any }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              First Name
+              First Name <span className="text-red-600">*</span>
             </label>
             <input
               type="text"
@@ -813,7 +830,7 @@ function Step4Customer({ pos }: { pos: any }) {
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Last Name
+              Last Name <span className="text-red-600">*</span>
             </label>
             <input
               type="text"
@@ -845,7 +862,7 @@ function Step4Customer({ pos }: { pos: any }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Phone (PH Format)
+              Phone (PH Format) <span className="text-red-600">*</span>
             </label>
             <input
               type="tel"

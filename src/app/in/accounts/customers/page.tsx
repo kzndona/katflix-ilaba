@@ -154,6 +154,17 @@ export default function CustomersPage() {
       return;
     }
 
+    // Check for duplicate phone number (excluding current customer if updating)
+    const existingWithSamePhone = rows.find(
+      (r) => r.phone_number === phone && r.id !== editing!.id
+    );
+    if (existingWithSamePhone) {
+      setErrorMsg(
+        `Phone number already exists (${existingWithSamePhone.first_name} ${existingWithSamePhone.last_name})`
+      );
+      return;
+    }
+
     // Validate email format if email is provided
     if (editing.email_address) {
       const email = editing!.email_address;
@@ -638,6 +649,7 @@ function CustomerModal({
                 label="First Name"
                 value={customer.first_name}
                 onChange={(v) => updateField("first_name", v)}
+                required={true}
               />
               <Field
                 label="Middle Name"
@@ -651,6 +663,7 @@ function CustomerModal({
                 label="Last Name"
                 value={customer.last_name}
                 onChange={(v) => updateField("last_name", v)}
+                required={true}
               />
               <Field
                 label="Birthdate"
@@ -676,12 +689,14 @@ function CustomerModal({
               label="Phone"
               value={customer.phone_number ?? ""}
               onChange={(v) => updateField("phone_number", v)}
+              required={true}
             />
 
             <Field
               label="Email Address"
               value={customer.email_address ?? ""}
               onChange={(v) => updateField("email_address", v)}
+              required={isNewCustomer}
             />
 
             <Field
@@ -738,19 +753,19 @@ function PhoneField({
   value,
   onChange,
   disabled = false,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  required?: boolean;
 }) {
   const isValid = value === "" || /^09\d{9}$/.test(value);
 
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <input
         type="tel"
         value={value}
@@ -786,6 +801,7 @@ function Field({
   type = "text",
   disabled = false,
   max,
+  required = false,
 }: {
   label: string;
   value: string;
@@ -793,12 +809,11 @@ function Field({
   type?: string;
   disabled?: boolean;
   max?: string;
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <input
         type={type}
         value={value}
@@ -817,17 +832,17 @@ function Select({
   value,
   onChange,
   options,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

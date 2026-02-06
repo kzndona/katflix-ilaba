@@ -600,7 +600,7 @@ function EditModal({
             {/* Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Name
+                Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -614,7 +614,7 @@ function EditModal({
             {/* Service Type */}
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Service Type
+                Service Type <span className="text-red-600">*</span>
               </label>
               <select
                 value={service.service_type}
@@ -668,7 +668,7 @@ function EditModal({
             {/* Base Price */}
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Base Price (₱)
+                Base Price (₱) <span className="text-red-600">*</span>
               </label>
               <input
                 type="number"
