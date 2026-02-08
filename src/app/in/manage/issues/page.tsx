@@ -314,7 +314,8 @@ export default function IssuesPage() {
                         onClick={() => handleSort("description")}
                         className="flex items-center gap-2 font-semibold text-sm text-gray-900 hover:text-blue-600 transition"
                       >
-                        Description <span className="text-red-600">*</span> <SortIcon field="description" />
+                        Description <span className="text-red-600">*</span>{" "}
+                        <SortIcon field="description" />
                       </button>
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">

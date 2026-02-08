@@ -278,7 +278,10 @@ function Field({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <input
         type={type}
         value={value}
@@ -304,7 +307,10 @@ function SelectField({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

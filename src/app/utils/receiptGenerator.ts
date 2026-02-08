@@ -109,21 +109,31 @@ export async function generateReceiptFromDB(orderId: string): Promise<ReceiptDat
  * 80mm width optimized, plain text suitable for all printers
  */
 
+// Helper: Ensure line doesn't exceed max width by truncation
+function truncateLine(text: string, maxWidth: number = 40): string {
+  if (text.length > maxWidth) {
+    return text.substring(0, maxWidth);
+  }
+  return text;
+}
+
 // Helper: Right-align amount on a line with max width of 40 chars
 function formatReceiptLine(label: string, amount?: number, maxWidth: number = 40): string {
   if (amount === undefined) {
-    // Just a label line
-    return label;
+    // Just a label line - still truncate it
+    return truncateLine(label, maxWidth);
   }
 
   const amountStr = `₱${amount.toFixed(2)}`;
-  const availableSpace = maxWidth - amountStr.length;
+  const amountWidth = amountStr.length;
+  const availableForLabel = maxWidth - amountWidth;
   
   // Truncate label if it's too long
-  const truncatedLabel = label.length > availableSpace ? label.substring(0, availableSpace - 1) : label;
-  const padding = availableSpace - truncatedLabel.length;
+  const truncatedLabel = label.length > availableForLabel ? label.substring(0, availableForLabel - 1) : label;
+  const padding = availableForLabel - truncatedLabel.length;
 
-  return truncatedLabel + " ".repeat(Math.max(1, padding)) + amountStr;
+  const line = truncatedLabel + " ".repeat(Math.max(1, padding)) + amountStr;
+  return truncateLine(line, maxWidth);
 }
 
 function formatReceiptAsPlaintext(
@@ -208,22 +218,25 @@ function formatReceiptAsPlaintext(
 
   // Build receipt
   let receipt = "";
+  
+  // Extract short order ID (before first hyphen)
+  const shortOrderId = orderId.split("-")[0].toUpperCase();
 
   // === HEADER ===
-  receipt += "=".repeat(40) + "\n";
-  receipt += " ".repeat(12) + "KATFLIX\n";
-  receipt += " ".repeat(9) + "Laundry Services\n";
-  receipt += "=".repeat(40) + "\n";
+  receipt += truncateLine("=".repeat(40), 40) + "\n";
+  receipt += truncateLine(" ".repeat(12) + "KATFLIX", 40) + "\n";
+  receipt += truncateLine(" ".repeat(9) + "Laundry Services", 40) + "\n";
+  receipt += truncateLine("=".repeat(40), 40) + "\n";
   receipt += "\n";
 
   // === ORDER & CUSTOMER INFO ===
-  receipt += `ORDER: ${orderId.substring(0, 8).toUpperCase()}\n`;
-  receipt += `${dateStr}, ${timeStr}\n`;
-  receipt += `Customer: ${customerName || "Walk-in"}\n`;
+  receipt += truncateLine(`ORDER: ${shortOrderId}`, 40) + "\n";
+  receipt += truncateLine(`${dateStr}, ${timeStr}`, 40) + "\n";
+  receipt += truncateLine(`Customer: ${customerName || "Walk-in"}`, 40) + "\n";
   if (customerPhone) {
-    receipt += `Phone: ${customerPhone}\n`;
+    receipt += truncateLine(`Phone: ${customerPhone}`, 40) + "\n";
   }
-  receipt += "-".repeat(40) + "\n";
+  receipt += truncateLine("-".repeat(40), 40) + "\n";
   receipt += "\n";
 
   // === PRODUCTS (if any) ===
@@ -232,13 +245,13 @@ function formatReceiptAsPlaintext(
       const qty = item.quantity || 1;
       const total = item.subtotal || 0;
 
-      receipt += `${item.product_name} x${qty}\n`;
-      receipt += "  " + formatReceiptLine(item.product_name, total, 36) + "\n";
+      receipt += truncateLine(`${item.product_name} x${qty}`, 40) + "\n";
+      receipt += formatReceiptLine(`  ${item.product_name}`, total, 40) + "\n";
       receipt += "\n";
     }
 
     if (basketItems.length > 0) {
-      receipt += "-".repeat(40) + "\n";
+      receipt += truncateLine("-".repeat(40), 40) + "\n";
       receipt += "\n";
     }
   }
@@ -250,11 +263,11 @@ function formatReceiptAsPlaintext(
       const weight = basket.weight ? `${basket.weight}kg` : "";
       const basketTotal = basket.total || 0;
 
-      receipt += `${basketName}`;
+      let basketHeader = basketName;
       if (weight) {
-        receipt += ` • ${weight}`;
+        basketHeader += ` • ${weight}`;
       }
-      receipt += `\n`;
+      receipt += truncateLine(basketHeader, 40) + "\n";
 
       // Services breakdown from basket.services array
       if (basket.services && Array.isArray(basket.services)) {
@@ -275,7 +288,7 @@ function formatReceiptAsPlaintext(
   }
 
   // === TOTALS ===
-  receipt += "-".repeat(40) + "\n";
+  receipt += truncateLine("-".repeat(40), 40) + "\n";
   receipt += "\n";
   receipt += formatReceiptLine("Subtotal", subtotal, 40) + "\n";
   if (serviceFee > 0) {
@@ -287,14 +300,14 @@ function formatReceiptAsPlaintext(
   if (taxes > 0) {
     receipt += formatReceiptLine("Tax (VAT)", taxes, 40) + "\n";
   }
-  receipt += "=".repeat(40) + "\n";
+  receipt += truncateLine("=".repeat(40), 40) + "\n";
   receipt += formatReceiptLine("TOTAL", totalAmount, 40) + "\n";
-  receipt += "=".repeat(40) + "\n";
+  receipt += truncateLine("=".repeat(40), 40) + "\n";
   receipt += "\n";
 
   // === PAYMENT INFO ===
   const paymentMethod = breakdown.payment?.method || "CASH";
-  receipt += formatReceiptLine("Payment", undefined, 40) + " " + paymentMethod.toUpperCase() + "\n";
+  receipt += truncateLine(`Payment: ${paymentMethod.toUpperCase()}`, 40) + "\n";
 
   if (breakdown.payment?.amount_paid) {
     const amountPaid = breakdown.payment.amount_paid;
@@ -306,21 +319,21 @@ function formatReceiptAsPlaintext(
   }
 
   receipt += "\n";
-  receipt += "-".repeat(40) + "\n";
+  receipt += truncateLine("-".repeat(40), 40) + "\n";
 
   // === HANDLING INFO ===
   if (handling.pickup?.status === "pending" || handling.delivery?.status === "pending") {
     receipt += "\n";
     if (handling.delivery?.status === "pending") {
-      receipt += "DELIVERY\n";
+      receipt += truncateLine("DELIVERY", 40) + "\n";
       if (handling.delivery?.address) {
-        receipt += `Address: ${handling.delivery.address}\n`;
+        receipt += truncateLine(`Address: ${handling.delivery.address}`, 40) + "\n";
       }
       if (handling.delivery?.fee > 0) {
-        receipt += `Fee: ₱${handling.delivery.fee.toFixed(2)}\n`;
+        receipt += truncateLine(`Fee: ₱${handling.delivery.fee.toFixed(2)}`, 40) + "\n";
       }
     } else if (handling.pickup?.status === "pending") {
-      receipt += "PICKUP AT STORE\n";
+      receipt += truncateLine("PICKUP AT STORE", 40) + "\n";
     }
     receipt += "\n";
   }
@@ -328,17 +341,16 @@ function formatReceiptAsPlaintext(
   // === CASHIER & META INFO ===
   if (staff?.first_name || staff?.last_name) {
     const staffName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim();
-    receipt += `Cashier: ${staffName}\n`;
+    receipt += truncateLine(`Cashier: ${staffName}`, 40) + "\n";
   }
 
-  receipt += `Source: ${breakdown.source || "Store"}\n`;
-  // Wrap Order ID on next line to prevent overflow
-  receipt += `Order ID:\n  ${orderId}\n`;
+  receipt += truncateLine(`Source: ${breakdown.source || "Store"}`, 40) + "\n";
+  receipt += truncateLine(`Order ID: ${shortOrderId}`, 40) + "\n";
 
   receipt += "\n";
-  receipt += "=".repeat(40) + "\n";
-  receipt += " ".repeat(14) + "Thank you!\n";
-  receipt += " ".repeat(11) + "Come again!\n";
+  receipt += truncateLine("=".repeat(40), 40) + "\n";
+  receipt += truncateLine(" ".repeat(14) + "Thank you!", 40) + "\n";
+  receipt += truncateLine(" ".repeat(11) + "Come again!", 40) + "\n";
   receipt += "\n";
 
   console.log("✅ [Receipt] Receipt string generated successfully", {

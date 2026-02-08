@@ -1255,7 +1255,7 @@ function ViewModal({
               </>
             ) : (
               <>
-                {order.status !== "cancelled" && (
+                {order.status !== "cancelled" && order.status !== "completed" && (
                   <button
                     onClick={() => setShowCancelConfirm(true)}
                     disabled={cancelling || cancelSuccess}

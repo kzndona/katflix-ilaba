@@ -841,7 +841,10 @@ function PhoneField({
 
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <input
         type="tel"
         value={value}
@@ -889,7 +892,10 @@ function Field({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <input
         type={type}
         value={value}
@@ -918,7 +924,10 @@ function Select({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

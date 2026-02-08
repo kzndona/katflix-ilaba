@@ -156,11 +156,11 @@ export default function CustomersPage() {
 
     // Check for duplicate phone number (excluding current customer if updating)
     const existingWithSamePhone = rows.find(
-      (r) => r.phone_number === phone && r.id !== editing!.id
+      (r) => r.phone_number === phone && r.id !== editing!.id,
     );
     if (existingWithSamePhone) {
       setErrorMsg(
-        `Phone number already exists (${existingWithSamePhone.first_name} ${existingWithSamePhone.last_name})`
+        `Phone number already exists (${existingWithSamePhone.first_name} ${existingWithSamePhone.last_name})`,
       );
       return;
     }
@@ -765,7 +765,10 @@ function PhoneField({
 
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <input
         type="tel"
         value={value}
@@ -813,7 +816,10 @@ function Field({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <input
         type={type}
         value={value}
@@ -842,7 +848,10 @@ function Select({
 }) {
   return (
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-600 ml-1">*</span>}</label>
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -148,7 +148,9 @@ function Step2Baskets({ pos }: { pos: any }) {
       <div className="flex items-center justify-center gap-4 max-w-4xl mx-auto mb-2">
         <h2 className="text-2xl font-bold text-slate-900">Configure Basket</h2>
         <div className="px-6 py-3 bg-red-50 border-2 border-red-300 rounded-lg">
-          <div className="text-lg font-bold text-red-900">8kg per basket</div>
+          <div className="text-lg font-bold text-red-900">
+            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket
+          </div>
         </div>
       </div>
 
@@ -1122,7 +1124,8 @@ function Step5Handling({
         className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 text-sm h-24 resize-none"
       />
 
-      {/* Scheduling */}
+      {/* Scheduling - Only show if delivery is selected */}
+      {pos.deliveryType === "delivery" && (
       <div className="space-y-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-4 w-full">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -1160,27 +1163,30 @@ function Step5Handling({
             {/* Time Picker */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">
-                Time (1:00 PM - 5:00 PM)
+                Time (11:00 AM - 3:00 PM)
               </label>
               <select
                 value={pos.scheduledTime}
                 onChange={(e) => pos.setScheduledTime(e.target.value)}
                 className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
               >
+                <option value="11:00">11:00 AM</option>
+                <option value="11:30">11:30 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="12:30">12:30 PM</option>
                 <option value="13:00">1:00 PM</option>
                 <option value="13:30">1:30 PM</option>
                 <option value="14:00">2:00 PM</option>
                 <option value="14:30">2:30 PM</option>
                 <option value="15:00">3:00 PM</option>
-                <option value="15:30">3:30 PM</option>
-                <option value="16:00">4:00 PM</option>
-                <option value="16:30">4:30 PM</option>
-                <option value="17:00">5:00 PM</option>
               </select>
             </div>
           </div>
         )}
       </div>
+      )}
+      {/* Clear scheduled values if not in delivery mode */}
+      {pos.deliveryType !== "delivery" && pos.scheduled && pos.setScheduled(false)}
     </div>
   );
 }
@@ -1718,14 +1724,31 @@ function OrderSummary({
         </div>
 
         {/* Checkout Button */}
-        <button
-          onClick={() => pos.createOrder()}
-          disabled={pos.isProcessing || !pos.isPaymentValid()}
-          style={{ backgroundColor: "#c41d7f" }}
-          className="w-full mt-4 text-white py-3 rounded-lg font-bold hover:opacity-90 transition disabled:bg-slate-400 disabled:cursor-not-allowed"
-        >
-          {pos.isProcessing ? "Processing..." : "Checkout"}
-        </button>
+        {(() => {
+          // Disable if scheduled delivery with a past date
+          let isScheduledDeliveryPastDate = false;
+          if (pos.deliveryType === "delivery" && pos.scheduled && pos.scheduledDate) {
+            const scheduledDateAtMidnight = new Date(pos.scheduledDate);
+            scheduledDateAtMidnight.setHours(0, 0, 0, 0);
+            
+            const todayAtMidnight = new Date();
+            todayAtMidnight.setHours(0, 0, 0, 0);
+            
+            isScheduledDeliveryPastDate = scheduledDateAtMidnight < todayAtMidnight;
+          }
+          
+          return (
+            <button
+              onClick={() => pos.createOrder()}
+              disabled={pos.isProcessing || !pos.isPaymentValid() || isScheduledDeliveryPastDate}
+              style={{ backgroundColor: "#c41d7f" }}
+              className="w-full mt-4 text-white py-3 rounded-lg font-bold hover:opacity-90 transition disabled:bg-slate-400 disabled:cursor-not-allowed"
+              title={isScheduledDeliveryPastDate ? "Cannot checkout for past dates" : ""}
+            >
+              {pos.isProcessing ? "Processing..." : "Checkout"}
+            </button>
+          );
+        })()}
       </div>
     </div>
   );
