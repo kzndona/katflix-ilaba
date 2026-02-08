@@ -281,10 +281,16 @@ export default function BasketsPage() {
 
   // Check if scheduled delivery is in the future
   const isScheduledDeliveryInFuture = (order: Order): boolean => {
-    if (!order.handling?.scheduled || !order.handling?.scheduled_date || !order.handling?.scheduled_time) {
+    if (
+      !order.handling?.scheduled ||
+      !order.handling?.scheduled_date ||
+      !order.handling?.scheduled_time
+    ) {
       return false;
     }
-    const scheduledDateTime = new Date(`${order.handling.scheduled_date}T${order.handling.scheduled_time}`);
+    const scheduledDateTime = new Date(
+      `${order.handling.scheduled_date}T${order.handling.scheduled_time}`,
+    );
     const now = new Date();
     return now < scheduledDateTime;
   };
@@ -975,21 +981,32 @@ export default function BasketsPage() {
                                     );
                                   }
                                 }}
-                                disabled={processingId === order.id || (nextAction.type === "delivery" && isScheduledDeliveryInFuture(order))}
-                                title={nextAction.type === "delivery" && isScheduledDeliveryInFuture(order) ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}` : ""}
+                                disabled={
+                                  processingId === order.id ||
+                                  (nextAction.type === "delivery" &&
+                                    isScheduledDeliveryInFuture(order))
+                                }
+                                title={
+                                  nextAction.type === "delivery" &&
+                                  isScheduledDeliveryInFuture(order)
+                                    ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}`
+                                    : ""
+                                }
                                 className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                   processingId === order.id
                                     ? "bg-gray-300 text-gray-700 cursor-wait"
-                                    : nextAction.type === "delivery" && isScheduledDeliveryInFuture(order)
-                                    ? "bg-gray-300 text-gray-700 cursor-not-allowed"
-                                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                                    : nextAction.type === "delivery" &&
+                                        isScheduledDeliveryInFuture(order)
+                                      ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                                      : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
                                 }`}
                               >
                                 {processingId === order.id
                                   ? "Processing..."
-                                  : nextAction.type === "delivery" && isScheduledDeliveryInFuture(order)
-                                  ? "Not yet for Delivery"
-                                  : nextAction.label}
+                                  : nextAction.type === "delivery" &&
+                                      isScheduledDeliveryInFuture(order)
+                                    ? "Not yet for Delivery"
+                                    : nextAction.label}
                               </button>
                             )}
                           </>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
+import { sendPushNotification } from "@/src/app/utils/send-notification";
 
 /**
  * PATCH /api/orders/{orderId}/serviceStatus
@@ -57,7 +58,7 @@ export async function PATCH(
     // === FETCH CURRENT ORDER ===
     const { data: order, error: fetchError } = await supabase
       .from("orders")
-      .select("handling, status, cashier_id")
+      .select("handling, status, cashier_id, customer_id")
       .eq("id", orderId)
       .single();
 
@@ -145,6 +146,25 @@ export async function PATCH(
       action,
       new_status: status,
     });
+
+    // === SEND PUSH NOTIFICATION ===
+    if (order.customer_id) {
+      const notificationTitle = handlingType === "pickup" 
+        ? "Pickup Update"
+        : "Delivery Update";
+      
+      const notificationBody = action === "start"
+        ? `${handlingType.charAt(0).toUpperCase() + handlingType.slice(1)} started`
+        : `${handlingType.charAt(0).toUpperCase() + handlingType.slice(1)} completed`;
+      
+      await sendPushNotification(
+        order.customer_id,
+        notificationTitle,
+        notificationBody
+      );
+    } else {
+      console.warn(`[Notification] No customer_id found for order ${orderId}`);
+    }
 
     return NextResponse.json({
       success: true,

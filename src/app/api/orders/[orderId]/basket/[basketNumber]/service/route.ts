@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
+import { sendPushNotification } from "@/src/app/utils/send-notification";
 
 interface UpdateServiceStatusRequest {
   service_type: string; // 'wash', 'dry', 'spin', 'iron', 'fold'
@@ -82,7 +83,7 @@ export async function PATCH(
     // === FETCH ORDER DATA ===
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("handling")
+      .select("handling, customer_id")
       .eq("id", orderId)
       .single();
 
@@ -205,6 +206,23 @@ export async function PATCH(
     console.log(
       `[Basket Service Status] Order: ${orderId}, Basket: ${basketNumber}, Service: ${service_type}, Action: ${action}`
     );
+
+    // === SEND PUSH NOTIFICATION ===
+    if (order.customer_id) {
+      const actionLabel = action === "start" 
+        ? `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} started`
+        : action === "complete"
+          ? `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} completed`
+          : `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} skipped`;
+      
+      await sendPushNotification(
+        order.customer_id,
+        `Basket #${basketNumber} Update`,
+        actionLabel
+      );
+    } else {
+      console.warn(`[Notification] No customer_id found for order ${orderId}`);
+    }
 
     // === UPDATE ORDER STATUS IF NEEDED ===
     // Check if all services in all baskets are complete

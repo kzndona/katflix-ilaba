@@ -1126,67 +1126,69 @@ function Step5Handling({
 
       {/* Scheduling - Only show if delivery is selected */}
       {pos.deliveryType === "delivery" && (
-      <div className="space-y-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-4 w-full">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={pos.scheduled}
-            onChange={(e) => pos.setScheduled(e.target.checked)}
-            className="w-4 h-4 accent-blue-600"
-          />
-          <div className="text-sm font-semibold text-slate-700">
-            📅 Schedule for later?
-          </div>
-        </label>
-
-        {pos.scheduled && (
-          <div className="space-y-3 ml-6 pt-2 border-t border-blue-200">
-            {/* Date Picker */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">
-                Date
-              </label>
-              <input
-                type="date"
-                value={pos.scheduledDate}
-                onChange={(e) => pos.setScheduledDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                max={
-                  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split("T")[0]
-                }
-                className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
-              />
+        <div className="space-y-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-4 w-full">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={pos.scheduled}
+              onChange={(e) => pos.setScheduled(e.target.checked)}
+              className="w-4 h-4 accent-blue-600"
+            />
+            <div className="text-sm font-semibold text-slate-700">
+              📅 Schedule for later?
             </div>
+          </label>
 
-            {/* Time Picker */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">
-                Time (11:00 AM - 3:00 PM)
-              </label>
-              <select
-                value={pos.scheduledTime}
-                onChange={(e) => pos.setScheduledTime(e.target.value)}
-                className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
-              >
-                <option value="11:00">11:00 AM</option>
-                <option value="11:30">11:30 AM</option>
-                <option value="12:00">12:00 PM</option>
-                <option value="12:30">12:30 PM</option>
-                <option value="13:00">1:00 PM</option>
-                <option value="13:30">1:30 PM</option>
-                <option value="14:00">2:00 PM</option>
-                <option value="14:30">2:30 PM</option>
-                <option value="15:00">3:00 PM</option>
-              </select>
+          {pos.scheduled && (
+            <div className="space-y-3 ml-6 pt-2 border-t border-blue-200">
+              {/* Date Picker */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={pos.scheduledDate}
+                  onChange={(e) => pos.setScheduledDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  max={
+                    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                      .toISOString()
+                      .split("T")[0]
+                  }
+                  className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
+                />
+              </div>
+
+              {/* Time Picker */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Time (11:00 AM - 3:00 PM)
+                </label>
+                <select
+                  value={pos.scheduledTime}
+                  onChange={(e) => pos.setScheduledTime(e.target.value)}
+                  className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 text-sm"
+                >
+                  <option value="11:00">11:00 AM</option>
+                  <option value="11:30">11:30 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="12:30">12:30 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="13:30">1:30 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="14:30">2:30 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                </select>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
       {/* Clear scheduled values if not in delivery mode */}
-      {pos.deliveryType !== "delivery" && pos.scheduled && pos.setScheduled(false)}
+      {pos.deliveryType !== "delivery" &&
+        pos.scheduled &&
+        pos.setScheduled(false)}
     </div>
   );
 }
@@ -1727,23 +1729,36 @@ function OrderSummary({
         {(() => {
           // Disable if scheduled delivery with a past date
           let isScheduledDeliveryPastDate = false;
-          if (pos.deliveryType === "delivery" && pos.scheduled && pos.scheduledDate) {
+          if (
+            pos.deliveryType === "delivery" &&
+            pos.scheduled &&
+            pos.scheduledDate
+          ) {
             const scheduledDateAtMidnight = new Date(pos.scheduledDate);
             scheduledDateAtMidnight.setHours(0, 0, 0, 0);
-            
+
             const todayAtMidnight = new Date();
             todayAtMidnight.setHours(0, 0, 0, 0);
-            
-            isScheduledDeliveryPastDate = scheduledDateAtMidnight < todayAtMidnight;
+
+            isScheduledDeliveryPastDate =
+              scheduledDateAtMidnight < todayAtMidnight;
           }
-          
+
           return (
             <button
               onClick={() => pos.createOrder()}
-              disabled={pos.isProcessing || !pos.isPaymentValid() || isScheduledDeliveryPastDate}
+              disabled={
+                pos.isProcessing ||
+                !pos.isPaymentValid() ||
+                isScheduledDeliveryPastDate
+              }
               style={{ backgroundColor: "#c41d7f" }}
               className="w-full mt-4 text-white py-3 rounded-lg font-bold hover:opacity-90 transition disabled:bg-slate-400 disabled:cursor-not-allowed"
-              title={isScheduledDeliveryPastDate ? "Cannot checkout for past dates" : ""}
+              title={
+                isScheduledDeliveryPastDate
+                  ? "Cannot checkout for past dates"
+                  : ""
+              }
             >
               {pos.isProcessing ? "Processing..." : "Checkout"}
             </button>

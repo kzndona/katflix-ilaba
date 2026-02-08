@@ -143,15 +143,17 @@ export default function OrdersPage() {
   const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
   // Reset auto-refresh timer when user takes an action
-  const resetAutoRefresh = () => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
+  const resetAutoRefresh = (prevInterval: NodeJS.Timeout | null) => {
+    // Always clear the previous interval first
+    if (prevInterval) {
+      clearInterval(prevInterval);
     }
     const newInterval = setInterval(() => {
       load();
       setLastRefresh(new Date());
     }, AUTO_REFRESH_INTERVAL);
     setRefreshInterval(newInterval);
+    return newInterval;
   };
 
   useEffect(() => {
@@ -195,10 +197,15 @@ export default function OrdersPage() {
 
   // Auto-refresh orders every 30 seconds
   useEffect(() => {
-    resetAutoRefresh();
+    const interval = setInterval(() => {
+      load();
+      setLastRefresh(new Date());
+    }, AUTO_REFRESH_INTERVAL);
+    setRefreshInterval(interval);
+
     return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
+      if (interval) {
+        clearInterval(interval);
       }
     };
   }, []);
@@ -644,9 +651,9 @@ export default function OrdersPage() {
           order={viewing}
           onClose={() => {
             setViewing(null);
-            resetAutoRefresh();
+            resetAutoRefresh(refreshInterval);
           }}
-          onActionTaken={resetAutoRefresh}
+          onActionTaken={() => resetAutoRefresh(refreshInterval)}
         />
       )}
 
@@ -656,9 +663,9 @@ export default function OrdersPage() {
           order={editing}
           onClose={() => {
             setEditing(null);
-            resetAutoRefresh();
+            resetAutoRefresh(refreshInterval);
           }}
-          onActionTaken={resetAutoRefresh}
+          onActionTaken={() => resetAutoRefresh(refreshInterval)}
         />
       )}
     </div>
@@ -1255,15 +1262,16 @@ function ViewModal({
               </>
             ) : (
               <>
-                {order.status !== "cancelled" && order.status !== "completed" && (
-                  <button
-                    onClick={() => setShowCancelConfirm(true)}
-                    disabled={cancelling || cancelSuccess}
-                    className="px-4 py-2 border border-red-300 rounded-lg text-red-700 text-sm font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Cancel Order
-                  </button>
-                )}
+                {order.status !== "cancelled" &&
+                  order.status !== "completed" && (
+                    <button
+                      onClick={() => setShowCancelConfirm(true)}
+                      disabled={cancelling || cancelSuccess}
+                      className="px-4 py-2 border border-red-300 rounded-lg text-red-700 text-sm font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
                 <button
                   onClick={onClose}
                   disabled={cancelling}
