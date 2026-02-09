@@ -3,6 +3,7 @@
 ## Overview
 
 The server now maintains a complete notification history in the database and exposes APIs for the customer app to:
+
 1. **Fetch notification history** with filtering & pagination
 2. **Mark notifications as read** (track engagement)
 3. **Delete/clear notifications**
@@ -20,16 +21,16 @@ The server now maintains a complete notification history in the database and exp
   customer_id: UUID (Foreign Key → customers.id)
   order_id: UUID (Foreign Key → orders.id)
   basket_number: INTEGER (nullable - for basket-level notifications)
-  
+
   type: VARCHAR (50)  -- 'pickup', 'delivery', 'service_update', 'order_status', 'general'
   title: VARCHAR (255) -- Notification title (e.g., "📍 Pickup in Progress")
   body: TEXT -- Notification body/message
   data: JSONB -- Flexible metadata (service_type, action, etc.)
-  
+
   status: VARCHAR (20) -- 'sent', 'delivered', 'read', 'failed'
   read_at: TIMESTAMP (nullable) -- When user marked as read
   clicked_at: TIMESTAMP (nullable) -- When user clicked/opened
-  
+
   created_at: TIMESTAMP
   updated_at: TIMESTAMP (auto-updated on any change)
 }
@@ -50,13 +51,13 @@ The server now maintains a complete notification history in the database and exp
 // All query parameters are optional
 
 interface QueryParams {
-  page?: number;              // default: 1
-  limit?: number;             // default: 20, max: 100
-  type?: string;              // 'pickup' | 'delivery' | 'service_update' | 'order_status' | 'general'
-  status?: string;            // 'sent' | 'delivered' | 'read' | 'failed'
-  orderId?: string;           // UUID of specific order
-  startDate?: string;         // ISO date string (e.g., "2026-02-01T00:00:00Z")
-  endDate?: string;           // ISO date string
+  page?: number; // default: 1
+  limit?: number; // default: 20, max: 100
+  type?: string; // 'pickup' | 'delivery' | 'service_update' | 'order_status' | 'general'
+  status?: string; // 'sent' | 'delivered' | 'read' | 'failed'
+  orderId?: string; // UUID of specific order
+  startDate?: string; // ISO date string (e.g., "2026-02-01T00:00:00Z")
+  endDate?: string; // ISO date string
 }
 ```
 
@@ -136,7 +137,7 @@ export function NotificationHistory() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Notification History</h2>
-      
+
       {notifications.length === 0 ? (
         <p className="text-gray-500">No notifications yet</p>
       ) : (
@@ -149,14 +150,14 @@ export function NotificationHistory() {
 
       {/* Pagination */}
       <div className="flex gap-2 justify-center">
-        <button 
+        <button
           onClick={() => setPage(p => Math.max(1, p - 1))}
           disabled={page === 1}
         >
           Previous
         </button>
         <span>Page {page} of {totalPages}</span>
-        <button 
+        <button
           onClick={() => setPage(p => p + 1)}
           disabled={page >= totalPages}
         >
@@ -180,7 +181,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
   };
 
   return (
-    <div 
+    <div
       className={`p-4 border rounded-lg ${
         notification.status === 'read' ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'
       }`}
@@ -216,7 +217,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
 
 ```typescript
 {
-  action: 'read' | 'click'
+  action: "read" | "click";
   // 'read' = user viewed the notification
   // 'click' = user clicked/opened the notification
 }
@@ -237,9 +238,9 @@ function NotificationItem({ notification }: { notification: Notification }) {
 // Mark as read
 async function markAsRead(notificationId: string) {
   const response = await fetch(`/api/notifications/${notificationId}/read`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'read' }),
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "read" }),
   });
   return response.json();
 }
@@ -247,9 +248,9 @@ async function markAsRead(notificationId: string) {
 // Mark as clicked (when user taps to view order details)
 async function markAsClicked(notificationId: string) {
   await fetch(`/api/notifications/${notificationId}/read`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'click' }),
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "click" }),
   });
 }
 ```
@@ -264,7 +265,7 @@ async function markAsClicked(notificationId: string) {
 
 ```typescript
 {
-  action: 'mark-all-as-read'
+  action: "mark-all-as-read";
 }
 ```
 
@@ -273,7 +274,7 @@ async function markAsClicked(notificationId: string) {
 ```typescript
 {
   success: boolean;
-  message: "All notifications marked as read"
+  message: "All notifications marked as read";
 }
 ```
 
@@ -281,10 +282,10 @@ async function markAsClicked(notificationId: string) {
 
 ```typescript
 async function markAllAsRead() {
-  const response = await fetch('/api/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'mark-all-as-read' }),
+  const response = await fetch("/api/notifications", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "mark-all-as-read" }),
   });
   return response.json();
 }
@@ -307,7 +308,7 @@ DELETE /api/notifications/{notificationId}
 ```typescript
 {
   success: boolean;
-  message: "Notification deleted"
+  message: "Notification deleted";
 }
 ```
 
@@ -316,7 +317,7 @@ DELETE /api/notifications/{notificationId}
 ```typescript
 async function deleteNotification(notificationId: string) {
   const response = await fetch(`/api/notifications/${notificationId}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
   return response.json();
 }
@@ -473,7 +474,7 @@ const handleNotificationError = (error: any) => {
     // Forbidden - user doesn't own this notification
   } else {
     // General error
-    console.error('Notification error:', error);
+    console.error("Notification error:", error);
   }
 };
 ```
@@ -498,6 +499,7 @@ const handleNotificationError = (error: any) => {
 ## Questions for the Customer App Dev Team?
 
 If you have any questions or run into issues, check:
+
 1. Network tab in DevTools to verify API responses
 2. Supabase Dashboard → notifications table to see actual records
 3. Browser console for any error messages

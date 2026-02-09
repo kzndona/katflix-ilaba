@@ -242,23 +242,7 @@ export async function POST(request: NextRequest) {
 
     // STEP 10: Award loyalty points
     if (!body.loyalty?.use_discount) {
-      const points = Math.floor(body.summary?.grand_total || 0);
-      if (points > 0) {
-        // Get current points
-        const { data: cust } = await supabase
-          .from('customers')
-          .select('loyalty_points')
-          .eq('id', customerId)
-          .single();
-
-        if (cust) {
-          const newPoints = (cust.loyalty_points || 0) + points;
-          await supabase
-            .from('customers')
-            .update({ loyalty_points: newPoints })
-            .eq('id', customerId);
-        }
-      }
+      // NOTE: Loyalty points are awarded when order is completed, not at creation
     }
 
     // STEP 11: Return success

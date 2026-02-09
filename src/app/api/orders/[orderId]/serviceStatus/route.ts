@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
 import { sendPushNotification } from "@/src/app/utils/send-notification";
+import { awardLoyaltyPoints } from "@/src/app/utils/send-notification";
 
 /**
  * PATCH /api/orders/{orderId}/serviceStatus
@@ -113,6 +114,20 @@ export async function PATCH(
         console.log(
           `[Order Status Update] Order ${orderId} updated to completed (delivery done)`
         );
+      }
+
+      // === AWARD LOYALTY POINTS ON COMPLETION ===
+      if (order.customer_id) {
+        const success = await awardLoyaltyPoints(
+          order.customer_id,
+          supabase,
+          1
+        );
+        if (!success) {
+          console.warn(
+            `[Loyalty Points] Failed to award points for order ${orderId}`
+          );
+        }
       }
     } else if (handlingType === "pickup" && status === "in_progress") {
       // If pickup starts, move to processing and assign cashier

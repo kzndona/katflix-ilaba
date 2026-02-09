@@ -586,26 +586,8 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    } else {
-      // Customer is NOT using loyalty discount - award 1 point per completed order
-      const { data: currentCustomer } = await supabase
-        .from("customers")
-        .select("loyalty_points")
-        .eq("id", customerId)
-        .single();
-      
-      if (currentCustomer) {
-        const newPoints = (currentCustomer.loyalty_points || 0) + 1;
-        const { error: updateError } = await supabase
-          .from("customers")
-          .update({ loyalty_points: newPoints })
-          .eq("id", customerId);
-        
-        if (updateError) {
-          console.error("Failed to award loyalty points:", updateError);
-        }
-      }
     }
+    // NOTE: Loyalty points are awarded when order is completed, not at creation
 
     // STEP 6: Generate receipt data
     const receiptData = {
