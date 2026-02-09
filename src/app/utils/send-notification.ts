@@ -1,10 +1,18 @@
 import admin from "@/src/app/utils/firebase-admin";
 
+export interface SendNotificationOptions {
+  orderId?: string;
+  basketNumber?: number;
+  notificationType?: string; // 'pickup', 'delivery', 'service_update', 'order_status', 'general'
+  metadata?: Record<string, any>;
+}
+
 export async function sendPushNotification(
   customerId: string,
   title: string,
   body: string,
-  data?: Record<string, string>
+  data?: Record<string, string>,
+  options?: SendNotificationOptions
 ) {
   try {
     // Get device token from database using server-side Supabase
@@ -22,23 +30,49 @@ export async function sendPushNotification(
 
     if (error || !customer?.fcm_device_token) {
       console.warn(`No device token for customer ${customerId}`);
-      return;
     }
 
-    // Send notification via FCM
-    const message = {
-      notification: {
+    let fcmResponse = null;
+
+    // Send notification via FCM if device token exists
+    if (customer?.fcm_device_token) {
+      const message = {
+        notification: {
+          title,
+          body,
+        },
+        data: data || {},
+        token: customer.fcm_device_token,
+      };
+
+      fcmResponse = await admin.messaging().send(message);
+      console.log(`✅ Notification sent to ${customerId}:`, fcmResponse);
+    }
+
+    // Insert notification into history table
+    const { error: insertError } = await supabase
+      .from("notifications")
+      .insert({
+        customer_id: customerId,
+        order_id: options?.orderId,
+        basket_number: options?.basketNumber,
+        type: options?.notificationType || "general",
         title,
         body,
-      },
-      data: data || {},
-      token: customer.fcm_device_token,
-    };
+        data: options?.metadata,
+        status: "sent",
+      });
 
-    const response = await admin.messaging().send(message);
-    console.log(`✅ Notification sent to ${customerId}:`, response);
-    
-    return response;
+    if (insertError) {
+      console.warn(
+        `⚠️ Failed to insert notification record for ${customerId}:`,
+        insertError.message
+      );
+    } else {
+      console.log(`✅ Notification record inserted for ${customerId}`);
+    }
+
+    return fcmResponse;
   } catch (err: any) {
     console.error("❌ Failed to send notification:", err);
   }

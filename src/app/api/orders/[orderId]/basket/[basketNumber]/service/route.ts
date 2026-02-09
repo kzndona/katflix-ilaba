@@ -209,16 +209,55 @@ export async function PATCH(
 
     // === SEND PUSH NOTIFICATION ===
     if (order.customer_id) {
-      const actionLabel = action === "start" 
-        ? `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} started`
-        : action === "complete"
-          ? `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} completed`
-          : `${service_type.charAt(0).toUpperCase() + service_type.slice(1)} skipped`;
+      const getServiceEmoji = (service: string) => {
+        const emojiMap: Record<string, string> = {
+          'washing': '🧼',
+          'drying': '🌬️',
+          'ironing': '👔',
+          'packaging': '📦',
+          'pressing': '🗜️',
+          'folding': '📑',
+        };
+        return emojiMap[service.toLowerCase()] || '⚙️';
+      };
+      
+      const serviceEmoji = getServiceEmoji(service_type);
+      const serviceLabel = service_type.charAt(0).toUpperCase() + service_type.slice(1);
+      
+      let notificationTitle = '';
+      let notificationBody = '';
+      
+      if (action === "start") {
+        notificationTitle = `${serviceEmoji} Basket #${basketNumber} - ${serviceLabel} Started`;
+        notificationBody = `We're now ${service_type} your items with care. Quality service in progress!`;
+      } else if (action === "complete") {
+        notificationTitle = `✨ Basket #${basketNumber} - ${serviceLabel} Complete`;
+        const nextStepMessages: Record<string, string> = {
+          'washing': 'Your items are being dried next.',
+          'drying': 'Your items are heading to ironing.',
+          'ironing': 'Almost done! Your items are being packaged.',
+          'packaging': 'Your order is ready for pickup or delivery!',
+        };
+        notificationBody = nextStepMessages[service_type.toLowerCase()] || `${serviceLabel} is complete. Next step coming up!`;
+      } else {
+        notificationTitle = `⏭️ Basket #${basketNumber} - ${serviceLabel} Skipped`;
+        notificationBody = `${serviceLabel} was skipped. Your order is moving forward!`;
+      }
       
       await sendPushNotification(
         order.customer_id,
-        `Basket #${basketNumber} Update`,
-        actionLabel
+        notificationTitle,
+        notificationBody,
+        undefined,
+        {
+          orderId,
+          basketNumber,
+          notificationType: "service_update",
+          metadata: {
+            service_type,
+            action,
+          },
+        }
       );
     } else {
       console.warn(`[Notification] No customer_id found for order ${orderId}`);

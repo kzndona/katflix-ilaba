@@ -54,14 +54,14 @@ export async function POST(req: Request) {
 
     // Determine notification type based on order status
     let notificationType = "update";
-    let message = `Your order is being processed.`;
+    let message = `Your order is being processed. We're taking great care of it!`;
 
     if (order.status === "pick-up") {
       notificationType = "pickup";
-      message = `Your order (Basket ${basket.basket_number}) is ready for pickup at the store!`;
+      message = `🎁 Your order (Basket #${basket.basket_number}) is ready! Come pick it up at our store whenever convenient.`;
     } else if (order.status === "delivering") {
       notificationType = "delivery";
-      message = `Your order (Basket ${basket.basket_number}) is on its way to you for delivery!`;
+      message = `🚚 Your order (Basket #${basket.basket_number}) is on its way! Our driver will deliver it soon.`;
     }
 
     // Log notification details for processing

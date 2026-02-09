@@ -149,18 +149,38 @@ export async function PATCH(
 
     // === SEND PUSH NOTIFICATION ===
     if (order.customer_id) {
-      const notificationTitle = handlingType === "pickup" 
-        ? "Pickup Update"
-        : "Delivery Update";
+      const handlingTypeLabel = handlingType.charAt(0).toUpperCase() + handlingType.slice(1);
+      
+      const notificationTitle = action === "start"
+        ? handlingType === "pickup" 
+          ? "📍 Pickup in Progress"
+          : "🚚 Delivery Started"
+        : handlingType === "pickup"
+          ? "✔️ Pickup Complete"
+          : "✅ Successfully Delivered";
       
       const notificationBody = action === "start"
-        ? `${handlingType.charAt(0).toUpperCase() + handlingType.slice(1)} started`
-        : `${handlingType.charAt(0).toUpperCase() + handlingType.slice(1)} completed`;
+        ? handlingType === "pickup"
+          ? "We've started picking your order. Hang tight—almost ready!"
+          : "Your order is on its way! Our driver is heading to you."
+        : handlingType === "pickup"
+          ? "Your order is now ready to collect."
+          : "Your order has been delivered successfully. Thank you!";
       
       await sendPushNotification(
         order.customer_id,
         notificationTitle,
-        notificationBody
+        notificationBody,
+        undefined,
+        {
+          orderId,
+          notificationType: handlingType === "pickup" ? "pickup" : "delivery",
+          metadata: {
+            handlingType,
+            action,
+            status,
+          },
+        }
       );
     } else {
       console.warn(`[Notification] No customer_id found for order ${orderId}`);

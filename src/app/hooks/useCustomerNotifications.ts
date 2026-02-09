@@ -105,10 +105,29 @@ function showBrowserNotification(notification: BasketStatusChangeNotification) {
 }
 
 function displayNotification(notification: BasketStatusChangeNotification) {
-  const title = `Order #${notification.basketNumber} status updated`;
+  const getStatusEmoji = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'ready': '🎉',
+      'prepared': '✨',
+      'completed': '✅',
+      'delivering': '🚚',
+      'delivered': '🎁',
+      'pick-up': '📍',
+      'preparing': '🧵',
+      'washing': '🧼',
+      'drying': '🌬️',
+      'ironing': '👔',
+      'packaging': '📦',
+    };
+    return statusMap[status.toLowerCase()] || '📄';
+  };
+
+  const statusEmoji = getStatusEmoji(notification.newStatus);
+  const title = `${statusEmoji} Your Order #${notification.basketNumber} Updated!`;
+  
   const body = notification.oldStatus
-    ? `Your order changed from ${notification.oldStatus} to ${notification.newStatus}.`
-    : `Your order is now ${notification.newStatus}.`;
+    ? `Your order has progressed from *${notification.oldStatus}* → *${notification.newStatus}*. Tap to see details!`
+    : `Great news! Your order is now *${notification.newStatus}*. Things are moving along nicely!`;
 
   const notif = new Notification(title, {
     body,
