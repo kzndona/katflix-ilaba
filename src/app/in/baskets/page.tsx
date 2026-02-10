@@ -307,6 +307,74 @@ export default function BasketsPage() {
     );
   };
 
+  // Get the next order-level action (pickup or delivery only, not services)
+  const getOrderNextAction = (
+    order: Order,
+  ): {
+    label: string;
+    action: "start" | "complete";
+    type: "pickup" | "delivery";
+  } | null => {
+    if (!order.handling || !order.handling.pickup) {
+      return null;
+    }
+
+    const pickupAddr = order.handling.pickup.address?.toLowerCase() || "";
+    const isStorePickup = pickupAddr === "in-store" || pickupAddr === "store";
+
+    // STEP 1: Check if pickup is pending (unless store pickup)
+    if (!isStorePickup && order.handling.pickup.status === "pending") {
+      return {
+        label: "Start Pickup",
+        action: "start",
+        type: "pickup",
+      };
+    }
+
+    if (!isStorePickup && order.handling.pickup.status === "in_progress") {
+      return {
+        label: "Complete Pickup",
+        action: "complete",
+        type: "pickup",
+      };
+    }
+
+    // STEP 2: If pickup is done (or store pickup), check if all services are done
+    if (!canStartDelivery(order)) {
+      return null;
+    }
+
+    // STEP 3: If all services done, check delivery
+    const deliveryAddr = order.handling.delivery?.address?.toLowerCase() || "";
+    const isStoreDelivery = deliveryAddr === "in-store" || deliveryAddr === "store";
+
+    if (
+      order.handling.delivery?.address &&
+      !isStoreDelivery &&
+      order.handling.delivery.status === "pending"
+    ) {
+      return {
+        label: "Start Delivery",
+        action: "start",
+        type: "delivery",
+      };
+    }
+
+    if (
+      order.handling.delivery?.address &&
+      !isStoreDelivery &&
+      order.handling.delivery.status === "in_progress"
+    ) {
+      return {
+        label: "Complete Delivery",
+        action: "complete",
+        type: "delivery",
+      };
+    }
+
+    return null;
+  };
+
   // Get the next pending item in the timeline (pickup → services → delivery)
   // If pickup address is "In-store" or "store" (POS), skip the pickup phase entirely
   const getTimelineNextAction = (
@@ -934,91 +1002,106 @@ export default function BasketsPage() {
                             )}
                         </div>
 
-                        {/* Action Button */}
-                        {nextAction ? (
-                          <>
-                            {order.source === "mobile" &&
-                            order.status === "pending" ? (
-                              <button
-                                onClick={() => {
-                                  console.log("[MODAL] Opening mobile order:", {
-                                    orderId: order.id,
-                                    hasReceiptUrl: !!order.gcash_receipt_url,
-                                    receiptUrl: order.gcash_receipt_url,
-                                  });
-                                  setMobileOrderModal(order);
-                                }}
-                                disabled={processingId === order.id}
-                                className="w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
-                              >
-                                📸 View Screenshot
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  if (nextAction.type === "pickup") {
-                                    updateServiceStatus(
-                                      order.id,
-                                      null,
-                                      "pickup",
-                                      nextAction.action,
-                                    );
-                                  } else if (nextAction.type === "service") {
-                                    updateServiceStatus(
-                                      order.id,
-                                      nextAction.basketNumber ||
-                                        basket.basket_number,
-                                      null,
-                                      nextAction.action,
-                                      nextAction.serviceType,
-                                    );
-                                  } else if (nextAction.type === "delivery") {
-                                    updateServiceStatus(
-                                      order.id,
-                                      null,
-                                      "delivery",
-                                      nextAction.action,
-                                    );
-                                  }
-                                }}
-                                disabled={
-                                  processingId === order.id ||
-                                  (nextAction.type === "delivery" &&
-                                    isScheduledDeliveryInFuture(order))
-                                }
-                                title={
-                                  nextAction.type === "delivery" &&
-                                  isScheduledDeliveryInFuture(order)
-                                    ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}`
-                                    : ""
-                                }
-                                className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                  processingId === order.id
-                                    ? "bg-gray-300 text-gray-700 cursor-wait"
-                                    : nextAction.type === "delivery" &&
-                                        isScheduledDeliveryInFuture(order)
-                                      ? "bg-gray-300 text-gray-700 cursor-not-allowed"
-                                      : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-                                }`}
-                              >
-                                {processingId === order.id
-                                  ? "Processing..."
-                                  : nextAction.type === "delivery" &&
-                                      isScheduledDeliveryInFuture(order)
-                                    ? "Not yet for Delivery"
-                                    : nextAction.label}
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-xs text-green-700 text-center py-3 px-3 bg-green-50 rounded-lg border border-green-200 font-semibold">
+                        {/* Service Action Button - Inside Basket */}
+                        {nextAction && nextAction.type === "service" ? (
+                          <button
+                            onClick={() => {
+                              updateServiceStatus(
+                                order.id,
+                                nextAction.basketNumber ||
+                                  basket.basket_number,
+                                null,
+                                nextAction.action,
+                                nextAction.serviceType,
+                              );
+                            }}
+                            disabled={processingId === order.id}
+                            className="w-full mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:cursor-wait"
+                          >
+                            {processingId === order.id
+                              ? "Processing..."
+                              : nextAction.label}
+                          </button>
+                        ) : allServicesComplete ? (
+                          <div className="text-xs text-green-700 text-center py-3 px-3 bg-green-50 rounded-lg border border-green-200 font-semibold mt-3">
                             ✓ Basket Complete
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Order-Level Action Button */}
+                {order.source === "mobile" && order.status === "pending" ? (
+                  <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                    <button
+                      onClick={() => {
+                        console.log("[MODAL] Opening mobile order:", {
+                          orderId: order.id,
+                          hasReceiptUrl: !!order.gcash_receipt_url,
+                          receiptUrl: order.gcash_receipt_url,
+                        });
+                        setMobileOrderModal(order);
+                      }}
+                      disabled={processingId === order.id}
+                      className="w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
+                    >
+                      📸 View Screenshot
+                    </button>
+                  </div>
+                ) : (() => {
+                  const orderAction = getOrderNextAction(order);
+                  return orderAction ? (
+                    <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                      <button
+                        onClick={() => {
+                          if (orderAction.type === "pickup") {
+                            updateServiceStatus(
+                              order.id,
+                              null,
+                              "pickup",
+                              orderAction.action,
+                            );
+                          } else if (orderAction.type === "delivery") {
+                            updateServiceStatus(
+                              order.id,
+                              null,
+                              "delivery",
+                              orderAction.action,
+                            );
+                          }
+                        }}
+                        disabled={
+                          processingId === order.id ||
+                          (orderAction.type === "delivery" &&
+                            isScheduledDeliveryInFuture(order))
+                        }
+                        title={
+                          orderAction.type === "delivery" &&
+                          isScheduledDeliveryInFuture(order)
+                            ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}`
+                            : ""
+                        }
+                        className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                          processingId === order.id
+                            ? "bg-gray-300 text-gray-700 cursor-wait"
+                            : orderAction.type === "delivery" &&
+                                isScheduledDeliveryInFuture(order)
+                              ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                        }`}
+                      >
+                        {processingId === order.id
+                          ? "Processing..."
+                          : orderAction.type === "delivery" &&
+                              isScheduledDeliveryInFuture(order)
+                            ? "Not yet for Delivery"
+                            : orderAction.label}
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             ))}
           </div>

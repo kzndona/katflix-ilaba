@@ -1639,8 +1639,7 @@ function OrderSummary({
                 const change = Math.max(0, pos.amountPaid - totalAmount);
                 return pos.amountPaid >= totalAmount && change > 0 ? (
                   <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
-                    Change: ₱
-                    {change.toFixed(2)}
+                    Change: ₱{change.toFixed(2)}
                   </div>
                 ) : null;
               })()}
@@ -1746,7 +1745,9 @@ function OrderSummary({
           }
 
           // Check if order has at least one service (basket) or product with items
-          const hasBasketServices = breakdown.baskets.some((b: any) => b.subtotal > 0);
+          const hasBasketServices = breakdown.baskets.some(
+            (b: any) => b.subtotal > 0,
+          );
           const hasProducts = Object.keys(pos.selectedProducts).length > 0;
           const hasItems = hasBasketServices || hasProducts;
 
