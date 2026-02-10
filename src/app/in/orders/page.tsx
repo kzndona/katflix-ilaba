@@ -134,6 +134,7 @@ export default function OrdersPage() {
     "pending",
     "processing",
     "completed",
+    "cancelled",
   ]);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
     null,
@@ -448,7 +449,7 @@ export default function OrdersPage() {
               Status
             </label>
             <div className="flex gap-1 items-stretch">
-              {["pending", "processing", "completed"].map((status) => (
+              {["pending", "processing", "completed", "cancelled"].map((status) => (
                 <button
                   key={status}
                   onClick={() => {
@@ -600,7 +601,7 @@ export default function OrdersPage() {
                               >
                                 View
                               </button>
-                              {order.status !== "completed" && (
+                              {order.status !== "completed" && order.status !== "cancelled" && (
                                 <button
                                   onClick={() => setEditing(order)}
                                   className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"

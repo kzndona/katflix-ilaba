@@ -346,7 +346,8 @@ export default function BasketsPage() {
 
     // STEP 3: If all services done, check delivery
     const deliveryAddr = order.handling.delivery?.address?.toLowerCase() || "";
-    const isStoreDelivery = deliveryAddr === "in-store" || deliveryAddr === "store";
+    const isStoreDelivery =
+      deliveryAddr === "in-store" || deliveryAddr === "store";
 
     if (
       order.handling.delivery?.address &&
@@ -1008,8 +1009,7 @@ export default function BasketsPage() {
                             onClick={() => {
                               updateServiceStatus(
                                 order.id,
-                                nextAction.basketNumber ||
-                                  basket.basket_number,
+                                nextAction.basketNumber || basket.basket_number,
                                 null,
                                 nextAction.action,
                                 nextAction.serviceType,
@@ -1050,58 +1050,60 @@ export default function BasketsPage() {
                       📸 View Screenshot
                     </button>
                   </div>
-                ) : (() => {
-                  const orderAction = getOrderNextAction(order);
-                  return orderAction ? (
-                    <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                      <button
-                        onClick={() => {
-                          if (orderAction.type === "pickup") {
-                            updateServiceStatus(
-                              order.id,
-                              null,
-                              "pickup",
-                              orderAction.action,
-                            );
-                          } else if (orderAction.type === "delivery") {
-                            updateServiceStatus(
-                              order.id,
-                              null,
-                              "delivery",
-                              orderAction.action,
-                            );
+                ) : (
+                  (() => {
+                    const orderAction = getOrderNextAction(order);
+                    return orderAction ? (
+                      <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                        <button
+                          onClick={() => {
+                            if (orderAction.type === "pickup") {
+                              updateServiceStatus(
+                                order.id,
+                                null,
+                                "pickup",
+                                orderAction.action,
+                              );
+                            } else if (orderAction.type === "delivery") {
+                              updateServiceStatus(
+                                order.id,
+                                null,
+                                "delivery",
+                                orderAction.action,
+                              );
+                            }
+                          }}
+                          disabled={
+                            processingId === order.id ||
+                            (orderAction.type === "delivery" &&
+                              isScheduledDeliveryInFuture(order))
                           }
-                        }}
-                        disabled={
-                          processingId === order.id ||
-                          (orderAction.type === "delivery" &&
-                            isScheduledDeliveryInFuture(order))
-                        }
-                        title={
-                          orderAction.type === "delivery" &&
-                          isScheduledDeliveryInFuture(order)
-                            ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}`
-                            : ""
-                        }
-                        className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          processingId === order.id
-                            ? "bg-gray-300 text-gray-700 cursor-wait"
+                          title={
+                            orderAction.type === "delivery" &&
+                            isScheduledDeliveryInFuture(order)
+                              ? `Scheduled for ${order.handling?.scheduled_date} at ${order.handling?.scheduled_time}`
+                              : ""
+                          }
+                          className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            processingId === order.id
+                              ? "bg-gray-300 text-gray-700 cursor-wait"
+                              : orderAction.type === "delivery" &&
+                                  isScheduledDeliveryInFuture(order)
+                                ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                          }`}
+                        >
+                          {processingId === order.id
+                            ? "Processing..."
                             : orderAction.type === "delivery" &&
                                 isScheduledDeliveryInFuture(order)
-                              ? "bg-gray-300 text-gray-700 cursor-not-allowed"
-                              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-                        }`}
-                      >
-                        {processingId === order.id
-                          ? "Processing..."
-                          : orderAction.type === "delivery" &&
-                              isScheduledDeliveryInFuture(order)
-                            ? "Not yet for Delivery"
-                            : orderAction.label}
-                      </button>
-                    </div>
-                  ) : null;
-                })()}
+                              ? "Not yet for Delivery"
+                              : orderAction.label}
+                        </button>
+                      </div>
+                    ) : null;
+                  })()
+                )}
               </div>
             ))}
           </div>
