@@ -449,25 +449,27 @@ export default function OrdersPage() {
               Status
             </label>
             <div className="flex gap-1 items-stretch">
-              {["pending", "processing", "completed", "cancelled"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => {
-                    setStatusFilters((prev) =>
-                      prev.includes(status)
-                        ? prev.filter((s) => s !== status)
-                        : [...prev, status],
-                    );
-                  }}
-                  className={`px-3 py-2 rounded text-xs font-medium transition flex-1 border ${
-                    statusFilters.includes(status)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300 border-gray-300"
-                  }`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
+              {["pending", "processing", "completed", "cancelled"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => {
+                      setStatusFilters((prev) =>
+                        prev.includes(status)
+                          ? prev.filter((s) => s !== status)
+                          : [...prev, status],
+                      );
+                    }}
+                    className={`px-3 py-2 rounded text-xs font-medium transition flex-1 border ${
+                      statusFilters.includes(status)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300 border-gray-300"
+                    }`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -601,14 +603,15 @@ export default function OrdersPage() {
                               >
                                 View
                               </button>
-                              {order.status !== "completed" && order.status !== "cancelled" && (
-                                <button
-                                  onClick={() => setEditing(order)}
-                                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
-                                >
-                                  Edit
-                                </button>
-                              )}
+                              {order.status !== "completed" &&
+                                order.status !== "cancelled" && (
+                                  <button
+                                    onClick={() => setEditing(order)}
+                                    className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
                             </div>
                           </td>
                         </tr>

@@ -23,6 +23,7 @@ import {
   formatReceiptAsPlaintext,
   CompactReceipt,
 } from "@/src/app/in/pos/logic/receiptGenerator";
+import OrderModificationModal from "./OrderModificationModal";
 
 // Status filter type
 type StatusFilter = "pending" | "processing" | "completed" | "cancelled";
@@ -111,6 +112,7 @@ export default function BasketsPage() {
   ]);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptContent, setReceiptContent] = useState("");
+  const [showOrderEditor, setShowOrderEditor] = useState<Order | null>(null);
 
   // Get authenticated staff user
   useEffect(() => {
@@ -160,15 +162,17 @@ export default function BasketsPage() {
     getAuthUser();
   }, []);
 
-  // Auto-refresh orders every 30 seconds
+  // Auto-refresh orders every 30 seconds (paused when editor modal is open)
   useEffect(() => {
+    if (showOrderEditor) return; // skip refresh while modifying an order
+
     const interval = setInterval(() => {
       load();
       setLastRefresh(new Date());
     }, AUTO_REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [showOrderEditor, load]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -1136,112 +1140,112 @@ export default function BasketsPage() {
 
               {/* Modal Content - Two Column Layout */}
               <div className="flex-1 overflow-hidden flex">
-                {/* Left Panel - Details */}
-                <div className="w-1/2 border-r border-gray-200 overflow-y-auto p-6 space-y-4">
-                  {/* Customer Info */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      Customer
-                    </h3>
-                    <p className="text-sm text-gray-700 font-medium">
-                      {mobileOrderModal.customers?.first_name}{" "}
-                      {mobileOrderModal.customers?.last_name}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {mobileOrderModal.customers?.phone_number}
-                    </p>
-                  </div>
+                  {/* Left Panel - Details */}
+                  <div className="w-1/2 border-r border-gray-200 overflow-y-auto p-6 space-y-4">
+                    {/* Customer Info */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        Customer
+                      </h3>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {mobileOrderModal.customers?.first_name}{" "}
+                        {mobileOrderModal.customers?.last_name}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {mobileOrderModal.customers?.phone_number}
+                      </p>
+                    </div>
 
-                  {/* Pickup Address */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      📍 Pickup
-                    </h3>
-                    <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded border border-blue-200">
-                      {mobileOrderModal.handling.pickup.address}
-                    </p>
-                  </div>
+                    {/* Pickup Address */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        📍 Pickup
+                      </h3>
+                      <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded border border-blue-200">
+                        {mobileOrderModal.handling.pickup.address}
+                      </p>
+                    </div>
 
-                  {/* Delivery Address */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      🚚 Delivery
-                    </h3>
-                    <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
-                      {mobileOrderModal.handling.delivery.address || "—"}
-                    </p>
-                  </div>
+                    {/* Delivery Address */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        🚚 Delivery
+                      </h3>
+                      <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
+                        {mobileOrderModal.handling.delivery.address || "—"}
+                      </p>
+                    </div>
 
-                  {/* Products List */}
-                  {mobileOrderModal.breakdown?.items &&
-                    mobileOrderModal.breakdown.items.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          📦 Products
-                        </h3>
-                        <div className="space-y-2">
-                          {mobileOrderModal.breakdown.items.map(
-                            (item: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="text-sm bg-gray-50 p-2 rounded border border-gray-200"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div className="flex-1">
+                    {/* Products List */}
+                    {mobileOrderModal.breakdown?.items &&
+                      mobileOrderModal.breakdown.items.length > 0 && (
+                        <div>
+                          <h3 className="font-semibold text-gray-900 mb-2">
+                            📦 Products
+                          </h3>
+                          <div className="space-y-2">
+                            {mobileOrderModal.breakdown.items.map(
+                              (item: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="text-sm bg-gray-50 p-2 rounded border border-gray-200"
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="font-medium text-gray-900">
+                                        {item.product_name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {item.quantity} × ₱
+                                        {(item.unit_price as number).toFixed(2)}
+                                      </p>
+                                    </div>
                                     <p className="font-medium text-gray-900">
-                                      {item.product_name}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {item.quantity} × ₱
-                                      {(item.unit_price as number).toFixed(2)}
+                                      ₱{(item.subtotal as number).toFixed(2)}
                                     </p>
                                   </div>
-                                  <p className="font-medium text-gray-900">
-                                    ₱{(item.subtotal as number).toFixed(2)}
-                                  </p>
                                 </div>
-                              </div>
-                            ),
-                          )}
+                              ),
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                  {/* Order Total */}
-                  <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900">
-                        Total:
-                      </span>
-                      <span className="text-2xl font-bold text-purple-600">
-                        ₱{mobileOrderModal.total_amount.toFixed(2)}
-                      </span>
+                    {/* Order Total */}
+                    <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-900">
+                          Total:
+                        </span>
+                        <span className="text-2xl font-bold text-purple-600">
+                          ₱{mobileOrderModal.total_amount.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Panel - GCash Receipt */}
-                <div className="w-1/2 bg-gray-50 overflow-hidden p-6 flex flex-col items-center justify-center">
-                  {(() => {
-                    console.log(
-                      "[MODAL RENDER] gcash_receipt_url:",
-                      mobileOrderModal.gcash_receipt_url,
-                    );
-                    return null;
-                  })()}
-                  {mobileOrderModal.gcash_receipt_url ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center">
-                      <h3 className="font-semibold text-gray-900 mb-3 shrink-0">
-                        💳 GCash Receipt
-                      </h3>
-                      <img
-                        src={`/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url.split("/").pop()}`}
-                        alt="GCash Receipt"
-                        className="flex-1 w-full object-contain"
-                        onLoad={() => {
-                          console.log("[IMG] Image loaded successfully");
-                        }}
-                        onError={(e) => {
+                  {/* Right Panel - GCash Receipt */}
+                  <div className="w-1/2 bg-gray-50 overflow-hidden p-6 flex flex-col items-center justify-center">
+                    {(() => {
+                      console.log(
+                        "[MODAL RENDER] gcash_receipt_url:",
+                        mobileOrderModal.gcash_receipt_url,
+                      );
+                      return null;
+                    })()}
+                    {mobileOrderModal.gcash_receipt_url ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center">
+                        <h3 className="font-semibold text-gray-900 mb-3 shrink-0">
+                          💳 GCash Receipt
+                        </h3>
+                        <img
+                          src={`/api/gcash-receipt/${mobileOrderModal.gcash_receipt_url.split("/").pop()}`}
+                          alt="GCash Receipt"
+                          className="flex-1 w-full object-contain"
+                          onLoad={() => {
+                            console.log("[IMG] Image loaded successfully");
+                          }}
+                          onError={(e) => {
                           console.log("[IMG ERROR] Image failed to load", e);
                           const img = e.target as HTMLImageElement;
                           img.src =
@@ -1257,50 +1261,73 @@ export default function BasketsPage() {
 
               {/* Modal Footer - Actions */}
               <div className="border-t border-gray-200 px-6 py-4 flex gap-3 shrink-0 bg-white">
-                <button
-                  onClick={() => printMobileOrderReceipt(mobileOrderModal)}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition bg-green-600 text-white hover:bg-green-700"
-                  title="Print receipt"
-                >
-                  🖨️ Print Receipt
-                </button>
-                <button
-                  onClick={async () => {
-                    await updateServiceStatus(
-                      mobileOrderModal.id,
-                      null,
-                      "pickup",
-                      "start",
-                    );
-                    setMobileOrderModal(null);
-                  }}
-                  disabled={processingId === mobileOrderModal.id}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    processingId === mobileOrderModal.id
-                      ? "bg-gray-300 text-gray-700 cursor-wait"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {processingId === mobileOrderModal.id
-                    ? "Processing..."
-                    : "Start Pickup"}
-                </button>
-                <button
-                  onClick={() => rejectMobileOrder(mobileOrderModal.id)}
-                  disabled={rejectingId === mobileOrderModal.id}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    rejectingId === mobileOrderModal.id
-                      ? "bg-gray-300 text-gray-700 cursor-wait"
-                      : "bg-red-600 text-white hover:bg-red-700"
-                  }`}
-                >
-                  {rejectingId === mobileOrderModal.id
-                    ? "Rejecting..."
-                    : "Reject"}
-                </button>
+                    <button
+                      onClick={() => printMobileOrderReceipt(mobileOrderModal)}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition bg-green-600 text-white hover:bg-green-700"
+                      title="Print receipt"
+                    >
+                      🖨️ Print Receipt
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowOrderEditor(mobileOrderModal);
+                      }}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition bg-orange-600 text-white hover:bg-orange-700"
+                      title="Full order editor with baskets and products"
+                    >
+                      ✏️ Modify Order
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await updateServiceStatus(
+                          mobileOrderModal.id,
+                          null,
+                          "pickup",
+                          "start",
+                        );
+                        setMobileOrderModal(null);
+                      }}
+                      disabled={processingId === mobileOrderModal.id}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                        processingId === mobileOrderModal.id
+                          ? "bg-gray-300 text-gray-700 cursor-wait"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {processingId === mobileOrderModal.id
+                        ? "Processing..."
+                        : "Start Pickup"}
+                    </button>
+                    <button
+                      onClick={() => rejectMobileOrder(mobileOrderModal.id)}
+                      disabled={rejectingId === mobileOrderModal.id}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                        rejectingId === mobileOrderModal.id
+                          ? "bg-gray-300 text-gray-700 cursor-wait"
+                          : "bg-red-600 text-white hover:bg-red-700"
+                      }`}
+                    >
+                      {rejectingId === mobileOrderModal.id
+                        ? "Rejecting..."
+                        : "Reject"}
+                    </button>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Order Modification Modal (Full Editor) */}
+        {showOrderEditor && (
+          <OrderModificationModal
+            order={showOrderEditor}
+            staffId={getStaffId()}
+            onClose={() => setShowOrderEditor(null)}
+            onSaved={() => {
+              setShowOrderEditor(null);
+              setMobileOrderModal(null);
+              load();
+            }}
+          />
         )}
 
         {/* Receipt Modal */}
