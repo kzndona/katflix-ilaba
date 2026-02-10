@@ -704,66 +704,6 @@ function EditModal({
               />
             </div>
 
-            {/* Sort Order */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Sort Order
-              </label>
-              <input
-                type="number"
-                value={service.sort_order}
-                onChange={(e) =>
-                  updateField("sort_order", parseInt(e.target.value, 10) || 0)
-                }
-                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-              />
-            </div>
-
-            {/* Image URL */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Image URL (Optional)
-              </label>
-              <input
-                type="text"
-                value={service.image_url ?? ""}
-                onChange={(e) =>
-                  updateField("image_url", e.target.value || null)
-                }
-                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://..."
-              />
-            </div>
-
-            {/* Modifiers */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Modifiers (JSON - Optional)
-              </label>
-              <textarea
-                value={
-                  service.modifiers
-                    ? JSON.stringify(service.modifiers, null, 2)
-                    : ""
-                }
-                onChange={(e) => {
-                  try {
-                    const parsed =
-                      e.target.value.trim() === ""
-                        ? null
-                        : JSON.parse(e.target.value);
-                    updateField("modifiers", parsed);
-                  } catch {
-                    // Invalid JSON, user is still typing
-                  }
-                }}
-                rows={2}
-                className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
-                placeholder='{"addon": "value"}'
-              />
-            </div>
-
             {/* Active Checkbox */}
             <div className="flex items-center space-x-2 py-1">
               <input

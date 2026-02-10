@@ -1636,10 +1636,11 @@ function OrderSummary({
                   pos.customer && pos.loyaltyDiscountTier
                     ? breakdown.summary.total * (1 - discountPercent)
                     : breakdown.summary.total;
-                return pos.amountPaid >= totalAmount ? (
+                const change = Math.max(0, pos.amountPaid - totalAmount);
+                return pos.amountPaid >= totalAmount && change > 0 ? (
                   <div className="p-2 bg-slate-100 rounded text-xs font-semibold text-slate-900">
                     Change: ₱
-                    {Math.max(0, pos.amountPaid - totalAmount).toFixed(2)}
+                    {change.toFixed(2)}
                   </div>
                 ) : null;
               })()}
@@ -1744,13 +1745,19 @@ function OrderSummary({
               scheduledDateAtMidnight < todayAtMidnight;
           }
 
+          // Check if order has at least one service (basket) or product with items
+          const hasBasketServices = breakdown.baskets.some((b: any) => b.subtotal > 0);
+          const hasProducts = Object.keys(pos.selectedProducts).length > 0;
+          const hasItems = hasBasketServices || hasProducts;
+
           return (
             <button
               onClick={() => pos.createOrder()}
               disabled={
                 pos.isProcessing ||
                 !pos.isPaymentValid() ||
-                isScheduledDeliveryPastDate
+                isScheduledDeliveryPastDate ||
+                !hasItems
               }
               style={{ backgroundColor: "#c41d7f" }}
               className="w-full mt-4 text-white py-3 rounded-lg font-bold hover:opacity-90 transition disabled:bg-slate-400 disabled:cursor-not-allowed"
