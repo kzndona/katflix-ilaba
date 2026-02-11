@@ -65,7 +65,9 @@ type Tab = "baskets" | "products" | "summary";
 // HELPERS: Hydrate POS Basket from order data
 // ============================================================================
 
-function hydrateBasket(orderBasket: ModalOrder["breakdown"]["baskets"][0]): Basket {
+function hydrateBasket(
+  orderBasket: ModalOrder["breakdown"]["baskets"][0],
+): Basket {
   const sd = orderBasket.services_data || {};
   const serviceTypes = orderBasket.services.map((s) => s.service_type);
 
@@ -75,9 +77,19 @@ function hydrateBasket(orderBasket: ModalOrder["breakdown"]["baskets"][0]): Bask
     notes: orderBasket.basket_notes || "",
     subtotal: orderBasket.total || 0,
     services: {
-      wash: sd.wash && sd.wash !== "off" ? sd.wash : serviceTypes.includes("wash") ? "basic" : "off",
+      wash:
+        sd.wash && sd.wash !== "off"
+          ? sd.wash
+          : serviceTypes.includes("wash")
+            ? "basic"
+            : "off",
       wash_cycles: sd.wash_cycles || 1,
-      dry: sd.dry && sd.dry !== "off" ? sd.dry : serviceTypes.includes("dry") ? "basic" : "off",
+      dry:
+        sd.dry && sd.dry !== "off"
+          ? sd.dry
+          : serviceTypes.includes("dry")
+            ? "basic"
+            : "off",
       spin: sd.spin !== undefined ? sd.spin : serviceTypes.includes("spin"),
       iron_weight_kg: sd.iron_weight_kg || 0,
       fold: sd.fold !== undefined ? sd.fold : serviceTypes.includes("fold"),
@@ -148,7 +160,9 @@ export default function OrderModificationModal({
         supabase.from("services").select("*").eq("is_active", true),
         supabase
           .from("products")
-          .select("id, item_name, unit_price, quantity, image_url, reorder_level")
+          .select(
+            "id, item_name, unit_price, quantity, image_url, reorder_level",
+          )
           .eq("is_active", true)
           .order("item_name"),
       ]);
@@ -163,7 +177,7 @@ export default function OrderModificationModal({
             quantity_in_stock: p.quantity,
             image_url: p.image_url,
             reorder_level: p.reorder_level,
-          }))
+          })),
         );
       }
 
@@ -185,12 +199,15 @@ export default function OrderModificationModal({
   // --- Service info helper (same as POS) ---
   const getServiceInfo = useCallback(
     (serviceType: string, tier?: string) => {
-      const matching = services.filter((s: any) => s.service_type === serviceType);
+      const matching = services.filter(
+        (s: any) => s.service_type === serviceType,
+      );
       if (!matching.length) return { name: "", price: 0 };
-      const service = matching.find((s: any) => !tier || s.tier === tier) || matching[0];
+      const service =
+        matching.find((s: any) => !tier || s.tier === tier) || matching[0];
       return { name: service.name || "", price: service.base_price || 0 };
     },
-    [services]
+    [services],
   );
 
   // --- Basket operations ---
@@ -199,15 +216,20 @@ export default function OrderModificationModal({
   const updateService = (key: keyof BasketServices, value: any) => {
     setBaskets((prev) =>
       prev.map((b, i) =>
-        i === activeBasketIndex ? { ...b, services: { ...b.services, [key]: value } } : b
-      )
+        i === activeBasketIndex
+          ? { ...b, services: { ...b.services, [key]: value } }
+          : b,
+      ),
     );
   };
 
   const updateWeight = (weight: number) => {
     setBaskets((prev) => {
       const updated = [...prev];
-      updated[activeBasketIndex] = { ...updated[activeBasketIndex], weight_kg: Math.min(weight, 8) };
+      updated[activeBasketIndex] = {
+        ...updated[activeBasketIndex],
+        weight_kg: Math.min(weight, 8),
+      };
       return updated;
     });
   };
@@ -246,7 +268,7 @@ export default function OrderModificationModal({
         return prev.map((i) =>
           i.product_id === productId
             ? { ...i, quantity: qty, total_price: qty * i.unit_price }
-            : i
+            : i,
         );
       }
       return [
@@ -268,9 +290,11 @@ export default function OrderModificationModal({
 
   // --- Price calculation ---
   // Mobile orders always include staff service fee and delivery fee
-  const isDelivery = !!(order.handling?.delivery?.address &&
+  const isDelivery = !!(
+    order.handling?.delivery?.address &&
     order.handling.delivery.address.toLowerCase() !== "in-store" &&
-    order.handling.delivery.address.toLowerCase() !== "store");
+    order.handling.delivery.address.toLowerCase() !== "store"
+  );
   const originalDeliveryFee = order.breakdown?.summary?.delivery_fee ?? null;
 
   const breakdown = buildOrderBreakdown(
@@ -281,11 +305,11 @@ export default function OrderModificationModal({
       unit_price: i.unit_price,
       quantity: i.quantity,
     })),
-    true,            // mobile orders always have staff service
-    isDelivery,      // delivery if real delivery address exists
+    true, // mobile orders always have staff service
+    isDelivery, // delivery if real delivery address exists
     originalDeliveryFee, // preserve original delivery fee
     services,
-    products
+    products,
   );
 
   // --- Save ---
@@ -322,7 +346,9 @@ export default function OrderModificationModal({
     return (
       <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
         <div className="bg-white rounded-2xl p-8 text-center">
-          <div className="text-lg font-semibold text-gray-700">Loading order editor...</div>
+          <div className="text-lg font-semibold text-gray-700">
+            Loading order editor...
+          </div>
         </div>
       </div>
     );
@@ -340,11 +366,10 @@ export default function OrderModificationModal({
         {/* ===== HEADER ===== */}
         <div className="bg-linear-to-r from-pink-50 to-rose-50 border-b border-pink-200 px-6 py-4 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              ✏️ Modify Order
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900">✏️ Modify Order</h2>
             <p className="text-sm text-gray-600 mt-0.5">
-              {order.customers?.first_name} {order.customers?.last_name} — Order #{order.id.slice(0, 8)}
+              {order.customers?.first_name} {order.customers?.last_name} — Order
+              #{order.id.slice(0, 8)}
             </p>
           </div>
           <button
@@ -360,7 +385,11 @@ export default function OrderModificationModal({
           {(
             [
               { key: "baskets", label: "🧺 Baskets", count: baskets.length },
-              { key: "products", label: "📦 Products", count: orderItems.length },
+              {
+                key: "products",
+                label: "📦 Products",
+                count: orderItems.length,
+              },
               { key: "summary", label: "📋 Summary", count: null },
             ] as { key: Tab; label: string; count: number | null }[]
           ).map((tab) => (
@@ -430,14 +459,35 @@ export default function OrderModificationModal({
                 <div className="space-y-3">
                   {/* Wash */}
                   <div>
-                    <div className="text-sm font-bold text-gray-900 mb-1">🧺 Wash</div>
+                    <div className="text-sm font-bold text-gray-900 mb-1">
+                      🧺 Wash
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { value: "off", label: "None", emoji: "⭕", tier: null },
-                        { value: "basic", label: "Basic", emoji: "🌊", tier: "basic" },
-                        { value: "premium", label: "Premium", emoji: "✨", tier: "premium" },
-                      ] as const).map((opt) => {
-                        const info = opt.tier ? getServiceInfo("wash", opt.tier) : { price: 0 };
+                      {(
+                        [
+                          {
+                            value: "off",
+                            label: "None",
+                            emoji: "⭕",
+                            tier: null,
+                          },
+                          {
+                            value: "basic",
+                            label: "Basic",
+                            emoji: "🌊",
+                            tier: "basic",
+                          },
+                          {
+                            value: "premium",
+                            label: "Premium",
+                            emoji: "✨",
+                            tier: "premium",
+                          },
+                        ] as const
+                      ).map((opt) => {
+                        const info = opt.tier
+                          ? getServiceInfo("wash", opt.tier)
+                          : { price: 0 };
                         return (
                           <button
                             key={opt.value}
@@ -465,7 +515,9 @@ export default function OrderModificationModal({
                         <input
                           type="checkbox"
                           checked={activeBasket.services.spin}
-                          onChange={(e) => updateService("spin", e.target.checked)}
+                          onChange={(e) =>
+                            updateService("spin", e.target.checked)
+                          }
                           className="w-4 h-4 accent-[#c41d7f]"
                         />
                         <span className="text-sm font-semibold text-gray-700">
@@ -477,14 +529,35 @@ export default function OrderModificationModal({
 
                   {/* Dry */}
                   <div>
-                    <div className="text-sm font-bold text-gray-900 mb-1">💨 Dry</div>
+                    <div className="text-sm font-bold text-gray-900 mb-1">
+                      💨 Dry
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { value: "off", label: "None", emoji: "⭕", tier: null },
-                        { value: "basic", label: "Basic", emoji: "💨", tier: "basic" },
-                        { value: "premium", label: "Premium", emoji: "🔥", tier: "premium" },
-                      ] as const).map((opt) => {
-                        const info = opt.tier ? getServiceInfo("dry", opt.tier) : { price: 0 };
+                      {(
+                        [
+                          {
+                            value: "off",
+                            label: "None",
+                            emoji: "⭕",
+                            tier: null,
+                          },
+                          {
+                            value: "basic",
+                            label: "Basic",
+                            emoji: "💨",
+                            tier: "basic",
+                          },
+                          {
+                            value: "premium",
+                            label: "Premium",
+                            emoji: "🔥",
+                            tier: "premium",
+                          },
+                        ] as const
+                      ).map((opt) => {
+                        const info = opt.tier
+                          ? getServiceInfo("dry", opt.tier)
+                          : { price: 0 };
                         return (
                           <button
                             key={opt.value}
@@ -522,12 +595,19 @@ export default function OrderModificationModal({
                 <div className="space-y-3">
                   {/* Additional Dry Time */}
                   <div>
-                    <div className="text-sm font-bold text-gray-900 mb-1">⏱️ Extra Dry Time (₱15/8min)</div>
+                    <div className="text-sm font-bold text-gray-900 mb-1">
+                      ⏱️ Extra Dry Time (₱15/8min)
+                    </div>
                     <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                       <button
                         onClick={() => {
-                          const curr = activeBasket.services.additional_dry_time_minutes;
-                          if (curr > 0) updateService("additional_dry_time_minutes", curr - 8);
+                          const curr =
+                            activeBasket.services.additional_dry_time_minutes;
+                          if (curr > 0)
+                            updateService(
+                              "additional_dry_time_minutes",
+                              curr - 8,
+                            );
                         }}
                         disabled={activeBasket.services.dry === "off"}
                         className="w-9 h-9 rounded bg-gray-200 font-bold hover:bg-gray-300 disabled:opacity-40"
@@ -542,8 +622,13 @@ export default function OrderModificationModal({
                       </div>
                       <button
                         onClick={() => {
-                          const curr = activeBasket.services.additional_dry_time_minutes;
-                          if (curr < 24) updateService("additional_dry_time_minutes", curr + 8);
+                          const curr =
+                            activeBasket.services.additional_dry_time_minutes;
+                          if (curr < 24)
+                            updateService(
+                              "additional_dry_time_minutes",
+                              curr + 8,
+                            );
                         }}
                         disabled={activeBasket.services.dry === "off"}
                         className="w-9 h-9 rounded bg-gray-200 font-bold hover:bg-gray-300 disabled:opacity-40"
@@ -551,7 +636,12 @@ export default function OrderModificationModal({
                         +
                       </button>
                       <span className="text-sm text-gray-600 ml-auto">
-                        ₱{((activeBasket.services.additional_dry_time_minutes / 8) * 15).toFixed(2)}
+                        ₱
+                        {(
+                          (activeBasket.services.additional_dry_time_minutes /
+                            8) *
+                          15
+                        ).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -568,8 +658,13 @@ export default function OrderModificationModal({
                           <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                             <button
                               onClick={() => {
-                                const curr = activeBasket.services.iron_weight_kg;
-                                if (curr > 0) updateService("iron_weight_kg", curr === 2 ? 0 : curr - 1);
+                                const curr =
+                                  activeBasket.services.iron_weight_kg;
+                                if (curr > 0)
+                                  updateService(
+                                    "iron_weight_kg",
+                                    curr === 2 ? 0 : curr - 1,
+                                  );
                               }}
                               className="w-9 h-9 rounded bg-gray-200 font-bold hover:bg-gray-300"
                             >
@@ -583,15 +678,24 @@ export default function OrderModificationModal({
                             </div>
                             <button
                               onClick={() => {
-                                const curr = activeBasket.services.iron_weight_kg;
-                                if (curr < 8) updateService("iron_weight_kg", curr === 0 ? 2 : (curr + 1) as any);
+                                const curr =
+                                  activeBasket.services.iron_weight_kg;
+                                if (curr < 8)
+                                  updateService(
+                                    "iron_weight_kg",
+                                    curr === 0 ? 2 : ((curr + 1) as any),
+                                  );
                               }}
                               className="w-9 h-9 rounded bg-gray-200 font-bold hover:bg-gray-300"
                             >
                               +
                             </button>
                             <span className="text-sm text-gray-600 ml-auto">
-                              ₱{(activeBasket.services.iron_weight_kg * ironInfo.price).toFixed(2)}
+                              ₱
+                              {(
+                                activeBasket.services.iron_weight_kg *
+                                ironInfo.price
+                              ).toFixed(2)}
                             </span>
                           </div>
                         </>
@@ -604,7 +708,9 @@ export default function OrderModificationModal({
                     <input
                       type="checkbox"
                       checked={activeBasket.services.heavy_fabrics}
-                      onChange={(e) => updateService("heavy_fabrics", e.target.checked)}
+                      onChange={(e) =>
+                        updateService("heavy_fabrics", e.target.checked)
+                      }
                       className="w-4 h-4 accent-[#c41d7f]"
                     />
                     <span className="text-sm font-semibold text-gray-700">
@@ -618,7 +724,9 @@ export default function OrderModificationModal({
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1">📝 Basket Notes</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  📝 Basket Notes
+                </label>
                 <textarea
                   value={activeBasket.notes}
                   onChange={(e) => updateNotes(e.target.value)}
@@ -633,7 +741,9 @@ export default function OrderModificationModal({
           {/* ---- PRODUCTS TAB ---- */}
           {activeTab === "products" && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">Tap a product to add it, then adjust quantities.</p>
+              <p className="text-sm text-gray-600">
+                Tap a product to add it, then adjust quantities.
+              </p>
 
               {products.length === 0 ? (
                 <p className="text-gray-500">No products available</p>
@@ -658,7 +768,11 @@ export default function OrderModificationModal({
                           }`}
                         >
                           {p.image_url ? (
-                            <img src={p.image_url} alt={p.item_name} className="w-full h-full object-cover" />
+                            <img
+                              src={p.image_url}
+                              alt={p.item_name}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             "📦"
                           )}
@@ -667,10 +781,16 @@ export default function OrderModificationModal({
                         {/* Name/Price */}
                         <div className="flex justify-between items-start gap-1 mb-2">
                           <div>
-                            <div className="font-semibold text-xs leading-tight">{p.item_name}</div>
-                            <div className="text-xs">₱{p.unit_price.toFixed(2)}</div>
+                            <div className="font-semibold text-xs leading-tight">
+                              {p.item_name}
+                            </div>
+                            <div className="text-xs">
+                              ₱{p.unit_price.toFixed(2)}
+                            </div>
                           </div>
-                          {isSelected && <div className="text-sm font-bold">{qty}</div>}
+                          {isSelected && (
+                            <div className="text-sm font-bold">{qty}</div>
+                          )}
                         </div>
 
                         {/* Controls */}
@@ -710,16 +830,23 @@ export default function OrderModificationModal({
           {/* ---- SUMMARY TAB ---- */}
           {activeTab === "summary" && (
             <div className="space-y-4">
-              <h3 className="font-bold text-gray-900">Order Summary (Recalculated)</h3>
+              <h3 className="font-bold text-gray-900">
+                Order Summary (Recalculated)
+              </h3>
 
               {/* Baskets */}
               {breakdown.baskets.map((b, idx) => (
-                <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div
+                  key={idx}
+                  className="bg-gray-50 border border-gray-200 rounded-lg p-3"
+                >
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold text-sm text-gray-900">
                       Basket #{b.basket_number} — {b.weight_kg}kg
                     </span>
-                    <span className="font-bold text-sm">₱{b.subtotal.toFixed(2)}</span>
+                    <span className="font-bold text-sm">
+                      ₱{b.subtotal.toFixed(2)}
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 space-y-0.5">
                     {b.services.wash !== "off" && (
@@ -734,7 +861,9 @@ export default function OrderModificationModal({
                     )}
                     {b.services.fold && <div>Fold</div>}
                     {b.services.additional_dry_time_minutes > 0 && (
-                      <div>+{b.services.additional_dry_time_minutes}min dry</div>
+                      <div>
+                        +{b.services.additional_dry_time_minutes}min dry
+                      </div>
                     )}
                   </div>
                 </div>
@@ -743,9 +872,14 @@ export default function OrderModificationModal({
               {/* Products */}
               {breakdown.items.length > 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <div className="font-semibold text-sm text-gray-900 mb-1">Products</div>
+                  <div className="font-semibold text-sm text-gray-900 mb-1">
+                    Products
+                  </div>
                   {breakdown.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-gray-600">
+                    <div
+                      key={idx}
+                      className="flex justify-between text-xs text-gray-600"
+                    >
                       <span>
                         {item.product_name} × {item.quantity}
                       </span>
@@ -768,7 +902,9 @@ export default function OrderModificationModal({
                 {breakdown.summary.staff_service_fee > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Staff Service Fee</span>
-                    <span>₱{breakdown.summary.staff_service_fee.toFixed(2)}</span>
+                    <span>
+                      ₱{breakdown.summary.staff_service_fee.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {breakdown.summary.delivery_fee > 0 && (
@@ -784,13 +920,15 @@ export default function OrderModificationModal({
                 <div className="border-t border-pink-300 my-1"></div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>New Total</span>
-                    <span className="text-[#c41d7f]">₱{breakdown.summary.total.toFixed(2)}</span>
+                  <span className="text-[#c41d7f]">
+                    ₱{breakdown.summary.total.toFixed(2)}
+                  </span>
                 </div>
                 {breakdown.summary.total !== order.total_amount && (
                   <div className="text-xs text-gray-500 text-right">
                     Previous: ₱{order.total_amount.toFixed(2)} (
-                    {breakdown.summary.total > order.total_amount ? "+" : ""}
-                    ₱{(breakdown.summary.total - order.total_amount).toFixed(2)})
+                    {breakdown.summary.total > order.total_amount ? "+" : ""}₱
+                    {(breakdown.summary.total - order.total_amount).toFixed(2)})
                   </div>
                 )}
               </div>
@@ -807,7 +945,10 @@ export default function OrderModificationModal({
           )}
           <div className="ml-auto flex items-center gap-3">
             <div className="text-sm font-semibold text-gray-700">
-              Total: <span className="text-[#c41d7f] text-lg">₱{breakdown.summary.total.toFixed(2)}</span>
+              Total:{" "}
+              <span className="text-[#c41d7f] text-lg">
+                ₱{breakdown.summary.total.toFixed(2)}
+              </span>
             </div>
             <button
               onClick={onClose}
