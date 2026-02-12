@@ -25,8 +25,8 @@ import {
 } from "@/src/app/in/pos/logic/receiptGenerator";
 import OrderModificationModal from "./OrderModificationModal";
 
-// Status filter type
-type StatusFilter = "pending" | "processing" | "completed" | "cancelled";
+// Status filter type (includes virtual handling-phase filters)
+type StatusFilter = "pending" | "processing" | "completed" | "cancelled" | "for_pickup" | "for_delivery";
 
 // Order type matching updated schema
 type Order = {
@@ -259,8 +259,31 @@ export default function BasketsPage() {
     }
   }
 
-  // Count orders by status
+  // Handling-phase helper: is the order currently in the pickup phase?
+  const isForPickup = (order: Order): boolean => {
+    const pickupAddr = order.handling?.pickup?.address?.toLowerCase() || "";
+    if (pickupAddr === "in-store" || pickupAddr === "store") return false;
+    return (
+      order.handling?.pickup?.status === "pending" ||
+      order.handling?.pickup?.status === "in_progress"
+    );
+  };
+
+  // Handling-phase helper: is the order currently in the delivery phase?
+  const isForDelivery = (order: Order): boolean => {
+    const deliveryAddr = order.handling?.delivery?.address?.toLowerCase() || "";
+    if (deliveryAddr === "in-store" || deliveryAddr === "store") return false;
+    if (!order.handling?.delivery?.address) return false;
+    return (
+      order.handling?.delivery?.status === "pending" ||
+      order.handling?.delivery?.status === "in_progress"
+    );
+  };
+
+  // Count orders by status (supports virtual handling-phase filters)
   const countByStatus = (status: StatusFilter) => {
+    if (status === "for_pickup") return orders.filter(isForPickup).length;
+    if (status === "for_delivery") return orders.filter(isForDelivery).length;
     return orders.filter((o) => o.status === status).length;
   };
 
@@ -273,10 +296,20 @@ export default function BasketsPage() {
     );
   };
 
-  // Filter orders by selected statuses
-  const filteredOrders = orders.filter((o) =>
-    selectedStatuses.includes(o.status as StatusFilter),
-  );
+  // Filter orders by selected statuses (union of order-level status + handling-phase filters)
+  const filteredOrders = orders.filter((o) => {
+    const orderStatusFilters = selectedStatuses.filter(
+      (s) => s !== "for_pickup" && s !== "for_delivery",
+    );
+    const matchesOrderStatus = orderStatusFilters.includes(
+      o.status as any,
+    );
+    const matchesPickup =
+      selectedStatuses.includes("for_pickup") && isForPickup(o);
+    const matchesDelivery =
+      selectedStatuses.includes("for_delivery") && isForDelivery(o);
+    return matchesOrderStatus || matchesPickup || matchesDelivery;
+  });
 
   // TODO: Replace with actual authenticated session
   const getStaffId = () => {
@@ -622,13 +655,28 @@ export default function BasketsPage() {
         unit_price: item.unit_price,
         subtotal: item.unit_price * item.quantity,
       })),
-      baskets: (order.breakdown?.baskets || []).map((basket) => ({
-        basket_number: basket.basket_number,
-        weight_kg: basket.weight,
-        subtotal: basket.total,
-        // Note: services structure from DB differs from receipt interface expectations
-        // Will implement conversion when needed
-      })) as any,
+      baskets: (order.breakdown?.baskets || []).map((basket) => {
+        const svc = basket.services_data || (basket as any).services || {};
+        return {
+          basket_number: basket.basket_number,
+          weight_kg: basket.weight,
+          subtotal: basket.total,
+          services: {
+            wash: svc.wash || undefined,
+            wash_pricing: svc.wash_pricing || undefined,
+            dry: svc.dry || undefined,
+            dry_pricing: svc.dry_pricing || undefined,
+            spin: svc.spin || undefined,
+            spin_pricing: svc.spin_pricing || undefined,
+            iron_weight_kg: svc.iron_weight_kg || undefined,
+            iron_pricing: svc.iron_pricing || undefined,
+            plastic_bags: svc.plastic_bags || undefined,
+            additional_dry_time_minutes: svc.additional_dry_minutes || undefined,
+            additional_dry_time_pricing: svc.additional_dry_time_pricing || undefined,
+            staff_service_pricing: svc.staff_service_pricing || undefined,
+          },
+        };
+      }),
       total: order.total_amount,
       timestamp: new Date(order.created_at).toISOString(),
       paymentMethod: order.handling?.payment_method?.toUpperCase() || "MOBILE",
@@ -705,6 +753,51 @@ export default function BasketsPage() {
               <span>Processing</span>
               <span className="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">
                 {countByStatus("processing")}
+              </span>
+            </button>
+
+            {/* Separator */}
+            <div className="h-8 w-px bg-gray-300"></div>
+
+            {/* For Pickup Filter */}
+            <button
+              onClick={() => toggleStatus("for_pickup")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("for_pickup")
+                  ? "bg-yellow-100 text-yellow-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("for_pickup")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-yellow-400 cursor-pointer"
+              />
+              <span>For Pickup</span>
+              <span className="text-xs bg-yellow-200 text-yellow-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("for_pickup")}
+              </span>
+            </button>
+
+            {/* For Delivery Filter */}
+            <button
+              onClick={() => toggleStatus("for_delivery")}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-lg font-semibold text-base transition-all ${
+                selectedStatuses.includes("for_delivery")
+                  ? "bg-violet-100 text-violet-900 shadow-md hover:shadow-lg"
+                  : "bg-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes("for_delivery")}
+                onChange={() => {}}
+                className="w-5 h-5 rounded border-2 border-violet-400 cursor-pointer"
+              />
+              <span>For Delivery</span>
+              <span className="text-xs bg-violet-200 text-violet-900 px-2 py-0.5 rounded-full font-bold">
+                {countByStatus("for_delivery")}
               </span>
             </button>
           </div>

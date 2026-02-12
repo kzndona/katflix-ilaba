@@ -123,7 +123,6 @@ export default function OrdersPage() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [viewing, setViewing] = useState<Order | null>(null);
-  const [editing, setEditing] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
@@ -603,15 +602,6 @@ export default function OrdersPage() {
                               >
                                 View
                               </button>
-                              {order.status !== "completed" &&
-                                order.status !== "cancelled" && (
-                                  <button
-                                    onClick={() => setEditing(order)}
-                                    className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700 transition"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
                             </div>
                           </td>
                         </tr>
@@ -655,18 +645,6 @@ export default function OrdersPage() {
           order={viewing}
           onClose={() => {
             setViewing(null);
-            resetAutoRefresh(refreshInterval);
-          }}
-          onActionTaken={() => resetAutoRefresh(refreshInterval)}
-        />
-      )}
-
-      {/* Edit Modal - Centered */}
-      {editing && (
-        <EditModal
-          order={editing}
-          onClose={() => {
-            setEditing(null);
             resetAutoRefresh(refreshInterval);
           }}
           onActionTaken={() => resetAutoRefresh(refreshInterval)}

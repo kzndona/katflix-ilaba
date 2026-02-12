@@ -149,7 +149,7 @@ function Step2Baskets({ pos }: { pos: any }) {
         <h2 className="text-2xl font-bold text-slate-900">Configure Basket</h2>
         <div className="px-6 py-3 bg-red-50 border-2 border-red-300 rounded-lg">
           <div className="text-lg font-bold text-red-900">
-            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket
+            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket MAX
           </div>
         </div>
       </div>
@@ -1751,17 +1751,21 @@ function OrderSummary({
           const hasProducts = Object.keys(pos.selectedProducts).length > 0;
           const hasItems = hasBasketServices || hasProducts;
 
+          const isDisabled = pos.isProcessing ||
+                !pos.isPaymentValid() ||
+                isScheduledDeliveryPastDate ||
+                !hasItems;
+
           return (
             <button
               onClick={() => pos.createOrder()}
-              disabled={
-                pos.isProcessing ||
-                !pos.isPaymentValid() ||
-                isScheduledDeliveryPastDate ||
-                !hasItems
-              }
-              style={{ backgroundColor: "#c41d7f" }}
-              className="w-full mt-4 text-white py-3 rounded-lg font-bold hover:opacity-90 transition disabled:bg-slate-400 disabled:cursor-not-allowed"
+              disabled={isDisabled}
+              className={`w-full mt-4 text-white py-3 rounded-lg font-bold transition ${
+                isDisabled 
+                  ? "bg-slate-400 cursor-not-allowed opacity-60" 
+                  : "hover:opacity-90 cursor-pointer"
+              }`}
+              style={isDisabled ? {} : { backgroundColor: "#c41d7f" }}
               title={
                 isScheduledDeliveryPastDate
                   ? "Cannot checkout for past dates"
@@ -1932,14 +1936,20 @@ export default function POSPage() {
           {/* Add/Remove Basket Buttons */}
           <div className="space-y-2 pb-4 border-b border-slate-700">
             <button
-              onClick={() => pos.addNewBasket?.()}
+              onClick={() => {
+                pos.addNewBasket?.();
+                pos.setStep(3);
+              }}
               className="w-full px-3 py-2 text-sm font-bold bg-slate-600 text-white hover:bg-slate-500 rounded-lg transition"
             >
               + Add Basket
             </button>
             {pos.baskets.length > 1 && (
               <button
-                onClick={() => pos.deleteBasket?.(pos.activeBasketIndex)}
+                onClick={() => {
+                  pos.deleteBasket?.(pos.activeBasketIndex);
+                  pos.setStep(3);
+                }}
                 className="w-full px-3 py-2 text-sm font-bold bg-slate-600 text-white hover:bg-slate-500 rounded-lg transition"
               >
                 Remove Basket

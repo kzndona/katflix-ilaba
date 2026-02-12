@@ -633,7 +633,7 @@ export default function ProductsPage() {
                       }
                       className="w-full px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition"
                     >
-                      Update Quantity Manually
+                      Update Quantity
                     </button>
                     <button
                       onClick={() => openEdit(selectedProductForView)}
@@ -1304,7 +1304,7 @@ function TransactionModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100 flex justify-between items-center">
           <h2 className="text-lg font-bold text-gray-900">
-            Update Quantity Manually
+            Update Quantity
           </h2>
           <button
             onClick={onClose}

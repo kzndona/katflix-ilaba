@@ -385,9 +385,15 @@ export function LocationPicker({
     }
   };
 
+  const isOverMaxDistance = distance !== null && distance / 1000 > 3;
+
   const handleConfirm = () => {
     if (!selectedLocation) {
       setError("Please select a location on the map");
+      return;
+    }
+    if (isOverMaxDistance) {
+      setError("Distance exceeds the 3km maximum delivery range");
       return;
     }
     onSelect(selectedLocation);
@@ -492,6 +498,14 @@ export function LocationPicker({
           )}
         </div>
 
+        {/* 3km max disclaimer */}
+        <div className="px-4 py-1.5 bg-amber-50 border-t border-amber-200 text-center shrink-0">
+          <p className="text-xs font-semibold text-amber-700">⚠️ Maximum delivery distance: 3km from store</p>
+          {isOverMaxDistance && (
+            <p className="text-xs font-bold text-red-600 mt-0.5">Current distance exceeds the 3km limit</p>
+          )}
+        </div>
+
         {/* Footer */}
         <div className="px-4 py-2 border-t border-gray-200 flex justify-end gap-2 shrink-0">
           <button
@@ -502,7 +516,7 @@ export function LocationPicker({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!selectedLocation}
+            disabled={!selectedLocation || isOverMaxDistance}
             className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm Location
