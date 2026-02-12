@@ -15,7 +15,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // Auto-detect: if input is digits (with optional +), it's a phone number
-  const isPhoneNumber = (value: string) => /^[+\d][\d\s\-()]*$/.test(value.trim());
+  const isPhoneNumber = (value: string) =>
+    /^[+\d][\d\s\-()]*$/.test(value.trim());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

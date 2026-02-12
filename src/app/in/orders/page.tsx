@@ -28,11 +28,15 @@ type Order = {
       address: string;
       status: "pending" | "in_progress" | "completed" | "skipped";
       notes: string | null;
+      started_at?: string | null;
+      completed_at?: string | null;
     };
     delivery: {
       address: string;
       status: "pending" | "in_progress" | "completed" | "skipped";
       notes: string | null;
+      started_at?: string | null;
+      completed_at?: string | null;
     };
     payment_method?: "cash" | "gcash";
     scheduled?: boolean;
@@ -825,6 +829,16 @@ function ViewModal({
                     ? "🏪 In-Store"
                     : order.handling?.pickup?.address || "In-Store"}
                 </p>
+                {order.handling?.pickup?.started_at && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Started: {formatToPST(order.handling.pickup.started_at)}
+                  </p>
+                )}
+                {order.handling?.pickup?.completed_at && (
+                  <p className="text-xs text-green-600 mt-0.5">
+                    Completed: {formatToPST(order.handling.pickup.completed_at)}
+                  </p>
+                )}
               </div>
 
               {/* Fulfillment - Delivery */}
@@ -838,6 +852,16 @@ function ViewModal({
                     ? "🏪 In-Store"
                     : `🚚 ${order.handling.delivery.address.substring(0, 40)}${order.handling.delivery.address.length > 40 ? "..." : ""}`}
                 </p>
+                {order.handling?.delivery?.started_at && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Started: {formatToPST(order.handling.delivery.started_at)}
+                  </p>
+                )}
+                {order.handling?.delivery?.completed_at && (
+                  <p className="text-xs text-green-600 mt-0.5">
+                    Completed: {formatToPST(order.handling.delivery.completed_at)}
+                  </p>
+                )}
               </div>
             </div>
 
