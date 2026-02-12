@@ -1241,43 +1241,176 @@ export default function BasketsPage() {
                 <div className="w-1/2 border-r border-gray-200 overflow-y-auto p-6 space-y-4">
                   {/* Customer Info */}
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                       Customer
                     </h3>
-                    <p className="text-sm text-gray-700 font-medium">
+                    <p className="text-base font-bold text-gray-900 mb-1">
                       {mobileOrderModal.customers?.first_name}{" "}
                       {mobileOrderModal.customers?.last_name}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {mobileOrderModal.customers?.phone_number}
+                      📱 {mobileOrderModal.customers?.phone_number}
                     </p>
                   </div>
 
                   {/* Pickup Address */}
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                       📍 Pickup
                     </h3>
-                    <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded border border-blue-200">
+                    <p className="text-xs text-gray-800 bg-blue-50 p-2 rounded border border-blue-200 font-medium">
                       {mobileOrderModal.handling.pickup.address}
                     </p>
                   </div>
 
                   {/* Delivery Address */}
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                       🚚 Delivery
                     </h3>
-                    <p className="text-sm text-gray-700 bg-orange-50 p-3 rounded border border-orange-200">
+                    <p className="text-xs text-gray-800 bg-orange-50 p-2 rounded border border-orange-200 font-medium">
                       {mobileOrderModal.handling.delivery.address || "—"}
                     </p>
                   </div>
+
+                  {/* Baskets & Services */}
+                  {mobileOrderModal.breakdown?.baskets &&
+                    mobileOrderModal.breakdown.baskets.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                          🧺 Baskets ({mobileOrderModal.breakdown.baskets.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {mobileOrderModal.breakdown.baskets.map(
+                            (basket: any, idx: number) => {
+                              const basketNumber = basket.basket_number || idx + 1;
+                              const weight = basket.weight || 0;
+                              const basketTotal = basket.subtotal || basket.total || 0;
+                              const services = basket.services || [];
+                              const servicesData = basket.services_data || {};
+
+                              // Extract pricing snapshots if available
+                              const pricingKeys = Object.entries(servicesData)
+                                .filter(([key]) => key.endsWith("_pricing"))
+                                .map(([key, data]: [string, any]) => ({
+                                  serviceType: key.replace("_pricing", ""),
+                                  ...data,
+                                }))
+                                .filter((p) => p.serviceType !== "staff_service")
+                                .sort((a, b) => {
+                                  const order: Record<string, number> = {
+                                    wash: 1, spin: 2, dry: 3, additional_dry_time: 4, iron: 5, fold: 6,
+                                  };
+                                  return (order[a.serviceType] || 99) - (order[b.serviceType] || 99);
+                                });
+
+                              return (
+                                <div
+                                  key={idx}
+                                  className="bg-gray-50 p-2 rounded border border-gray-200"
+                                >
+                                  <div className="flex justify-between items-start mb-1">
+                                    <div>
+                                      <p className="font-semibold text-gray-900 text-xs">
+                                        Basket #{basketNumber}
+                                      </p>
+                                      {weight > 0 && (
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                          ⚖️ {weight} kg
+                                        </p>
+                                      )}
+                                    </div>
+                                    {basketTotal > 0 && (
+                                      <p className="font-semibold text-gray-900 text-xs">
+                                        ₱{(basketTotal as number).toFixed(2)}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {basket.basket_notes && (
+                                    <p className="text-xs text-gray-600 italic mb-1">
+                                      &ldquo;{basket.basket_notes}&rdquo;
+                                    </p>
+                                  )}
+
+                                  {/* Services from pricing snapshots */}
+                                  {pricingKeys.length > 0 && (
+                                    <div className="space-y-1 pt-1 border-t border-gray-200">
+                                      {pricingKeys.map((pricing) => {
+                                        const name = pricing.name || pricing.serviceType;
+                                        const tier = pricing.tier ? ` (${pricing.tier})` : "";
+                                        let price = pricing.serviceType === "additional_dry_time"
+                                          ? pricing.total_price || 0
+                                          : pricing.base_price || 0;
+
+                                        if (pricing.serviceType === "iron" && servicesData?.iron_weight_kg) {
+                                          price = price * servicesData.iron_weight_kg;
+                                        }
+
+                                        return (
+                                          <div
+                                            key={pricing.serviceType}
+                                            className="flex justify-between text-xs text-gray-700"
+                                          >
+                                            <span className="capitalize font-medium">
+                                              {pricing.serviceType === "additional_dry_time"
+                                                ? `Additional Dry (${pricing.total_minutes}m)`
+                                                : pricing.serviceType === "iron" && servicesData?.iron_weight_kg
+                                                  ? `${name} (${servicesData.iron_weight_kg}kg)`
+                                                  : `${name}${tier}`}
+                                            </span>
+                                            <span className="font-semibold text-gray-900">
+                                              ₱{(price as number).toFixed(2)}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Fallback: Services from array */}
+                                  {pricingKeys.length === 0 && Array.isArray(services) && services.length > 0 && (
+                                    <div className="space-y-1 pt-1 border-t border-gray-200">
+                                      {services.map((svc: any, sIdx: number) => (
+                                        <div
+                                          key={sIdx}
+                                          className="flex justify-between text-xs text-gray-700"
+                                        >
+                                          <span className="capitalize font-medium">
+                                            {svc.service_name || svc.service_type || "Service"}
+                                          </span>
+                                          <span
+                                            className={`font-semibold ${
+                                              svc.status === "completed"
+                                                ? "text-green-600"
+                                                : svc.status === "in_progress"
+                                                  ? "text-blue-600"
+                                                  : "text-gray-500"
+                                            }`}
+                                          >
+                                            {svc.status === "completed"
+                                              ? "✓ Done"
+                                              : svc.status === "in_progress"
+                                                ? "⏳ In Progress"
+                                                : "Pending"}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                   {/* Products List */}
                   {mobileOrderModal.breakdown?.items &&
                     mobileOrderModal.breakdown.items.length > 0 && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                           📦 Products
                         </h3>
                         <div className="space-y-2">
@@ -1285,19 +1418,18 @@ export default function BasketsPage() {
                             (item: any, idx: number) => (
                               <div
                                 key={idx}
-                                className="text-sm bg-gray-50 p-2 rounded border border-gray-200"
+                                className="bg-gray-50 p-2 rounded border border-gray-200"
                               >
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
-                                    <p className="font-medium text-gray-900">
+                                    <p className="font-semibold text-gray-900 text-xs">
                                       {item.product_name}
                                     </p>
-                                    <p className="text-xs text-gray-500">
-                                      {item.quantity} × ₱
-                                      {(item.unit_price as number).toFixed(2)}
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {item.quantity} × ₱{(item.unit_price as number).toFixed(2)}
                                     </p>
                                   </div>
-                                  <p className="font-medium text-gray-900">
+                                  <p className="font-semibold text-gray-900 text-xs ml-2">
                                     ₱{(item.subtotal as number).toFixed(2)}
                                   </p>
                                 </div>
@@ -1309,12 +1441,12 @@ export default function BasketsPage() {
                     )}
 
                   {/* Order Total */}
-                  <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-4">
+                  <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-300 mt-4">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900">
-                        Total:
+                      <span className="font-semibold text-gray-700 text-xs uppercase tracking-wide">
+                        Total Order Amount
                       </span>
-                      <span className="text-2xl font-bold text-purple-600">
+                      <span className="text-2xl font-bold text-purple-700">
                         ₱{mobileOrderModal.total_amount.toFixed(2)}
                       </span>
                     </div>
