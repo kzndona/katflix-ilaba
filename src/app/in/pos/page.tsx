@@ -76,41 +76,14 @@ function Step2Baskets({ pos }: { pos: any }) {
     };
   };
 
-  // Helper to get additional dry time info from dry service modifiers
-  const getAdditionalDryTimeInfo = () => {
-    const dryService = pos.services.find((s: any) => s.service_type === "dry");
-    if (!dryService)
-      return {
-        price_per_increment: 15,
-        minutes_per_increment: 8,
-        max_increments: 3,
-      };
-
-    try {
-      const modifiers =
-        typeof dryService.modifiers === "string"
-          ? JSON.parse(dryService.modifiers)
-          : dryService.modifiers;
-
-      if (modifiers?.additional_dry_time) {
-        return {
-          price_per_increment:
-            modifiers.additional_dry_time.price_per_increment || 15,
-          minutes_per_increment:
-            modifiers.additional_dry_time.minutes_per_increment || 8,
-          max_increments: modifiers.additional_dry_time.max_increments || 3,
-        };
-      }
-    } catch (e) {
-      console.error("Error parsing dry service modifiers:", e);
-    }
-
-    return {
-      price_per_increment: 15,
-      minutes_per_increment: 8,
-      max_increments: 3,
-    };
-  };
+  // Extra dry time pricing tiers (hardcoded)
+  const EXTRA_DRY_TIERS = [
+    { minutes: 8, price: 15 },
+    { minutes: 16, price: 30 },
+    { minutes: 24, price: 45 },
+  ];
+  const getExtraDryPrice = (mins: number) => EXTRA_DRY_TIERS.find(t => t.minutes === mins)?.price || 0;
+  const maxExtraDryMinutes = EXTRA_DRY_TIERS[EXTRA_DRY_TIERS.length - 1].minutes; // 24
 
   if (pos.baskets.length === 0) {
     return (
@@ -272,78 +245,50 @@ function Step2Baskets({ pos }: { pos: any }) {
         <div className="space-y-3 flex flex-col">
           {/* Additional Dry Time */}
           <div className="h-32 flex flex-col">
-            {(() => {
-              const dryTimeInfo = getAdditionalDryTimeInfo();
-              const price = dryTimeInfo.price_per_increment;
-              const minutes = dryTimeInfo.minutes_per_increment;
-              return (
-                <>
-                  <div className="text-sm font-bold text-slate-900 mb-2">
-                    ⏱️ Additional Dry Time @ ₱{price.toFixed(2)}/{minutes}min
-                  </div>
-                  <div className="p-3 border rounded-lg flex items-center justify-center gap-4 bg-slate-100 border-slate-300 flex-1">
-                    <div className="text-center min-w-16">
-                      <div className="text-2xl font-bold text-slate-900">
-                        {activeBasket.services?.additional_dry_time_minutes ||
-                          0}
-                      </div>
-                      <div className="text-xs text-slate-600">min</div>
-                    </div>
-                    <div className="text-center min-w-20 border-l border-slate-300 pl-4">
-                      <div className="text-sm font-semibold text-slate-700">
-                        ₱
-                        {(
-                          ((activeBasket.services
-                            ?.additional_dry_time_minutes || 0) /
-                            minutes) *
-                          price
-                        ).toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 border-l border-slate-300 pl-4 h-full">
-                      <button
-                        onClick={() => {
-                          if (activeBasket.services?.dry !== "off") {
-                            const curr =
-                              activeBasket.services
-                                ?.additional_dry_time_minutes || 0;
-                            if (curr > 0)
-                              pos.updateActiveBasketService?.(
-                                "additional_dry_time_minutes",
-                                curr - minutes,
-                              );
-                          }
-                        }}
-                        disabled={activeBasket.services?.dry === "off"}
-                        className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm rounded flex items-center justify-center"
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (activeBasket.services?.dry !== "off") {
-                            const curr =
-                              activeBasket.services
-                                ?.additional_dry_time_minutes || 0;
-                            const maxMinutes =
-                              minutes * dryTimeInfo.max_increments;
-                            if (curr < maxMinutes)
-                              pos.updateActiveBasketService?.(
-                                "additional_dry_time_minutes",
-                                curr + minutes,
-                              );
-                          }
-                        }}
-                        disabled={activeBasket.services?.dry === "off"}
-                        className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm rounded flex items-center justify-center"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
+            <div className="text-sm font-bold text-slate-900 mb-2">
+              ⏱️ Extra Dry Time
+            </div>
+            <div className="p-3 border rounded-lg flex items-center justify-center gap-4 bg-slate-100 border-slate-300 flex-1">
+              <div className="text-center min-w-16">
+                <div className="text-2xl font-bold text-slate-900">
+                  {activeBasket.services?.additional_dry_time_minutes || 0}
+                </div>
+                <div className="text-xs text-slate-600">min</div>
+              </div>
+              <div className="text-center min-w-20 border-l border-slate-300 pl-4">
+                <div className="text-sm font-semibold text-slate-700">
+                  ₱{getExtraDryPrice(activeBasket.services?.additional_dry_time_minutes || 0).toFixed(2)}
+                </div>
+              </div>
+              <div className="flex gap-2 border-l border-slate-300 pl-4 h-full">
+                <button
+                  onClick={() => {
+                    if (activeBasket.services?.dry !== "off") {
+                      const curr = activeBasket.services?.additional_dry_time_minutes || 0;
+                      const prevTier = [...EXTRA_DRY_TIERS].reverse().find(t => t.minutes < curr);
+                      pos.updateActiveBasketService?.("additional_dry_time_minutes", prevTier ? prevTier.minutes : 0);
+                    }
+                  }}
+                  disabled={activeBasket.services?.dry === "off"}
+                  className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm rounded flex items-center justify-center"
+                >
+                  −
+                </button>
+                <button
+                  onClick={() => {
+                    if (activeBasket.services?.dry !== "off") {
+                      const curr = activeBasket.services?.additional_dry_time_minutes || 0;
+                      const nextTier = EXTRA_DRY_TIERS.find(t => t.minutes > curr);
+                      if (nextTier) pos.updateActiveBasketService?.("additional_dry_time_minutes", nextTier.minutes);
+                    }
+                  }}
+                  disabled={activeBasket.services?.dry === "off"}
+                  className="h-full aspect-square min-w-0 bg-slate-300 text-slate-700 hover:bg-slate-400 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm rounded flex items-center justify-center"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Iron */}
@@ -1249,41 +1194,13 @@ function OrderSummary({
     return plasticBagProduct?.unit_price || 0.5; // Default to 0.50 if not found
   };
 
-  // Helper to get additional dry time info from dry service modifiers
-  const getAdditionalDryTimeInfo = () => {
-    const dryService = pos.services.find((s: any) => s.service_type === "dry");
-    if (!dryService)
-      return {
-        price_per_increment: 15,
-        minutes_per_increment: 8,
-        max_increments: 3,
-      };
-
-    try {
-      const modifiers =
-        typeof dryService.modifiers === "string"
-          ? JSON.parse(dryService.modifiers)
-          : dryService.modifiers;
-
-      if (modifiers?.additional_dry_time) {
-        return {
-          price_per_increment:
-            modifiers.additional_dry_time.price_per_increment || 15,
-          minutes_per_increment:
-            modifiers.additional_dry_time.minutes_per_increment || 8,
-          max_increments: modifiers.additional_dry_time.max_increments || 3,
-        };
-      }
-    } catch (e) {
-      console.error("Error parsing dry service modifiers:", e);
-    }
-
-    return {
-      price_per_increment: 15,
-      minutes_per_increment: 8,
-      max_increments: 3,
-    };
-  };
+  // Extra dry time pricing tiers (hardcoded)
+  const EXTRA_DRY_TIERS = [
+    { minutes: 8, price: 15 },
+    { minutes: 16, price: 30 },
+    { minutes: 24, price: 45 },
+  ];
+  const getExtraDryPrice = (mins: number) => EXTRA_DRY_TIERS.find(t => t.minutes === mins)?.price || 0;
 
   return (
     <div className="flex flex-col h-full gap-0">
@@ -1366,13 +1283,7 @@ function OrderSummary({
                             m)
                           </span>
                           <span className="font-semibold">
-                            ₱
-                            {(
-                              ((b.services.additional_dry_time_minutes || 0) /
-                                getAdditionalDryTimeInfo()
-                                  .minutes_per_increment) *
-                              getAdditionalDryTimeInfo().price_per_increment
-                            ).toFixed(2)}
+                            ₱{getExtraDryPrice(b.services.additional_dry_time_minutes || 0).toFixed(2)}
                           </span>
                         </div>
                       )}

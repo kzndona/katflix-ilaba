@@ -217,7 +217,9 @@ export function formatReceiptAsPlaintext(receipt: CompactReceipt): string {
 
         if (services.additional_dry_time_minutes && services.additional_dry_time_minutes > 0) {
           const minutes = services.additional_dry_time_minutes;
-          const price = services.additional_dry_time_pricing?.base_price || 0;
+          // Hardcoded tier pricing: 8m=₱15, 16m=₱30, 24m=₱45
+          const EXTRA_DRY_TIERS: Record<number, number> = { 8: 15, 16: 30, 24: 45 };
+          const price = EXTRA_DRY_TIERS[minutes] || services.additional_dry_time_pricing?.base_price || 0;
           lines.push(formatReceiptLine(`  Extra Dry (${minutes}m)`, price, 40));
         }
 

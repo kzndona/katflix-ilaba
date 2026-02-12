@@ -24,9 +24,20 @@ const PRICING = {
   BASKET_WEIGHT_MAX: 8,
   IRON_WEIGHT_MIN: 2,
   IRON_WEIGHT_MAX: 8,
-  ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL: 15,
   FOLD_PRICE: 0,                     // Assume included or free for now
 };
+
+// Extra dry time pricing tiers (hardcoded)
+export const EXTRA_DRY_TIERS = [
+  { minutes: 8, price: 15 },
+  { minutes: 16, price: 30 },
+  { minutes: 24, price: 45 },
+] as const;
+
+export function getExtraDryPrice(minutes: number): number {
+  const tier = EXTRA_DRY_TIERS.find(t => t.minutes === minutes);
+  return tier?.price || 0;
+}
 
 // ============================================================================
 // SERVICE PRICING HELPERS
@@ -138,10 +149,9 @@ export function calculateBasketSubtotal(
     total += PRICING.FOLD_PRICE;
   }
 
-  // Additional dry time
-  const dryTimeLevels = basket.services.additional_dry_time_minutes / 8; // 0, 1, 2, or 3
-  const additionalDryTimeCost = dryTimeLevels * PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL;
-  console.log(`[calculateBasketSubtotal] Additional Dry Time: ${basket.services.additional_dry_time_minutes}min ÷ 8 = ${dryTimeLevels} levels × ₱${PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL} = ₱${additionalDryTimeCost}`);
+  // Additional dry time (hardcoded tiers: 8m=₱15, 16m=₱30, 24m=₱45)
+  const additionalDryTimeCost = getExtraDryPrice(basket.services.additional_dry_time_minutes);
+  console.log(`[calculateBasketSubtotal] Additional Dry Time: ${basket.services.additional_dry_time_minutes}min = ₱${additionalDryTimeCost}`);
   total += additionalDryTimeCost;
 
   // Plastic bags - included in services subtotal
@@ -333,12 +343,12 @@ export function buildOrderBreakdown(
       }
     }
     
-    // Add additional dry time pricing
+    // Add additional dry time pricing (use hardcoded tier price)
     if (basket.services.additional_dry_time_minutes > 0) {
       enrichedServices.additional_dry_time_pricing = {
         name: "Additional Dry Time",
         tier: null,
-        base_price: PRICING.ADDITIONAL_DRY_TIME_PRICE_PER_LEVEL,
+        base_price: getExtraDryPrice(basket.services.additional_dry_time_minutes),
         service_type: "additional_dry_time"
       };
     }

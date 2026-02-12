@@ -286,11 +286,17 @@ export default function BasketsPage() {
     );
   };
 
-  // Count orders by status (supports virtual handling-phase filters)
+  // Determine the single current phase of an order (mutually exclusive)
+  const getOrderPhase = (order: Order): StatusFilter => {
+    if (order.status === "pending") return "pending";
+    if (isForPickup(order)) return "for_pickup";
+    if (isForDelivery(order)) return "for_delivery";
+    return "processing";
+  };
+
+  // Count orders by phase (each order belongs to exactly one phase)
   const countByStatus = (status: StatusFilter) => {
-    if (status === "for_pickup") return orders.filter(isForPickup).length;
-    if (status === "for_delivery") return orders.filter(isForDelivery).length;
-    return orders.filter((o) => o.status === status).length;
+    return orders.filter((o) => getOrderPhase(o) === status).length;
   };
 
   // Toggle status filter
@@ -302,17 +308,9 @@ export default function BasketsPage() {
     );
   };
 
-  // Filter orders by selected statuses (union of order-level status + handling-phase filters)
+  // Filter orders by selected phases (strictly one phase per order)
   const filteredOrders = orders.filter((o) => {
-    const orderStatusFilters = selectedStatuses.filter(
-      (s) => s !== "for_pickup" && s !== "for_delivery",
-    );
-    const matchesOrderStatus = orderStatusFilters.includes(o.status as any);
-    const matchesPickup =
-      selectedStatuses.includes("for_pickup") && isForPickup(o);
-    const matchesDelivery =
-      selectedStatuses.includes("for_delivery") && isForDelivery(o);
-    return matchesOrderStatus || matchesPickup || matchesDelivery;
+    return selectedStatuses.includes(getOrderPhase(o));
   });
 
   // TODO: Replace with actual authenticated session
