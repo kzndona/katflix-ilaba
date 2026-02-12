@@ -859,7 +859,8 @@ function ViewModal({
                 )}
                 {order.handling?.delivery?.completed_at && (
                   <p className="text-xs text-green-600 mt-0.5">
-                    Completed: {formatToPST(order.handling.delivery.completed_at)}
+                    Completed:{" "}
+                    {formatToPST(order.handling.delivery.completed_at)}
                   </p>
                 )}
               </div>

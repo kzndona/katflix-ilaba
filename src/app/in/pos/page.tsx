@@ -573,13 +573,11 @@ function Step4Customer({ pos }: { pos: any }) {
     if (!firstName) return "First name is required";
     if (!lastName) return "Last name is required";
     if (!phone) return "Phone number is required";
-    if (phone.length < 11) return "Phone number must be at least 11 digits";
-    if (phone.length > 13) return "Phone number cannot exceed 13 characters";
 
-    // PH phone format: starts with +63 or 09
-    const isValidPhFormat = /^(\+63|09)\d{9,11}$/.test(phone);
+    // PH phone format: 09XXXXXXXXX (11 digits only)
+    const isValidPhFormat = /^09\d{9}$/.test(phone);
     if (!isValidPhFormat) {
-      return "Phone must be in PH format: +63XXXXXXXXXX or 09XXXXXXXXXX";
+      return "Phone must be in format 09XXXXXXXXX (11 digits)";
     }
 
     if (
@@ -869,8 +867,8 @@ function Step4Customer({ pos }: { pos: any }) {
             </label>
             <input
               type="tel"
-              placeholder="+63 or 09"
-              maxLength={13}
+              placeholder="09## ### ####"
+              maxLength={11}
               value={
                 editedPhone ||
                 (pos.customer
