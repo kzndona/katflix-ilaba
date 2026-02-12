@@ -9,18 +9,48 @@ export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Auto-detect: if input is digits (with optional +), it's a phone number
+  const isPhoneNumber = (value: string) => /^[+\d][\d\s\-()]*$/.test(value.trim());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
+    let emailToUse = identifier.trim();
+
+    // If it looks like a phone number, look up the email first
+    if (isPhoneNumber(identifier)) {
+      try {
+        const res = await fetch("/api/auth/phone-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: identifier }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error || "No account found with that phone number");
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        emailToUse = data.email;
+      } catch {
+        setError("Failed to verify phone number. Please try again.");
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
+      email: emailToUse,
       password: password,
     });
 
@@ -60,16 +90,17 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col space-y-4">
-            {/* Email */}
+            {/* Email or Phone Number */}
             <div>
               <label className="block text-md font-medium text-gray-700 mb-2">
-                Email
+                Email or Phone Number
               </label>
               <input
-                type="email"
+                type="text"
+                placeholder="you@example.com or 09171234567"
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
               />
             </div>

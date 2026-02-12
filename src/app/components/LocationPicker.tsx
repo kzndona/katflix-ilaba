@@ -255,7 +255,7 @@ export function LocationPicker({
           });
         }
 
-        // Listen to idle event to calculate distance after 3 seconds
+        // Listen to idle event to calculate distance after 0.2 seconds
         map.addListener("idle", () => {
           console.log("Map idle, scheduling distance calculation...");
 
@@ -264,7 +264,7 @@ export function LocationPicker({
             clearTimeout(debounceTimerRef.current);
           }
 
-          // Wait 3 seconds then calculate
+          // Wait 0.2 seconds then calculate
           debounceTimerRef.current = setTimeout(() => {
             const center = map.getCenter();
             const coords = {
@@ -287,7 +287,7 @@ export function LocationPicker({
             } else {
               calculateDistanceAndRoute(coords, map);
             }
-          }, 3000);
+          }, 100);
         });
 
         // Initial distance calculation only if not at store

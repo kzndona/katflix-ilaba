@@ -23,6 +23,7 @@
 This app shares the **same Firebase project** as the customer booking app. Both apps use Firebase Cloud Messaging (FCM) through the same project but with different app registrations.
 
 You need to register a **new Android app** in the existing Firebase project:
+
 - Go to Firebase Console → Project Settings → Add App → Android
 - Use a **different package name** than the customer app (e.g., `com.katflix.rider`)
 - Download the generated `google-services.json` for this new Android app
@@ -85,6 +86,7 @@ flutter pub get
 **File:** `lib/main.dart`
 
 This is the core of the implementation. You need to:
+
 - Initialize Firebase
 - Set up notification handlers for foreground, background, and terminated states
 - Handle notification tap to navigate to the specific order screen
@@ -215,6 +217,7 @@ class _RiderAppState extends State<RiderApp> {
 ```
 
 **Key points:**
+
 - `navigatorKey` is a global key that lets you navigate from anywhere (including notification callbacks).
 - `getInitialMessage()` handles the case where the app was **fully closed** and the user taps a notification.
 - `onMessageOpenedApp` handles taps when the app is in the **background**.
@@ -420,21 +423,21 @@ Body:  "Juan Dela Cruz - Pickup at 123 Main St, City"
 
 ## Backend API Endpoints (For Reference)
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/api/rider/register-device` | POST | Register FCM token. Body: `{ staffId, deviceToken }` |
-| `/api/orders/{orderId}` | GET | Fetch single order details (for the order detail screen) |
-| `/api/orders/rider` | GET | Fetch orders assigned to riders (if you build a list view) |
+| Endpoint                     | Method | Purpose                                                    |
+| ---------------------------- | ------ | ---------------------------------------------------------- |
+| `/api/rider/register-device` | POST   | Register FCM token. Body: `{ staffId, deviceToken }`       |
+| `/api/orders/{orderId}`      | GET    | Fetch single order details (for the order detail screen)   |
+| `/api/orders/rider`          | GET    | Fetch orders assigned to riders (if you build a list view) |
 
 ---
 
 ## Backend Files (For Reference)
 
-| File | Purpose |
-|---|---|
-| `src/app/utils/firebase-admin.ts` | Firebase Admin SDK initialization |
-| `src/app/utils/send-notification.ts` | Contains `sendRiderPushNotification()` — broadcasts to all active riders |
-| `src/app/api/rider/register-device/route.ts` | Stores rider's FCM device token in `staff` table |
+| File                                                  | Purpose                                                                   |
+| ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| `src/app/utils/firebase-admin.ts`                     | Firebase Admin SDK initialization                                         |
+| `src/app/utils/send-notification.ts`                  | Contains `sendRiderPushNotification()` — broadcasts to all active riders  |
+| `src/app/api/rider/register-device/route.ts`          | Stores rider's FCM device token in `staff` table                          |
 | `src/app/api/orders/[orderId]/serviceStatus/route.ts` | Triggers rider notification when `handlingType=pickup` and `action=start` |
 
 ---
@@ -442,6 +445,7 @@ Body:  "Juan Dela Cruz - Pickup at 123 Main St, City"
 ## Testing
 
 1. **Build and run the rider app** on an Android device/emulator:
+
    ```bash
    flutter run
    ```
@@ -465,14 +469,14 @@ Body:  "Juan Dela Cruz - Pickup at 123 Main St, City"
 
 ## Troubleshooting
 
-| Issue | Solution |
-|---|---|
-| No notification received | Check backend logs for `sendRiderPushNotification` output. Verify token is saved in `staff.fcm_device_token` |
-| Token registration returns 403 | The `staff_roles` table must have a row with `staff_id` and `role_id = "rider"` |
-| Notification received but no navigation on tap | Ensure `message.data['orderId']` is present. Check that `navigatorKey` is attached to `MaterialApp` |
-| App crashes on notification tap when terminated | Ensure `Firebase.initializeApp()` is called in `_firebaseMessagingBackgroundHandler` |
-| `http://localhost:3000` doesn't work on emulator | Use `http://10.0.2.2:3000` for Android emulator (maps to host machine's localhost) |
-| `google-services.json` not found | Make sure it's placed in `android/app/` (not `android/`) |
+| Issue                                            | Solution                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| No notification received                         | Check backend logs for `sendRiderPushNotification` output. Verify token is saved in `staff.fcm_device_token` |
+| Token registration returns 403                   | The `staff_roles` table must have a row with `staff_id` and `role_id = "rider"`                              |
+| Notification received but no navigation on tap   | Ensure `message.data['orderId']` is present. Check that `navigatorKey` is attached to `MaterialApp`          |
+| App crashes on notification tap when terminated  | Ensure `Firebase.initializeApp()` is called in `_firebaseMessagingBackgroundHandler`                         |
+| `http://localhost:3000` doesn't work on emulator | Use `http://10.0.2.2:3000` for Android emulator (maps to host machine's localhost)                           |
+| `google-services.json` not found                 | Make sure it's placed in `android/app/` (not `android/`)                                                     |
 
 ---
 
