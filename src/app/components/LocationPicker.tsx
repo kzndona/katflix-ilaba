@@ -500,9 +500,13 @@ export function LocationPicker({
 
         {/* 3km max disclaimer */}
         <div className="px-4 py-1.5 bg-amber-50 border-t border-amber-200 text-center shrink-0">
-          <p className="text-xs font-semibold text-amber-700">⚠️ Maximum delivery distance: 3km from store</p>
+          <p className="text-xs font-semibold text-amber-700">
+            ⚠️ Maximum delivery distance: 3km from store
+          </p>
           {isOverMaxDistance && (
-            <p className="text-xs font-bold text-red-600 mt-0.5">Current distance exceeds the 3km limit</p>
+            <p className="text-xs font-bold text-red-600 mt-0.5">
+              Current distance exceeds the 3km limit
+            </p>
           )}
         </div>
 

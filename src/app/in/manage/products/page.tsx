@@ -1303,9 +1303,7 @@ function TransactionModal({
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-gray-900">
-            Update Quantity
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900">Update Quantity</h2>
           <button
             onClick={onClose}
             className="text-gray-600 hover:text-gray-900 text-xl font-light transition"

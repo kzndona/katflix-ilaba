@@ -26,7 +26,13 @@ import {
 import OrderModificationModal from "./OrderModificationModal";
 
 // Status filter type (includes virtual handling-phase filters)
-type StatusFilter = "pending" | "processing" | "completed" | "cancelled" | "for_pickup" | "for_delivery";
+type StatusFilter =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "cancelled"
+  | "for_pickup"
+  | "for_delivery";
 
 // Order type matching updated schema
 type Order = {
@@ -301,9 +307,7 @@ export default function BasketsPage() {
     const orderStatusFilters = selectedStatuses.filter(
       (s) => s !== "for_pickup" && s !== "for_delivery",
     );
-    const matchesOrderStatus = orderStatusFilters.includes(
-      o.status as any,
-    );
+    const matchesOrderStatus = orderStatusFilters.includes(o.status as any);
     const matchesPickup =
       selectedStatuses.includes("for_pickup") && isForPickup(o);
     const matchesDelivery =
@@ -671,8 +675,10 @@ export default function BasketsPage() {
             iron_weight_kg: svc.iron_weight_kg || undefined,
             iron_pricing: svc.iron_pricing || undefined,
             plastic_bags: svc.plastic_bags || undefined,
-            additional_dry_time_minutes: svc.additional_dry_minutes || undefined,
-            additional_dry_time_pricing: svc.additional_dry_time_pricing || undefined,
+            additional_dry_time_minutes:
+              svc.additional_dry_minutes || undefined,
+            additional_dry_time_pricing:
+              svc.additional_dry_time_pricing || undefined,
             staff_service_pricing: svc.staff_service_pricing || undefined,
           },
         };

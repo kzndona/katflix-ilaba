@@ -149,7 +149,8 @@ function Step2Baskets({ pos }: { pos: any }) {
         <h2 className="text-2xl font-bold text-slate-900">Configure Basket</h2>
         <div className="px-6 py-3 bg-red-50 border-2 border-red-300 rounded-lg">
           <div className="text-lg font-bold text-red-900">
-            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket MAX
+            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket
+            MAX
           </div>
         </div>
       </div>
@@ -1751,18 +1752,19 @@ function OrderSummary({
           const hasProducts = Object.keys(pos.selectedProducts).length > 0;
           const hasItems = hasBasketServices || hasProducts;
 
-          const isDisabled = pos.isProcessing ||
-                !pos.isPaymentValid() ||
-                isScheduledDeliveryPastDate ||
-                !hasItems;
+          const isDisabled =
+            pos.isProcessing ||
+            !pos.isPaymentValid() ||
+            isScheduledDeliveryPastDate ||
+            !hasItems;
 
           return (
             <button
               onClick={() => pos.createOrder()}
               disabled={isDisabled}
               className={`w-full mt-4 text-white py-3 rounded-lg font-bold transition ${
-                isDisabled 
-                  ? "bg-slate-400 cursor-not-allowed opacity-60" 
+                isDisabled
+                  ? "bg-slate-400 cursor-not-allowed opacity-60"
                   : "hover:opacity-90 cursor-pointer"
               }`}
               style={isDisabled ? {} : { backgroundColor: "#c41d7f" }}
