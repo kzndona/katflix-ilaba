@@ -48,12 +48,12 @@ If the user enters an email instead, skip the lookup and sign in directly with S
 
 ## Important Difference from Rider/Staff App
 
-| | Staff/Rider App | Customer App |
-|---|---|---|
-| **API endpoint** | `POST /api/auth/phone-lookup` | `POST /api/customers/phone-lookup` |
-| **Table queried** | `staff` | `customers` |
-| **Auth requirement** | `is_active = true` | `is_active = true` AND `auth_id IS NOT NULL` |
-| **Extra error** | None | "Account not set up for login yet" if no `auth_id` |
+|                      | Staff/Rider App               | Customer App                                       |
+| -------------------- | ----------------------------- | -------------------------------------------------- |
+| **API endpoint**     | `POST /api/auth/phone-lookup` | `POST /api/customers/phone-lookup`                 |
+| **Table queried**    | `staff`                       | `customers`                                        |
+| **Auth requirement** | `is_active = true`            | `is_active = true` AND `auth_id IS NOT NULL`       |
+| **Extra error**      | None                          | "Account not set up for login yet" if no `auth_id` |
 
 The customer API has an extra check: customers created from POS might not have an `auth_id` (they were never invited to log in). Only customers who received an email invitation and set their password can use phone sign-in.
 
@@ -66,6 +66,7 @@ The customer API has an extra check: customers created from POS might not have a
 **Base URL:** Same as the app's API base URL (e.g., `https://your-domain.com`)
 
 **Request:**
+
 ```json
 {
   "phone": "09171234567"
@@ -73,6 +74,7 @@ The customer API has an extra check: customers created from POS might not have a
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "email": "customer@example.com"
@@ -81,14 +83,14 @@ The customer API has an extra check: customers created from POS might not have a
 
 **Error Responses:**
 
-| Status | Body | Meaning |
-|--------|------|---------|
-| 400 | `{ "error": "Phone number is required" }` | Missing or empty phone |
-| 400 | `{ "error": "Phone number must be in format 09XXXXXXXXX (11 digits)" }` | Invalid format |
-| 403 | `{ "error": "This account has not been set up for login yet. Please contact the store." }` | Customer exists but has no `auth_id` (never invited) |
-| 404 | `{ "error": "No account found with that phone number" }` | No matching active customer |
-| 404 | `{ "error": "No email associated with this account. Please contact the store." }` | Customer has no email |
-| 500 | `{ "error": "Internal server error" }` | Server error |
+| Status | Body                                                                                       | Meaning                                              |
+| ------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| 400    | `{ "error": "Phone number is required" }`                                                  | Missing or empty phone                               |
+| 400    | `{ "error": "Phone number must be in format 09XXXXXXXXX (11 digits)" }`                    | Invalid format                                       |
+| 403    | `{ "error": "This account has not been set up for login yet. Please contact the store." }` | Customer exists but has no `auth_id` (never invited) |
+| 404    | `{ "error": "No account found with that phone number" }`                                   | No matching active customer                          |
+| 404    | `{ "error": "No email associated with this account. Please contact the store." }`          | Customer has no email                                |
+| 500    | `{ "error": "Internal server error" }`                                                     | Server error                                         |
 
 ---
 
@@ -97,10 +99,11 @@ The customer API has an extra check: customers created from POS might not have a
 ### Step 1: Add http dependency (if not already added)
 
 In `pubspec.yaml`:
+
 ```yaml
 dependencies:
   http: ^1.1.0
-  supabase_flutter: ^2.0.0  # or your current version
+  supabase_flutter: ^2.0.0 # or your current version
 ```
 
 ```bash
@@ -343,14 +346,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
 ## Key Implementation Rules
 
-| Rule | Detail |
-|------|--------|
-| **Phone format** | `09XXXXXXXXX` — exactly 11 digits, starts with `09` |
-| **No +63 support** | Do NOT accept `+63` format on the frontend |
-| **Detection logic** | `RegExp(r'^09\d{9}$')` — if it matches, it's a phone number; otherwise treat as email |
-| **API endpoint** | `POST /api/customers/phone-lookup` (NOT `/api/auth/phone-lookup` — that's for staff) |
-| **Supabase auth** | Always sign in via `signInWithPassword(email:, password:)` — the phone lookup just resolves the email |
-| **Single input field** | One `TextField` for both email and phone — no toggle, no tabs |
+| Rule                   | Detail                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Phone format**       | `09XXXXXXXXX` — exactly 11 digits, starts with `09`                                                   |
+| **No +63 support**     | Do NOT accept `+63` format on the frontend                                                            |
+| **Detection logic**    | `RegExp(r'^09\d{9}$')` — if it matches, it's a phone number; otherwise treat as email                 |
+| **API endpoint**       | `POST /api/customers/phone-lookup` (NOT `/api/auth/phone-lookup` — that's for staff)                  |
+| **Supabase auth**      | Always sign in via `signInWithPassword(email:, password:)` — the phone lookup just resolves the email |
+| **Single input field** | One `TextField` for both email and phone — no toggle, no tabs                                         |
 
 ---
 
@@ -366,6 +369,7 @@ customers.is_active      BOOLEAN      -- only active customers can sign in
 ```
 
 **Important:** Not all customers have an `auth_id`. Customers created from POS without an email invitation will not have one. The phone lookup API checks for this and returns a friendly error:
+
 - `403` — "This account has not been set up for login yet. Please contact the store."
 
 This means the customer needs to have been invited (via email) and set their password before phone sign-in will work.
@@ -389,12 +393,12 @@ This means the customer needs to have been invited (via email) and set their pas
 
 ## Files Reference
 
-| File | Purpose |
-|------|---------|
+| File                                          | Purpose                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------- |
 | `src/app/api/customers/phone-lookup/route.ts` | Backend API — looks up email by phone number from `customers` table |
-| `src/app/api/customers/create/route.ts` | Customer creation — creates `auth_id` when email is provided |
-| `src/app/api/customer/saveCustomer/route.ts` | Customer save — also creates `auth_id` via email invitation |
-| `RIDER_APP_PHONE_SIGNIN_HANDOFF.md` | Rider app equivalent (uses `staff` table instead) |
+| `src/app/api/customers/create/route.ts`       | Customer creation — creates `auth_id` when email is provided        |
+| `src/app/api/customer/saveCustomer/route.ts`  | Customer save — also creates `auth_id` via email invitation         |
+| `RIDER_APP_PHONE_SIGNIN_HANDOFF.md`           | Rider app equivalent (uses `staff` table instead)                   |
 
 ---
 

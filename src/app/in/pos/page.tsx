@@ -149,7 +149,7 @@ function Step2Baskets({ pos }: { pos: any }) {
         <h2 className="text-2xl font-bold text-slate-900">Configure Basket</h2>
         <div className="px-6 py-3 bg-red-50 border-2 border-red-300 rounded-lg">
           <div className="text-lg font-bold text-red-900">
-            {activeBasket.services?.heavy_fabrics ? "5kg" : "8kg"} per basket
+            {activeBasket.services?.heavy_fabrics ? "⚠️ 5kg" : "8kg"} per basket
             MAX
           </div>
         </div>

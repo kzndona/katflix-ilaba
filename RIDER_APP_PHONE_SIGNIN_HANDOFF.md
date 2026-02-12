@@ -53,6 +53,7 @@ If the user enters an email instead, skip the lookup and sign in directly with S
 **Base URL:** Same as the app's API base URL (e.g., `https://your-domain.com`)
 
 **Request:**
+
 ```json
 {
   "phone": "09171234567"
@@ -60,6 +61,7 @@ If the user enters an email instead, skip the lookup and sign in directly with S
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "email": "rider@example.com"
@@ -68,12 +70,12 @@ If the user enters an email instead, skip the lookup and sign in directly with S
 
 **Error Responses:**
 
-| Status | Body | Meaning |
-|--------|------|---------|
-| 400 | `{ "error": "Phone number is required" }` | Missing or empty phone |
-| 400 | `{ "error": "Phone number must be in format 09XXXXXXXXX (11 digits)" }` | Invalid format |
-| 404 | `{ "error": "No account found with that phone number" }` | No matching active staff |
-| 500 | `{ "error": "Internal server error" }` | Server error |
+| Status | Body                                                                    | Meaning                  |
+| ------ | ----------------------------------------------------------------------- | ------------------------ |
+| 400    | `{ "error": "Phone number is required" }`                               | Missing or empty phone   |
+| 400    | `{ "error": "Phone number must be in format 09XXXXXXXXX (11 digits)" }` | Invalid format           |
+| 404    | `{ "error": "No account found with that phone number" }`                | No matching active staff |
+| 500    | `{ "error": "Internal server error" }`                                  | Server error             |
 
 ---
 
@@ -82,10 +84,11 @@ If the user enters an email instead, skip the lookup and sign in directly with S
 ### Step 1: Add http dependency (if not already added)
 
 In `pubspec.yaml`:
+
 ```yaml
 dependencies:
   http: ^1.1.0
-  supabase_flutter: ^2.0.0  # or your current version
+  supabase_flutter: ^2.0.0 # or your current version
 ```
 
 ```bash
@@ -328,14 +331,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
 ## Key Implementation Rules
 
-| Rule | Detail |
-|------|--------|
-| **Phone format** | `09XXXXXXXXX` — exactly 11 digits, starts with `09` |
-| **No +63 support** | Do NOT accept `+63` format on the frontend |
-| **Detection logic** | `RegExp(r'^09\d{9}$')` — if it matches, it's a phone number; otherwise treat as email |
-| **API call** | Only call `/api/auth/phone-lookup` when input is detected as a phone number |
-| **Supabase auth** | Always sign in via `signInWithPassword(email:, password:)` — the phone lookup just resolves the email |
-| **Single input field** | One `TextField` for both email and phone — no toggle, no tabs |
+| Rule                   | Detail                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Phone format**       | `09XXXXXXXXX` — exactly 11 digits, starts with `09`                                                   |
+| **No +63 support**     | Do NOT accept `+63` format on the frontend                                                            |
+| **Detection logic**    | `RegExp(r'^09\d{9}$')` — if it matches, it's a phone number; otherwise treat as email                 |
+| **API call**           | Only call `/api/auth/phone-lookup` when input is detected as a phone number                           |
+| **Supabase auth**      | Always sign in via `signInWithPassword(email:, password:)` — the phone lookup just resolves the email |
+| **Single input field** | One `TextField` for both email and phone — no toggle, no tabs                                         |
 
 ---
 
@@ -376,10 +379,10 @@ The phone lookup API queries by `phone_number` and `is_active = true`. It does *
 
 ## Files Reference
 
-| File | Purpose |
-|------|---------|
+| File                                     | Purpose                                                         |
+| ---------------------------------------- | --------------------------------------------------------------- |
 | `src/app/api/auth/phone-lookup/route.ts` | Backend API — looks up email by phone number from `staff` table |
-| `src/app/auth/sign-in/page.tsx` | Web app sign-in — reference implementation of the same flow |
+| `src/app/auth/sign-in/page.tsx`          | Web app sign-in — reference implementation of the same flow     |
 
 ---
 
