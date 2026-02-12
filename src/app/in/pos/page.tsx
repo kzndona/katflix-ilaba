@@ -2120,7 +2120,9 @@ export default function POSPage() {
                       </p>
                     </div>
                     <div className="bg-blue-50 rounded-lg p-4">
-                      <p className="text-xs text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-xs text-gray-600 mb-1">
+                        Total Amount to Remit
+                      </p>
                       <p className="text-2xl font-bold text-blue-700">
                         ₱
                         {reportOrders
@@ -2134,17 +2136,11 @@ export default function POSPage() {
                     </div>
                     <div className="bg-green-50 rounded-lg p-4">
                       <p className="text-xs text-gray-600 mb-1">
-                        Average Transaction
+                        Starting Balance
                       </p>
-                      <p className="text-2xl font-bold text-green-700">
-                        ₱
-                        {(
-                          reportOrders.reduce(
-                            (sum: number, order: any) =>
-                              sum + order.total_amount,
-                            0,
-                          ) / (reportOrders.length || 1)
-                        ).toFixed(2)}
+                      <p className="text-2xl font-bold text-green-700">₱500</p>
+                      <p className="text-xs text-gray-600 mt-2">
+                        Varying denominations
                       </p>
                     </div>
                   </div>

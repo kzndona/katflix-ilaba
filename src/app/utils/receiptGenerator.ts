@@ -260,19 +260,19 @@ function formatReceiptAsPlaintext(
   if (basketItems.length > 0) {
     for (const basket of basketItems) {
       const basketName = `Basket ${basket.basket_number}`;
-      const weight = basket.weight ? `${basket.weight}kg` : "";
       const basketTotal = basket.total || 0;
 
-      let basketHeader = basketName;
-      if (weight) {
-        basketHeader += ` • ${weight}`;
-      }
-      receipt += truncateLine(basketHeader, 40) + "\n";
+      receipt += truncateLine(basketName, 40) + "\n";
 
-      // Services breakdown from basket.services array
+      // Services breakdown from basket.services array (exclude staff_service - it's order-level)
       if (basket.services && Array.isArray(basket.services)) {
         for (const service of basket.services) {
           const serviceName = service.service_name || "Service";
+          const serviceType = service.service_type || "";
+          
+          // Skip staff_service - it's computed at order level, not basket level
+          if (serviceType === "staff_service" || serviceName.toLowerCase().includes("staff service")) continue;
+          
           const isPremium = service.is_premium || false;
           const servicePrice = service.subtotal || 0;
           

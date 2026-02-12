@@ -193,7 +193,7 @@ export function formatReceiptAsPlaintext(receipt: CompactReceipt): string {
     lines.push(separatorLine("-", 40));
 
     for (const basket of receipt.baskets) {
-      lines.push(truncateLine(`Basket ${basket.basket_number} (${basket.weight_kg}kg)`, 40));
+      lines.push(truncateLine(`Basket ${basket.basket_number}`, 40));
 
       if (basket.services) {
         const { services } = basket;
@@ -232,11 +232,6 @@ export function formatReceiptAsPlaintext(receipt: CompactReceipt): string {
           lines.push(truncateLine(`  Bags (${services.plastic_bags}pc)`, 40));
         }
 
-        if (services.staff_service_pricing && services.staff_service_pricing.base_price > 0) {
-          const price = services.staff_service_pricing.base_price;
-          const name = services.staff_service_pricing.name || "Staff Service";
-          lines.push(formatReceiptLine(`  ${name}`, price, 40));
-        }
       }
 
       lines.push(formatReceiptLine("  Subtotal:", basket.subtotal, 40));
