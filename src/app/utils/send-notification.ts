@@ -133,3 +133,82 @@ export async function sendPushNotification(
     console.error("❌ Failed to send notification:", err);
   }
 }
+
+/**
+ * Send push notification to ALL riders (staff with role "rider" and a valid FCM token).
+ * Used to alert riders about new pickup assignments, delivery requests, etc.
+ *
+ * @param title - Notification title
+ * @param body - Notification body
+ * @param data - Optional data payload (must be Record<string, string> for FCM)
+ * @param options - Optional metadata for notification history
+ * @returns Array of FCM responses (one per rider notified)
+ */
+export async function sendRiderPushNotification(
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+  options?: SendNotificationOptions
+) {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
+
+    // Fetch all staff with role "rider" who have a device token registered
+    const { data: riders, error } = await supabase
+      .from("staff")
+      .select("id, first_name, last_name, fcm_device_token, staff_roles!inner(role_id)")
+      .eq("staff_roles.role_id", "rider")
+      .eq("is_active", true)
+      .not("fcm_device_token", "is", null);
+
+    if (error) {
+      console.error("❌ Failed to fetch riders:", error.message);
+      return [];
+    }
+
+    if (!riders || riders.length === 0) {
+      console.warn("⚠️ No riders with device tokens found");
+      return [];
+    }
+
+    console.log(`📱 Sending rider notification to ${riders.length} rider(s)...`);
+
+    const results = await Promise.allSettled(
+      riders.map(async (rider: any) => {
+        // Send FCM push notification
+        const message = {
+          notification: {
+            title,
+            body,
+          },
+          data: data || {},
+          token: rider.fcm_device_token,
+        };
+
+        const fcmResponse = await admin.messaging().send(message);
+        console.log(
+          `✅ Rider notification sent to ${rider.first_name} ${rider.last_name} (${rider.id}):`,
+          fcmResponse
+        );
+
+        return { riderId: rider.id, response: fcmResponse };
+      })
+    );
+
+    // Log summary
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+    console.log(
+      `📱 Rider notifications: ${succeeded} sent, ${failed} failed`
+    );
+
+    return results;
+  } catch (err: any) {
+    console.error("❌ Failed to send rider notifications:", err);
+    return [];
+  }
+}

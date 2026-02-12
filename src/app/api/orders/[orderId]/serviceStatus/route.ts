@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/src/app/utils/supabase/server";
-import { sendPushNotification } from "@/src/app/utils/send-notification";
+import { sendPushNotification, sendRiderPushNotification } from "@/src/app/utils/send-notification";
 import { awardLoyaltyPoints } from "@/src/app/utils/send-notification";
 
 /**
@@ -162,7 +162,33 @@ export async function PATCH(
       new_status: status,
     });
 
-    // === SEND PUSH NOTIFICATION ===
+    // === NOTIFY RIDERS when pickup starts ===
+    if (handlingType === "pickup" && action === "start") {
+      const customerName = order.customer_id
+        ? await (async () => {
+            const { data: cust } = await supabase
+              .from("customers")
+              .select("first_name, last_name")
+              .eq("id", order.customer_id)
+              .single();
+            return cust ? `${cust.first_name} ${cust.last_name}` : "A customer";
+          })()
+        : "A customer";
+
+      const pickupAddress = updatedHandling?.pickup?.address || order.handling?.pickup?.address || "N/A";
+
+      await sendRiderPushNotification(
+        "📍 New Pickup Assignment",
+        `${customerName} - Pickup at ${pickupAddress}`,
+        {
+          type: "pickup_started",
+          orderId,
+          pickupAddress,
+        }
+      );
+    }
+
+    // === SEND PUSH NOTIFICATION (to customer) ===
     if (order.customer_id) {
       const handlingTypeLabel = handlingType.charAt(0).toUpperCase() + handlingType.slice(1);
       
